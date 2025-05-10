@@ -4,117 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nexus-7: Genesis</title>
-    <script src="https://cdn.tailwindcss.com">
-let combatSpeedMultiplier = 1;
-document.getElementById('toggle-speed-btn').addEventListener('click', () => {
-    combatSpeedMultiplier = (combatSpeedMultiplier === 1) ? 3 : 1;
-    document.getElementById('toggle-speed-btn').textContent = combatSpeedMultiplier === 1 ? "Vitesse x3" : "Vitesse x1";
-});
-
-document.getElementById('close-end-modal').addEventListener('click', () => {
-    document.getElementById('combat-end-modal').classList.add('hidden');
-});
-
-// Patch de simulateCombat pour montrer le modal de fin
-const originalSimulateCombat = simulateCombat;
-simulateCombat = async function(enemyDetails) {
-    await originalSimulateCombat(enemyDetails);
-    if (enemyDetails && gameState.nanobotStats.currentHealth > 0) {
-        const rewards = `+${enemyDetails.attack * 2} Biomasse<br>+${enemyDetails.defense} Nanites`;
-        document.getElementById('combat-end-rewards').innerHTML = rewards;
-        document.getElementById('combat-end-modal').classList.remove('hidden');
-    }
-}
-
-// Appliquer multiplicateur de vitesse au délai de combat
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms / combatSpeedMultiplier));
-}
-
-
-// XP & Loot
-if (!gameState.nanobotStats.level) {
-    gameState.nanobotStats.level = 1;
-    gameState.nanobotStats.xp = 0;
-    gameState.nanobotStats.xpToNext = 100;
-}
-
-function gainXP(amount) {
-    let stats = gameState.nanobotStats;
-    stats.xp += amount;
-    while (stats.xp >= stats.xpToNext) {
-        stats.xp -= stats.xpToNext;
-        stats.level++;
-        stats.xpToNext = Math.floor(stats.xpToNext * 1.5);
-        addLogEntry("Niveau atteint: " + stats.level, "success", combatLogSummaryEl, gameState.combatLogSummary);
-        stats.baseAttack += 2;
-        stats.baseDefense += 1;
-        stats.baseHealth += 10;
-    }
-    const percent = (stats.xp / stats.xpToNext) * 100;
-    document.getElementById("xp-bar").style.width = percent + "%";
-    document.getElementById("xp-gain").textContent = `+${amount} XP (Niv. ${stats.level})`;
-}
-
-// Loot générique
-function generateLoot() {
-    const possibleLoot = ["Composant Avancé", "Cristal de Stockage", "Module Prototypé", "Fragment Alien"];
-    let results = [];
-    if (Math.random() < 0.5) results.push(possibleLoot[Math.floor(Math.random() * possibleLoot.length)]);
-    if (Math.random() < 0.2) results.push("Artefact Rare");
-    return results;
-}
-
-simulateCombat = async function(enemyDetails) {
-    await originalSimulateCombat(enemyDetails);
-    if (enemyDetails && gameState.nanobotStats.currentHealth > 0) {
-        const rewards = `+${enemyDetails.attack * 2} Biomasse<br>+${enemyDetails.defense} Nanites`;
-        document.getElementById('combat-end-rewards').innerHTML = rewards;
-        document.getElementById('combat-end-modal').classList.remove('hidden');
-
-        // XP et Loot
-        const xpGain = Math.floor(enemyDetails.attack + enemyDetails.defense);
-        gainXP(xpGain);
-        const loot = generateLoot();
-        const lootList = document.getElementById("loot-list");
-        lootList.innerHTML = "";
-        loot.forEach(item => {
-            addToInventory(item);
-            const li = document.createElement("li");
-            li.textContent = "🎁 " + item;
-            lootList.appendChild(li);
-        });
-    }
-}
-
-
-// Gestion de l'inventaire
-function addToInventory(item) {
-    gameState.inventory.push(item);
-    updateInventoryDisplay();
-}
-
-function updateInventoryDisplay() {
-    const list = document.getElementById("inventory-list");
-    if (!list) return;
-    list.innerHTML = "";
-    gameState.inventory.forEach((item, index) => {
-        const li = document.createElement("li");
-        li.textContent = `• ${item}`;
-        list.appendChild(li);
-    });
-}
-
-</script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Roboto', sans-serif; background-color: #1a202c; color: #e2e8f0; overflow-x: hidden; }
         .font-orbitron { font-family: 'Orbitron', sans-serif; }
         .resource-bar, .main-content, .footer { border: 1px solid #4a5568; border-radius: 0.5rem; background-color: #2d3748; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); }
         .btn { transition: all 0.3s ease; border-radius: 0.375rem; padding: 0.5rem 1rem; font-weight: 600; }
+        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
+        .btn-xs { padding: 0.125rem 0.3rem; font-size: 0.75rem; }
         .btn-primary { background-color: #4299e1; color: white; } .btn-primary:hover { background-color: #3182ce; }
         .btn-secondary { background-color: #4a5568; color: #e2e8f0; } .btn-secondary:hover { background-color: #2d3748; }
         .btn-danger { background-color: #e53e3e; color: white; } .btn-danger:hover { background-color: #c53030; }
+        .btn-success { background-color: #48bb78; color: white; } .btn-success:hover { background-color: #38a169; }
+        .btn-warning { background-color: #ecc94b; color: #1a202c; } .btn-warning:hover { background-color: #d69e2e; }
+        .btn-info { background-color: #63b3ed; color: white; } .btn-info:hover { background-color: #4299e1;}
         .btn-disabled { background-color: #718096; color: #a0aec0; cursor: not-allowed; }
         .panel { background-color: #2d3748; border: 1px solid #4a5568; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem; }
         
@@ -126,12 +30,14 @@ function updateInventoryDisplay() {
         
         .nanobot-display { width: 150px; height: 200px; margin: 10px auto; position: relative; border: 2px solid #4a5568; background-color: #1a202c; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .nanobot-core { width: 50px; height: 50px; background-color: #63b3ed; border: 2px solid #2c5282; box-shadow: 0 0 5px #63b3ed; position: relative; }
-        .nanobot-module { position: absolute; background-color: #a0aec0; border: 1px solid #718096; }
+        .nanobot-module, .nanobot-item-visual { position: absolute; background-color: #a0aec0; border: 1px solid #718096; }
         .module-arm-blade { width: 60px; height: 10px; background-color: #e53e3e; top: 20px; left: -65px; transform: rotate(-30deg); }
         .module-legs-antigrav { width: 20px; height: 30px; background-color: #48bb78; bottom: -35px; }
         .module-legs-antigrav.left { left: 0px; } .module-legs-antigrav.right { right: 0px; }
         .module-shield { position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px; border: 3px dashed #4299e1; border-radius: 5px; animation: pulse-shield 2s infinite; }
         @keyframes pulse-shield { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+        .item-weapon-laser { width: 70px; height: 8px; background: linear-gradient(to right, red, orange); top: 21px; right: -75px; transform: rotate(20deg); }
+        .item-armor-plating { width: 55px; height: 55px; border: 3px solid #90cdf4; border-radius: 5px; top: -4px; left: -4px; opacity:0.7; }
 
         #combat-modal-content { min-width: 80vw; max-width: 600px; min-height: 50vh; }
         .combat-arena { display: flex; justify-content: space-around; align-items: flex-end; height: 250px; background-color: #1a202c; border: 1px solid #4a5568; border-radius: 0.25rem; padding: 20px; margin-bottom: 1rem; position: relative; overflow: hidden;}
@@ -140,33 +46,72 @@ function updateInventoryDisplay() {
         .combatant-name { font-weight: bold; margin-bottom: 5px; font-size: 0.875rem; }
         .health-bar-container { width: 80px; height: 10px; background-color: #718096; border-radius: 3px; margin: 5px auto 0; overflow: hidden; border: 1px solid #4a5568;}
         .health-bar { height: 100%; background-color: #48bb78; width: 100%; transition: width 0.5s ease; }
-        .health-bar.low { background-color: #f56565; }
+        .health-bar.low { background-color: #f56565; } .health-bar.medium { background-color: #faf089; }
         .damage-float { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 1.25rem; font-weight: bold; color: #e53e3e; animation: floatUp 1s ease-out forwards; opacity: 0; white-space: nowrap; }
         @keyframes floatUp { 0% { opacity: 1; top: -20px; } 100% { opacity: 0; top: -60px; } }
         
-        /* Exploration Map Styles */
         #exploration-content-container { display: flex; flex-direction: column; align-items: center; }
         #map-grid { display: grid; gap: 2px; background-color: #1a202c; border: 2px solid #4a5568; margin-bottom: 1rem; }
-        .map-tile {
-            width: 40px; height: 40px;
-            background-color: #2d3748; /* Default unexplored */
-            border: 1px solid #4a5568;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 1.5rem; /* For icons/text */
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
+        .map-tile { width: 40px; height: 40px; background-color: #2d3748; border: 1px solid #4a5568; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; cursor: pointer; transition: background-color 0.3s; }
         .map-tile:hover { background-color: #4a5568; }
-        .map-tile.explored { background-color: #3b475c; } /* Slightly lighter for explored empty */
+        .map-tile.explored { background-color: #3b475c; } 
         .map-tile.unexplored { background-color: #222938; filter: brightness(0.7); }
         .map-tile.nanobot { background-color: #63b3ed !important; box-shadow: 0 0 8px #63b3ed; z-index:10; }
-        .map-tile.base { background-color: #48bb78; } /* Green for base */
-        .map-tile.resource-biomass::before { content: "🌿"; color: #9ae6b4; } /* Light green leaf */
-        .map-tile.resource-nanites::before { content: "⚙️"; color: #90cdf4; } /* Light blue gear */
-        .map-tile.enemy::before { content: "💀"; color: #f56565; } /* Red skull */
-        .map-tile.upgrade::before { content: "💡"; color: #faf089; } /* Yellow lightbulb */
-        .map-tile.impassable { background-color: #718096; cursor: not-allowed; } /* Grey for mountains/water */
+        .map-tile.base { background-color: #48bb78; } 
+        .map-tile.resource-biomass::before { content: "🌿"; color: #9ae6b4; } 
+        .map-tile.resource-nanites::before { content: "⚙️"; color: #90cdf4; } 
+        .map-tile.enemy::before { content: "💀"; color: #f56565; } 
+        .map-tile.upgrade::before { content: "💡"; color: #faf089; } 
+        .map-tile.impassable { background-color: #718096; cursor: not-allowed; } 
         #map-info { text-align: center; font-size: 0.9rem; }
+
+        .inventory-item, .shop-item { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border-bottom: 1px solid #4a5568; }
+        .inventory-item:last-child, .shop-item:last-child { border-bottom: none; }
+        .item-details { flex-grow: 1; }
+        .item-name { font-weight: bold; color: #a0aec0; }
+        .item-stats { font-size: 0.8em; color: #718096; }
+
+        .equipment-slot { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; margin-bottom: 0.5rem; background-color: #384252; border-radius: 0.25rem; }
+        .slot-name { font-weight: bold; color: #90cdf4; }
+        .equipped-item-name { color: #e2e8f0; }
+        .empty-slot { color: #718096; font-style: italic; }
+
+        #base-status-section { margin-top: 1rem; padding: 0.75rem; background-color: #384252; border-radius: 0.375rem; }
+        #base-health-bar-container { width: 100%; height: 15px; background-color: #718096; border-radius: 5px; margin-top: 0.5rem; overflow: hidden; border: 1px solid #4a5568;}
+        #base-health-bar { height: 100%; background-color: #48bb78; width: 100%; transition: width 0.5s ease; }
+        .night-assault-active { border: 2px dashed #e53e3e !important; animation: pulse-danger 1s infinite alternate; }
+        @keyframes pulse-danger { from { box-shadow: 0 0 10px #e53e3e; } to { box-shadow: 0 0 20px #c53030, 0 0 5px #e53e3e; } }
+
+        #night-assault-enemies-display { 
+            display: flex; flex-wrap: wrap; gap: 5px; 
+            padding: 0.5rem; margin-top: 0.5rem; 
+            background-color: #1a202c; border-radius: 0.25rem; min-height: 30px;
+            border: 1px solid #4a5568;
+        }
+        .assault-enemy-dot {
+            width: 10px; height: 10px;
+            background-color: #e53e3e; 
+            border-radius: 50%;
+            box-shadow: 0 0 3px #c53030;
+            animation: pulse-dot 1.5s infinite ease-in-out alternate;
+        }
+        .assault-enemy-dot.drone { background-color: #e53e3e; } /* Red */
+        .assault-enemy-dot.bot { background-color: #dd6b20; } /* Orange */
+        .assault-enemy-dot.crawler { background-color: #d69e2e; } /* Yellow/Brown */
+
+        @keyframes pulse-dot { from { opacity: 0.7; transform: scale(0.9); } to { opacity: 1; transform: scale(1.1); } }
+        
+        #night-assault-log-container { margin-top: 1rem; }
+        #night-assault-log {
+            background-color: #1a202c; border: 1px solid #4a5568; border-radius: 0.375rem;
+            padding: 0.75rem; height: 150px; overflow-y: auto; font-size: 0.8rem;
+            color: #cbd5e0;
+        }
+        #night-assault-log p { margin-bottom: 0.25rem; }
+        #night-assault-log .text-orange-300 { color: #fbd38d; } 
+        #night-assault-log .text-red-400 { color: #fc8181; } 
+        #night-assault-log .text-green-400 { color: #9ae6b4; } 
+        #night-assault-log .text-teal-300 { color: #81e6d9; } 
     </style>
 </head>
 <body class="p-4">
@@ -178,36 +123,72 @@ function updateInventoryDisplay() {
             <div><span class="font-semibold">Nanites:</span> <span id="nanites">0</span> (+<span id="nanitesRate">0</span>/s)</div>
             <div><span class="font-semibold">Énergie:</span> <span id="energy">0</span> / <span id="energyCapacity">0</span> (<span id="energyCostMove">0</span>/mouv.)</div>
         </div>
-        <div><span class="font-semibold">Cycle:</span> <span id="cycleStatus">Jour</span> (<span id="gameTime">00:00</span>)</div>
+        <div class="flex items-center space-x-4">
+            <div id="base-health-display" class="text-sm"><span class="font-semibold">Base:</span> <span id="base-health-value">0</span> / <span id="base-max-health-value">0</span></div>
+            <div><span class="font-semibold">Cycle:</span> <span id="cycleStatus">Jour</span> (<span id="gameTime">00:00</span>)</div>
+        </div>
     </header>
 
     <main class="main-content grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
         <section id="buildings-section" class="panel col-span-1 lg:h-[calc(100vh-220px)] overflow-y-auto">
-            <h2 class="font-orbitron text-xl mb-3 text-blue-300 border-b border-gray-600 pb-2">Modules Structurels</h2>
-            </section>
+            <h2 class="font-orbitron text-xl mb-3 text-blue-300 border-b border-gray-600 pb-2">Modules Structurels & Défensifs</h2>
+        </section>
 
         <section id="main-view-section" class="panel col-span-1 lg:col-span-2 lg:h-[calc(100vh-220px)] overflow-y-auto">
-            <div class="flex border-b border-gray-600 mb-3">
+            <div class="flex border-b border-gray-600 mb-3 flex-wrap">
                 <button id="tab-overview" class="font-orbitron py-2 px-4 text-lg focus:outline-none border-b-2 border-blue-400 text-blue-300">Noyau</button>
                 <button id="tab-research" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">R&D</button>
                 <button id="tab-nanobot" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">Nexus-7</button>
                 <button id="tab-exploration" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">Exploration</button>
-            
-<button id="tab-inventory" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">Inventaire</button>
-</div>
+                <button id="tab-inventory" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">Inventaire</button>
+                <button id="tab-shop" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">Boutique</button>
+            </div>
 
             <div id="overview-content">
                 <h2 class="font-orbitron text-xl mb-3 text-blue-300">Statut du Noyau</h2>
-                <p class="mb-2">Le Noyau Central est le cœur de vos opérations.</p>
-                <img src="https://placehold.co/600x250/2d3748/e2e8f0?text=Vue+du+Noyau+Central" alt="Image du Noyau Central" class="mx-auto rounded-lg shadow-md my-4">
-                <div id="event-log" class="mt-4 p-3 bg-gray-700 rounded h-40 overflow-y-auto text-sm">
-                    <h3 class="font-semibold mb-2 text-gray-300">Journal des événements :</h3>
+                <p class="mb-2">Le Noyau Central est le cœur de vos opérations et doit être protégé à tout prix.</p>
+                
+                <div id="base-status-section">
+                    <h3 class="font-orbitron text-lg text-yellow-300">Intégrité Structurelle du Noyau</h3>
+                    <div class="flex justify-between items-center text-sm mb-1">
+                        <span>PV Noyau: <span id="overview-base-health">N/A</span></span>
+                        <span id="base-defense-power">Puissance Défensive: 0</span>
                     </div>
+                    <div id="base-health-bar-container">
+                        <div id="base-health-bar" class="health-bar"></div>
+                    </div>
+                    
+                    <h4 class="font-orbitron text-sm text-red-400 mt-3 mb-1">Menaces Actives:</h4>
+                    <div id="night-assault-enemies-display">
+                        <p class="text-gray-500 italic text-xs">Aucune menace détectée pour le moment.</p>
+                    </div>
+
+                    <div class="mt-3 flex space-x-2">
+                        <button id="repair-base-btn" class="btn btn-success btn-sm">Réparer Noyau (1 PV / 2 Bio, 1 Nan)</button>
+                        <button id="repair-defenses-btn" class="btn btn-info btn-sm">Réparer Défenses (1 PV / 1 Bio)</button>
+                    </div>
+                     <div id="active-defenses-display" class="mt-2 text-xs text-gray-400">
+                        <strong>Aucune défense active.</strong>
+                    </div>
+                </div>
+
+                <img src="https://placehold.co/600x250/2d3748/e2e8f0?text=Vue+du+Noyau+Central" alt="Image du Noyau Central" class="mx-auto rounded-lg shadow-md my-4">
+                
+                <div id="night-assault-log-container">
+                    <h3 class="font-orbitron text-lg mb-2 text-red-300 border-b border-gray-600 pb-1">Journal d'Assaut Nocturne</h3>
+                    <div id="night-assault-log">
+                        <p class="text-gray-500 italic">En attente d'événements...</p>
+                    </div>
+                </div>
+
+                <div id="event-log" class="mt-4 p-3 bg-gray-700 rounded h-40 overflow-y-auto text-sm">
+                    <h3 class="font-semibold mb-2 text-gray-300">Journal Principal des Événements :</h3>
+                </div>
             </div>
 
             <div id="research-content" class="hidden">
                 <h2 class="font-orbitron text-xl mb-3 text-blue-300">Arbre Technologique</h2>
-                </div>
+            </div>
 
             <div id="nanobot-content" class="hidden">
                 <h2 class="font-orbitron text-xl mb-3 text-blue-300">Configuration Nexus-7</h2>
@@ -215,11 +196,10 @@ function updateInventoryDisplay() {
                     <div>
                         <h3 class="font-orbitron text-lg mb-2 text-blue-200">Visualisation</h3>
                         <div id="nanobot-visual-container" class="nanobot-display">
-                            <div id="nanobot-body" class="nanobot-core">
-                                </div>
+                            <div id="nanobot-body" class="nanobot-core"></div>
                         </div>
-                        <div id="equipped-modules-display" class="mt-2 text-sm text-center">
-                            </div>
+                        <div id="equipped-modules-display" class="mt-2 text-sm text-center"></div>
+                         <div id="equipped-items-display-brief" class="mt-1 text-sm text-center text-gray-400"></div>
                     </div>
                     <div>
                         <h3 class="font-orbitron text-lg mb-2 text-blue-200">Statistiques</h3>
@@ -229,26 +209,35 @@ function updateInventoryDisplay() {
                             <li>Défense: <span id="nanobot-defense" class="font-semibold">0</span></li>
                             <li>Vitesse: <span id="nanobot-speed" class="font-semibold">0</span></li>
                         </ul>
-                        <h3 class="font-orbitron text-lg mt-4 mb-2 text-blue-200">Actions</h3>
+                        <h3 class="font-orbitron text-lg mt-4 mb-2 text-blue-200">Actions Spéciales</h3>
+                        <button id="toggle-nanobot-defend-base-btn" class="btn btn-secondary w-full mb-2">Activer Défense du Noyau</button>
                         <button id="simulate-combat-btn" class="btn btn-danger w-full">Simuler Combat (Test)</button>
                         <div id="combat-log-summary" class="mt-2 p-2 bg-gray-700 rounded h-24 overflow-y-auto text-xs">
                             <h4 class="font-semibold mb-1 text-gray-300">Résumé Combat :</h4>
-                            </div>
+                        </div>
                     </div>
                 </div>
+                <div class="mt-6">
+                    <h3 class="font-orbitron text-lg mb-2 text-blue-200">Équipement Actuel</h3>
+                    <div id="nanobot-equipment-slots" class="space-y-2"></div>
+                </div>
+            </div>
+            
+            <div id="inventory-content" class="hidden">
+                <h2 class="font-orbitron text-xl mb-3 text-blue-300">Inventaire des Objets</h2>
+                <ul id="inventory-list" class="space-y-1 text-sm text-gray-300"></ul>
             </div>
 
-            
-<div id="inventory-content" class="hidden">
-    <h2 class="font-orbitron text-xl mb-3 text-blue-300">Inventaire</h2>
-    <ul id="inventory-list" class="space-y-2 text-sm text-gray-300"></ul>
-</div>
+            <div id="shop-content" class="hidden">
+                <h2 class="font-orbitron text-xl mb-3 text-blue-300">Marché de Ravitaillement X-9</h2>
+                <p class="text-sm text-gray-400 mb-4">Les drones marchands proposent occasionnellement des améliorations et composants rares. Les stocks sont limités.</p>
+                <div id="shop-items-list" class="space-y-2"></div>
+            </div>
 
-<div id="exploration-content" class="hidden">
+            <div id="exploration-content" class="hidden">
                 <h2 class="font-orbitron text-xl mb-3 text-blue-300">Carte d'Exploration X-9</h2>
                 <div id="exploration-content-container">
-                    <div id="map-grid">
-                        </div>
+                    <div id="map-grid"></div>
                     <div id="map-info" class="mt-3">
                         <p>Position: <span id="nanobot-map-pos">N/A</span>. Cliquez sur une case adjacente pour explorer.</p>
                         <p id="tile-info-display" class="text-gray-400 italic">Survolez une case explorée pour plus d'infos.</p>
@@ -260,593 +249,14 @@ function updateInventoryDisplay() {
 
     <footer class="footer p-3 mt-4 text-center text-sm"> <p>&copy; 2025 Nexus-7: Genesis.</p> </footer>
     
-    <div id="modal" class="modal hidden">
-        <div class="modal-content">
-            <h3 id="modal-title" class="font-orbitron text-lg mb-4">Titre Modale</h3>
-            <p id="modal-message" class="mb-6">Message Modale.</p>
-            <div class="flex justify-end space-x-3">
-                <button id="modal-cancel" class="btn btn-secondary">Annuler</button>
-                <button id="modal-confirm" class="btn btn-primary">Confirmer</button>
-            </div>
-        </div>
-    </div>
+    <div id="modal" class="modal hidden"><div class="modal-content"><h3 id="modal-title" class="font-orbitron text-lg mb-4">Titre Modale</h3><p id="modal-message" class="mb-6">Message Modale.</p><div class="flex justify-end space-x-3"><button id="modal-cancel" class="btn btn-secondary">Annuler</button><button id="modal-confirm" class="btn btn-primary">Confirmer</button></div></div></div>
+    <div id="combat-modal" class="modal hidden"><div id="combat-modal-content" class="modal-content"><h2 class="font-orbitron text-2xl mb-4 text-center text-red-400">Affrontement !</h2><div class="combat-arena"><div id="combat-nanobot" class="combatant"><div class="combatant-name">Nexus-7</div><div class="combatant-sprite" id="combat-nanobot-sprite" style="background-color: #63b3ed;"></div><div class="health-bar-container"><div id="combat-nanobot-healthbar" class="health-bar"></div></div></div><div id="combat-enemy" class="combatant"><div class="combatant-name" id="combat-enemy-name">Ennemi</div><div class="combatant-sprite" id="combat-enemy-sprite" style="background-color: #e53e3e;"></div><div class="health-bar-container"><div id="combat-enemy-healthbar" class="health-bar"></div></div></div></div><div id="combat-log-visual" class="max-h-[150px] overflow-y-auto bg-gray-800 p-2 rounded font-mono text-xs mt-4 border border-gray-600"></div><div class="text-center mt-4"><button id="close-combat-modal-btn" class="btn btn-secondary">Fermer</button><button id="toggle-speed-btn" class="btn btn-secondary ml-2">Vitesse x3</button></div></div></div>
+    <div id="combat-end-modal" class="modal hidden"><div class="modal-content text-center"><h3 id="combat-end-title" class="font-orbitron text-lg mb-4 text-green-300">Victoire !</h3><p id="combat-end-rewards" class="mb-2 text-sm"></p><h4 class="text-blue-300 mt-4 mb-1 font-orbitron">XP & Niveau</h4><p id="xp-gain" class="text-sm mb-2"></p><div class="w-full bg-gray-700 rounded-full h-2.5 mb-2"><div id="xp-bar" class="bg-blue-500 h-2.5 rounded-full" style="width: 0%"></div></div><h4 class="text-yellow-300 mt-4 mb-1 font-orbitron">Butin Obtenu</h4><ul id="loot-list" class="text-sm text-gray-300 list-disc list-inside mb-4"></ul><button id="close-end-modal" class="btn btn-primary mt-4">Fermer</button></div></div>
 
-    <div id="combat-modal" class="modal hidden">
-        <div id="combat-modal-content" class="modal-content">
-            <h2 class="font-orbitron text-2xl mb-4 text-center text-red-400">Affrontement !</h2>
-            <div class="combat-arena">
-                <div id="combat-nanobot" class="combatant">
-                    <div class="combatant-name">Nexus-7</div>
-                    <div class="combatant-sprite" id="combat-nanobot-sprite" style="background-color: #63b3ed;">
-                        </div>
-                    <div class="health-bar-container"><div id="combat-nanobot-healthbar" class="health-bar"></div></div>
-                </div>
-                <div id="combat-enemy" class="combatant">
-                    <div class="combatant-name" id="combat-enemy-name">Ennemi</div>
-                    <div class="combatant-sprite" id="combat-enemy-sprite" style="background-color: #e53e3e;"></div>
-                    <div class="health-bar-container"><div id="combat-enemy-healthbar" class="health-bar"></div></div>
-                </div>
-            </div>
-            <div id="combat-log-visual" class="max-height: 150px; overflow-y: auto; background-color: #1a202c; padding: 0.5rem; border-radius: 0.25rem; font-size: 0.8rem; margin-top:1rem; border: 1px solid #4a5568;">
-                 <p class="text-gray-400">Début du combat...</p>
-            </div>
-            <div class="text-center mt-4">
-                <button id="close-combat-modal-btn" class="btn btn-secondary">Fermer</button>
-<button id="toggle-speed-btn" class="btn btn-secondary ml-2">Vitesse x3</button>
-
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // --- Configuration du Jeu ---
-        const TICK_SPEED = 1000;
-        const DAY_DURATION = 5 * 60 * 1000; const NIGHT_DURATION = 3 * 60 * 1000;
-        const COMBAT_ANIMATION_DELAY = 700;
-        const EXPLORATION_COST_ENERGY = 5;
-        const MAP_SIZE = { width: 15, height: 10 };
-        const TILE_TYPES = {
-            UNEXPLORED: 0, EMPTY: 1, BASE: 2,
-            RESOURCE_BIOMASS: 10, RESOURCE_NANITES: 11,
-            ENEMY_DRONE: 20, ENEMY_SAURIAN: 21,
-            UPGRADE_CACHE: 30, IMPASSABLE: 99
-        };
-        const BASE_COORDINATES = { x: 0, y: 0 };
-
-        // --- État du Jeu ---
-        let gameState = {
-            resources: { biomass: 200, nanites: 100, energy: 50 },
-            productionRates: { biomass: 0, nanites: 0 },
-            capacity: { energy: 50 },
-            buildings: {}, research: {}, gameTime: 0, isDay: true, currentCycleTime: 0,
-            eventLog: ["Bienvenue, Nexus-7. Initialisation..."],
-            nanobotStats: { baseHealth: 100, currentHealth: 100, baseAttack: 10, baseDefense: 5, baseSpeed: 10, health: 100, attack: 10, defense: 5, speed: 10 },
-            activeModules: [],
-            combatLogSummary: ["Journal de combat initialisé."],
-            map: {
-                tiles: [], 
-                explored: [], 
-                nanobotPos: { ...BASE_COORDINATES },
-                currentEnemyEncounter: null 
-            }
-        };
-
-        // --- Définitions (Bâtiments, Modules, Recherches) ---
-        const buildingsData = { 
-            'biomassHarvester': { name: "Collecteur de Biomasse", description: "Récolte la Biomasse.", levels: [ { cost: { biomass: 50 }, production: { biomass: 1 }, energyConsumption: 2 }, { cost: { biomass: 120, nanites: 20 }, production: { biomass: 3 }, energyConsumption: 4 } ] },
-            'naniteFactory': { name: "Usine de Nanites", description: "Assemble des Nanites.", levels: [ { cost: { biomass: 80, nanites: 10 }, production: { nanites: 0.5 }, energyConsumption: 5 }, { cost: { biomass: 200, nanites: 50 }, production: { nanites: 1.5 }, energyConsumption: 8 } ] },
-            'powerPlant': { name: "Générateur d'Énergie", description: "Fournit de l'Énergie.", levels: [ { cost: { biomass: 60, nanites: 20 }, capacity: { energy: 50 } }, { cost: { biomass: 150, nanites: 50 }, capacity: { energy: 100 } } ] },
-            'researchLab': { name: "Laboratoire de Recherche", description: "Débloque des technologies.", levels: [ { cost: { biomass: 100, nanites: 100 }, researchSpeedFactor: 1, energyConsumption: 10 }, { cost: { biomass: 250, nanites: 250 }, researchSpeedFactor: 1.5, energyConsumption: 15 } ] },
-            'defenseFoundry': { name: "Fonderie Défensive", description: "Fabrique modules défensifs.", levels: [ { cost: { biomass: 200, nanites: 150 }, energyConsumption: 15, grantsModule: 'shieldGeneratorMk1' }, { cost: { biomass: 500, nanites: 400 }, energyConsumption: 25, grantsModule: 'shieldGeneratorMk2' }] }
-        };
-        const nanobotModulesData = { 
-            'armBlade': { name: "Lame de Bras", description: "Un bras transformable en lame tranchante.", statBoost: { attack: 5 }, visualClass: 'module-arm-blade' },
-            'gravLegs': { name: "Jambes Anti-Grav", description: "Permet un déplacement rapide et agile.", statBoost: { speed: 5, defense: 1 }, visualClasses: ['module-legs-antigrav left', 'module-legs-antigrav right'] },
-            'shieldGeneratorMk1': { name: "Bouclier Énergétique Mk1", description: "Génère un champ de force protecteur de base.", statBoost: { defense: 10, health: 20 }, visualClass: 'module-shield' },
-            'shieldGeneratorMk2': { name: "Bouclier Énergétique Mk2", description: "Génère un champ de force protecteur amélioré.", statBoost: { defense: 20, health: 50 }, visualClass: 'module-shield' }
-        };
-        const researchData = { 
-            'naniteSwarm': { name: "Tempête de Nanites", description: "Arme dévastatrice.", cost: { biomass: 500, nanites: 1000 }, time: 300, requirements: { buildings: { researchLab: 1 } }, grantsStatBoost: { attack: 15 } },
-            'graviticManipulation': { name: "Manipulation Gravitique", description: "Développement de modules de déplacement.", cost: { biomass: 300, nanites: 200 }, time: 180, requirements: { buildings: { researchLab: 1 } }, grantsModule: 'gravLegs' },
-            'combatAlgorithms': { name: "Algorithmes de Combat", description: "Améliore l'efficacité au combat.", cost: { biomass: 150, nanites: 300 }, time: 120, requirements: { buildings: { researchLab: 1 } }, grantsStatBoost: { attack: 5, defense: 3 } },
-            'weaponizedNanites': { name: "Nanites Armés", description: "Intègre des nanites offensives.", cost: { biomass: 400, nanites: 250 }, time: 240, requirements: { buildings: { researchLab: 2 } }, grantsModule: 'armBlade' },
-            'ecoSymbiosis': { name: "Symbiose Écologique", description: "Contrôle des formes de vie.", cost: { biomass: 1000, nanites: 500 }, time: 600, requirements: { buildings: { researchLab: 2 }, research: ['naniteSwarm'] }, grantsStatBoost: { health: 50, speed: -2 } }
-        };
-        let activeResearch = null;
-
-        // --- Éléments DOM ---
-        const biomassEl=document.getElementById('biomass'),nanitesEl=document.getElementById('nanites'),energyEl=document.getElementById('energy'),biomassRateEl=document.getElementById('biomassRate'),nanitesRateEl=document.getElementById('nanitesRate'),energyCapacityEl=document.getElementById('energyCapacity'),energyCostMoveEl=document.getElementById('energyCostMove');
-        const buildingsSection=document.getElementById('buildings-section'),researchSection=document.getElementById('research-content'),eventLogEl=document.getElementById('event-log'),gameTimeEl=document.getElementById('gameTime'),cycleStatusEl=document.getElementById('cycleStatus');
-        const tabOverview=document.getElementById('tab-overview'),tabResearch=document.getElementById('tab-research'),tabNanobot=document.getElementById('tab-nanobot'),tabExploration=document.getElementById('tab-exploration');
-        const overviewContent=document.getElementById('overview-content'),researchContentEl=document.getElementById('research-content'),nanobotContentEl=document.getElementById('nanobot-content'),explorationContentEl=document.getElementById('exploration-content');
-        const modal = document.getElementById('modal'), modalTitle = document.getElementById('modal-title'), modalMessage = document.getElementById('modal-message'), modalConfirm = document.getElementById('modal-confirm'), modalCancel = document.getElementById('modal-cancel');
-        
-        const nanobotHealthEl=document.getElementById('nanobot-health'),nanobotAttackEl=document.getElementById('nanobot-attack'),nanobotDefenseEl=document.getElementById('nanobot-defense'),nanobotSpeedEl=document.getElementById('nanobot-speed');
-        const nanobotVisualBody=document.getElementById('nanobot-body'),equippedModulesDisplayEl=document.getElementById('equipped-modules-display');
-        const simulateCombatBtn=document.getElementById('simulate-combat-btn'),combatLogSummaryEl=document.getElementById('combat-log-summary');
-        
-        const combatModalEl=document.getElementById('combat-modal'); // Renamed to avoid conflict with 'modal' variable
-        const combatNanobotSprite=document.getElementById('combat-nanobot-sprite'),combatEnemySprite=document.getElementById('combat-enemy-sprite');
-        const combatNanobotHealthbar=document.getElementById('combat-nanobot-healthbar'),combatEnemyHealthbar=document.getElementById('combat-enemy-healthbar');
-        const combatEnemyNameEl=document.getElementById('combat-enemy-name'),combatLogVisualEl=document.getElementById('combat-log-visual'),closeCombatModalBtn=document.getElementById('close-combat-modal-btn');
-        
-        const mapGridEl = document.getElementById('map-grid');
-        const nanobotMapPosEl = document.getElementById('nanobot-map-pos');
-        const tileInfoDisplayEl = document.getElementById('tile-info-display');
-        
-        // --- Fonctions Utilitaires ---
-        function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
-        function formatTime(seconds) { return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`; }
-        let modalConfirmCallback = null; 
-        function showModal(title, message, onConfirm, showCancel = true) { 
-            modalTitle.textContent = title; 
-            modalMessage.textContent = message; 
-            modalConfirmCallback = onConfirm; 
-            modalConfirm.classList.toggle('hidden', !onConfirm); 
-            modalCancel.classList.toggle('hidden', !showCancel); 
-            modal.classList.remove('hidden'); 
-        } 
-        function hideModal() { 
-            modal.classList.add('hidden'); 
-            modalConfirmCallback = null; 
-        }
-        modalConfirm.addEventListener('click', () => { if (modalConfirmCallback) modalConfirmCallback(); hideModal(); });
-        modalCancel.addEventListener('click', hideModal);
-
-        function addLogEntry(message, type = "info", logElement = eventLogEl, logArray = gameState.eventLog) { 
-            const timestamp = type !== "combat-visual" && type !== "map-event" ? `[${formatTime(gameState.gameTime)}] ` : ""; 
-            const entry = document.createElement('p'); 
-            entry.innerHTML = `<span class="text-gray-400">${timestamp}</span>${message}`; 
-            if (type === "error") entry.classList.add("text-red-400"); 
-            if (type === "success") entry.classList.add("text-green-400"); 
-            if (type === "warning") entry.classList.add("text-yellow-400"); 
-            if (type === "combat" || type === "combat-visual" || type === "map-event") entry.classList.add("text-orange-300"); 
-            if (logElement) { // Check if logElement is not null
-                 logElement.appendChild(entry); 
-                 logElement.scrollTop = logElement.scrollHeight; 
-            }
-            if (logArray) { 
-                logArray.push(`${timestamp}${message}`); 
-                if (logArray.length > 50) logArray.shift(); 
-            } 
-        }
-
-        // --- Fonctions de Mise à Jour de l'UI ---
-        function updateResourceDisplay() { biomassEl.textContent = Math.floor(gameState.resources.biomass); nanitesEl.textContent = Math.floor(gameState.resources.nanites); energyEl.textContent = Math.floor(gameState.resources.energy); biomassRateEl.textContent = gameState.productionRates.biomass.toFixed(1); nanitesRateEl.textContent = gameState.productionRates.nanites.toFixed(1); energyCapacityEl.textContent = gameState.capacity.energy; energyCostMoveEl.textContent = EXPLORATION_COST_ENERGY; }
-        function updateBuildingDisplay() { 
-            buildingsSection.innerHTML = '<h2 class="font-orbitron text-xl mb-3 text-blue-300 border-b border-gray-600 pb-2">Modules Structurels</h2>'; 
-            for (const id in buildingsData) { 
-                const building = buildingsData[id]; const level = gameState.buildings[id] || 0; 
-                const currentLevelData = level > 0 ? building.levels[level - 1] : null; 
-                const nextLevel = level < building.levels.length ? building.levels[level] : null; 
-                const div = document.createElement('div'); div.className = 'mb-4 p-3 bg-gray-800 rounded shadow'; 
-                let content = `<h3 class="text-lg font-semibold text-blue-400">${building.name} (Niv. ${level})</h3>`; 
-                content += `<p class="text-sm text-gray-400 mb-1">${building.description}</p>`; 
-                if (currentLevelData) { 
-                    content += `<p class="text-xs text-gray-500">Effet actuel: `; 
-                    let effects = []; 
-                    if (currentLevelData.production) { effects.push(...Object.entries(currentLevelData.production).map(([res, val]) => `${val}/s ${res}`)); } 
-                    if (currentLevelData.capacity) { effects.push(...Object.entries(currentLevelData.capacity).map(([res, val]) => `+${val} Cap. ${res}`)); } 
-                    if (currentLevelData.researchSpeedFactor) { effects.push(`Vitesse Rech. x${currentLevelData.researchSpeedFactor}`); } 
-                    if (currentLevelData.grantsModule && nanobotModulesData[currentLevelData.grantsModule]) { effects.push(`Débloque: ${nanobotModulesData[currentLevelData.grantsModule].name}`); } 
-                    content += effects.join(', ') || "Aucun"; content += ` / Cons.: ${currentLevelData.energyConsumption || 0} Énergie</p>`; 
-                } 
-                if (nextLevel) { 
-                    const canAfford = Object.entries(nextLevel.cost).every(([res, val]) => gameState.resources[res] >= val); 
-                    let costString = Object.entries(nextLevel.cost).map(([res, val]) => `${val} ${res}`).join(', '); 
-                    content += `<button onclick="build('${id}')" class="btn ${canAfford ? 'btn-primary' : 'btn-disabled'} mt-2 text-sm w-full" ${!canAfford ? 'disabled' : ''}>Améliorer (Coût: ${costString})</button>`; 
-                } else { content += `<p class="text-sm text-green-400 mt-2">Niveau Max</p>`; } 
-                div.innerHTML = content; buildingsSection.appendChild(div); 
-            } 
-        }
-        function updateResearchDisplay() { 
-            researchSection.innerHTML = '<h2 class="font-orbitron text-xl mb-3 text-blue-300 border-b border-gray-600 pb-2">Arbre Technologique</h2>'; 
-            if (activeResearch) { 
-                const research = researchData[activeResearch.id]; 
-                const timeRemaining = Math.max(0, Math.ceil(activeResearch.totalTime - (gameState.gameTime - activeResearch.startTime))); 
-                const progress = Math.min(100, ((activeResearch.totalTime - timeRemaining) / activeResearch.totalTime) * 100); 
-                researchSection.innerHTML += `<div class="mb-4 p-3 bg-gray-800 rounded shadow"><h3 class="text-lg font-semibold text-yellow-400">En cours: ${research.name}</h3><p class="text-sm text-gray-400 mb-1">${research.description}</p><div class="w-full bg-gray-700 rounded-full h-2.5 mb-1"><div class="bg-blue-500 h-2.5 rounded-full" style="width: ${progress}%"></div></div><p class="text-sm text-gray-300">Temps: ${formatTime(timeRemaining)}</p></div>`; 
-            } 
-            for (const id in researchData) { 
-                const research = researchData[id]; 
-                if (gameState.research[id]) { researchSection.innerHTML += `<div class="mb-2 p-3 bg-gray-700 rounded opacity-70"><h3 class="text-md font-semibold text-green-400">${research.name} (Terminé)</h3><p class="text-xs text-gray-500">${research.description}</p></div>`; continue; } 
-                if (activeResearch && activeResearch.id === id) continue; 
-                let canResearch = true; let requirementText = []; 
-                const costEntries = Object.entries(research.cost); costEntries.forEach(([res, val]) => { if (gameState.resources[res] < val) canResearch = false; }); 
-                let costString = costEntries.map(([res, val]) => `${val} ${res}`).join(', '); 
-                if (research.requirements) { 
-                    if (research.requirements.buildings) { Object.entries(research.requirements.buildings).forEach(([bId, rLvl]) => { if ((gameState.buildings[bId] || 0) < rLvl) { canResearch = false; requirementText.push(`${buildingsData[bId].name} Niv. ${rLvl}`); } }); } 
-                    if (research.requirements.research) { research.requirements.research.forEach(rId => { if (!gameState.research[rId]) { canResearch = false; requirementText.push(`Rech.: ${researchData[rId].name}`); } }); } 
-                } 
-                let effectsText = []; 
-                if (research.grantsModule && nanobotModulesData[research.grantsModule]) { effectsText.push(`Module: ${nanobotModulesData[research.grantsModule].name}`); } 
-                if (research.grantsStatBoost) { effectsText.push(...Object.entries(research.grantsStatBoost).map(([stat, val]) => `${stat.replace('base', '')}: +${val}`)); } 
-                const div = document.createElement('div'); div.className = 'mb-4 p-3 bg-gray-800 rounded shadow'; 
-                let content = `<h3 class="text-lg font-semibold text-blue-400">${research.name}</h3>`; 
-                content += `<p class="text-sm text-gray-400 mb-1">${research.description}</p>`; 
-                if (effectsText.length > 0) content += `<p class="text-xs text-green-300 mb-1">Effet: ${effectsText.join(', ')}.</p>`; 
-                content += `<p class="text-xs text-gray-500 mb-1">Coût: ${costString}. Temps: ${formatTime(research.time)}.</p>`; 
-                if (requirementText.length > 0) content += `<p class="text-xs text-yellow-500 mb-1">Prérequis: ${requirementText.join(', ')}.</p>`; 
-                content += `<button onclick="startResearch('${id}')" class="btn ${canResearch && !activeResearch ? 'btn-primary' : 'btn-disabled'} mt-2 text-sm w-full" ${(!canResearch || activeResearch) ? 'disabled' : ''}>Lancer</button>`; 
-                div.innerHTML = content; researchSection.appendChild(div); 
-            } 
-        }
-        function updateNanobotDisplay() { 
-            nanobotHealthEl.textContent = `${Math.floor(gameState.nanobotStats.currentHealth)} / ${gameState.nanobotStats.health}`; 
-            nanobotAttackEl.textContent = gameState.nanobotStats.attack; 
-            nanobotDefenseEl.textContent = gameState.nanobotStats.defense; 
-            nanobotSpeedEl.textContent = gameState.nanobotStats.speed; 
-            nanobotVisualBody.innerHTML = ''; 
-            let equippedModulesNames = []; 
-            gameState.activeModules.forEach(moduleId => { 
-                const moduleData = nanobotModulesData[moduleId]; 
-                if (moduleData) { 
-                    equippedModulesNames.push(moduleData.name); 
-                    if (moduleData.visualClass) { const visualEl = document.createElement('div'); visualEl.className = `nanobot-module ${moduleData.visualClass}`; nanobotVisualBody.appendChild(visualEl); } 
-                    else if (moduleData.visualClasses) { moduleData.visualClasses.forEach(className => { const visualEl = document.createElement('div'); visualEl.className = `nanobot-module ${className}`; nanobotVisualBody.appendChild(visualEl); }); } 
-                } 
-            }); 
-            equippedModulesDisplayEl.textContent = equippedModulesNames.length > 0 ? `Modules: ${equippedModulesNames.join(', ')}` : "Aucun module."; 
-        }
-
-        // --- Logique de Jeu ---
-        function calculateNanobotStats() { const stats = gameState.nanobotStats; stats.health = stats.baseHealth; stats.attack = stats.baseAttack; stats.defense = stats.baseDefense; stats.speed = stats.baseSpeed; gameState.activeModules = []; for (const researchId in gameState.research) { if (gameState.research[researchId] && researchData[researchId]) { const resData = researchData[researchId]; if (resData.grantsStatBoost) { for (const stat in resData.grantsStatBoost) { stats[stat] = (stats[stat] || 0) + resData.grantsStatBoost[stat]; if (stat === "health") stats.baseHealth += resData.grantsStatBoost[stat]; } } if (resData.grantsModule && !gameState.activeModules.includes(resData.grantsModule)) { gameState.activeModules.push(resData.grantsModule); } } } for (const buildingId in gameState.buildings) { const level = gameState.buildings[buildingId]; if (level > 0) { const buildingDef = buildingsData[buildingId]; const levelData = buildingDef.levels[level-1]; if (levelData.grantsModule && nanobotModulesData[levelData.grantsModule] && !gameState.activeModules.includes(levelData.grantsModule)) { gameState.activeModules.push(levelData.grantsModule); } } } gameState.activeModules.forEach(moduleId => { const moduleData = nanobotModulesData[moduleId]; if (moduleData && moduleData.statBoost) { for (const stat in moduleData.statBoost) { stats[stat] = (stats[stat] || 0) + moduleData.statBoost[stat]; if (stat === "health") stats.baseHealth += moduleData.statBoost[stat]; } } }); stats.currentHealth = Math.min(stats.currentHealth, stats.health); if (stats.currentHealth < 0) stats.currentHealth = 0; }
-        function calculateProductionAndConsumption() { gameState.productionRates.biomass = 0; gameState.productionRates.nanites = 0; gameState.resources.energy = 0; gameState.capacity.energy = 50; let totalEnergyConsumption = 0; for (const buildingId in gameState.buildings) { const level = gameState.buildings[buildingId]; if (level > 0) { const buildingDef = buildingsData[buildingId]; const levelData = buildingDef.levels[level - 1]; if (levelData.production) { if (levelData.production.biomass) gameState.productionRates.biomass += levelData.production.biomass; if (levelData.production.nanites) gameState.productionRates.nanites += levelData.production.nanites; } if (levelData.capacity && levelData.capacity.energy) gameState.capacity.energy += levelData.capacity.energy; if (levelData.energyConsumption) totalEnergyConsumption += levelData.energyConsumption; } } if (!gameState.isDay) { gameState.productionRates.biomass *= 0.7; gameState.productionRates.nanites *= 0.7; } gameState.resources.energy = totalEnergyConsumption; if (gameState.resources.energy > gameState.capacity.energy) { const deficitFactor = gameState.capacity.energy / gameState.resources.energy; gameState.productionRates.biomass *= deficitFactor; gameState.productionRates.nanites *= deficitFactor; if (Math.random() < 0.1) addLogEntry("Surcharge énergétique! Prod. réduite.", "error"); } }
-        function build(buildingId) { const building = buildingsData[buildingId]; const currentLevel = gameState.buildings[buildingId] || 0; if (currentLevel >= building.levels.length) { addLogEntry(`${building.name} Niv. Max.`, "info"); return; } const nextLevelData = building.levels[currentLevel]; for (const resource in nextLevelData.cost) { if (gameState.resources[resource] < nextLevelData.cost[resource]) { addLogEntry(`Ressources insuffisantes: ${building.name}.`, "error"); return; } } showModal(`Améliorer ${building.name}?`, `Vers Niv. ${currentLevel + 1}?`, () => { for (const resource in nextLevelData.cost) gameState.resources[resource] -= nextLevelData.cost[resource]; gameState.buildings[buildingId] = currentLevel + 1; addLogEntry(`${building.name} amélioré Niv. ${currentLevel + 1}.`, "success"); if (nextLevelData.grantsModule) calculateNanobotStats(); calculateProductionAndConsumption(); updateDisplays(); }); }
-        function startResearch(researchId) { if (activeResearch) { addLogEntry("Recherche en cours.", "info"); return; } if (gameState.research[researchId]) { addLogEntry("Technologie acquise.", "info"); return; } const research = researchData[researchId]; let labLevel = gameState.buildings['researchLab'] || 0; let researchSpeedFactor = labLevel > 0 ? buildingsData['researchLab'].levels[labLevel - 1].researchSpeedFactor : 0.5; for (const resource in research.cost) { if (gameState.resources[resource] < research.cost[resource]) { addLogEntry(`Ressources insuffisantes: ${research.name}.`, "error"); return; } } /* Vérif prérequis */ showModal(`Lancer ${research.name}?`, `Coût & Temps adaptés.`, () => { for (const resource in research.cost) gameState.resources[resource] -= research.cost[resource]; activeResearch = { id: researchId, startTime: gameState.gameTime, totalTime: research.time / researchSpeedFactor }; addLogEntry(`Recherche ${research.name} initiée.`, "success"); updateDisplays(); });}
-        function updateGameTimeAndCycle() { gameState.gameTime++; gameState.currentCycleTime += TICK_SPEED; const currentCycleDuration = gameState.isDay ? DAY_DURATION : NIGHT_DURATION; if (gameState.currentCycleTime >= currentCycleDuration) { gameState.isDay = !gameState.isDay; gameState.currentCycleTime = 0; addLogEntry(`Cycle: ${gameState.isDay ? 'JOUR' : 'NUIT'}.`, "info"); if (!gameState.isDay) addLogEntry("Écosystème hyperactif...", "warning"); else addLogEntry("Activité hostile en baisse.", "info"); calculateProductionAndConsumption(); } gameTimeEl.textContent = formatTime(gameState.gameTime); cycleStatusEl.textContent = `${gameState.isDay ? "Jour" : "Nuit"} (${formatTime(Math.floor((currentCycleDuration - gameState.currentCycleTime)/1000))})`; }
-        function updateDisplays() { updateResourceDisplay(); updateBuildingDisplay(); updateResearchDisplay(); updateNanobotDisplay(); if (explorationContentEl.classList.contains('hidden') === false) updateExplorationDisplay(); }
-
-        // --- Exploration Map Functions ---
-        function generateMap() {
-            gameState.map.tiles = []; gameState.map.explored = [];
-            for (let y = 0; y < MAP_SIZE.height; y++) {
-                const tileRow = []; const exploredRow = [];
-                for (let x = 0; x < MAP_SIZE.width; x++) { tileRow.push(TILE_TYPES.EMPTY); exploredRow.push(false); }
-                gameState.map.tiles.push(tileRow); gameState.map.explored.push(exploredRow);
-            }
-            gameState.map.tiles[BASE_COORDINATES.y][BASE_COORDINATES.x] = TILE_TYPES.BASE;
-            gameState.map.explored[BASE_COORDINATES.y][BASE_COORDINATES.x] = true;
-            for (let i = 0; i < 5; i++) { let rx, ry; do { rx = Math.floor(Math.random() * MAP_SIZE.width); ry = Math.floor(Math.random() * MAP_SIZE.height); } while (gameState.map.tiles[ry][rx] !== TILE_TYPES.EMPTY); gameState.map.tiles[ry][rx] = { type: TILE_TYPES.RESOURCE_BIOMASS, amount: Math.floor(Math.random() * 50) + 20 };}
-            for (let i = 0; i < 3; i++) { let rx, ry; do { rx = Math.floor(Math.random() * MAP_SIZE.width); ry = Math.floor(Math.random() * MAP_SIZE.height); } while (gameState.map.tiles[ry][rx] !== TILE_TYPES.EMPTY); gameState.map.tiles[ry][rx] = { type: TILE_TYPES.RESOURCE_NANITES, amount: Math.floor(Math.random() * 30) + 10 };}
-            for (let i = 0; i < 4; i++) { let ex, ey; do { ex = Math.floor(Math.random() * MAP_SIZE.width); ey = Math.floor(Math.random() * MAP_SIZE.height); } while (gameState.map.tiles[ey][ex] !== TILE_TYPES.EMPTY || (ex === BASE_COORDINATES.x && ey === BASE_COORDINATES.y)); gameState.map.tiles[ey][ex] = { type: TILE_TYPES.ENEMY_DRONE, details: { name: "Drone Éclaireur", health: 30, maxHealth:30, attack: 8, defense: 2, color: '#a0aec0' } };}
-            let ux, uy; do { ux = Math.floor(Math.random() * MAP_SIZE.width); uy = Math.floor(Math.random() * MAP_SIZE.height); } while (gameState.map.tiles[uy][ux] !== TILE_TYPES.EMPTY || (ux === BASE_COORDINATES.x && uy === BASE_COORDINATES.y)); gameState.map.tiles[uy][ux] = { type: TILE_TYPES.UPGRADE_CACHE, reward: { biomass: 50, nanites: 25 } };
-            for (let i = 0; i < MAP_SIZE.width * MAP_SIZE.height * 0.1; i++) { let ix, iy; do { ix = Math.floor(Math.random() * MAP_SIZE.width); iy = Math.floor(Math.random() * MAP_SIZE.height); } while (gameState.map.tiles[iy][ix] !== TILE_TYPES.EMPTY || (ix === BASE_COORDINATES.x && iy === BASE_COORDINATES.y)); gameState.map.tiles[iy][ix] = TILE_TYPES.IMPASSABLE; }
-            gameState.nanobotMapPos = { ...BASE_COORDINATES };
-        }
-
-        function getTileDisplayClass(x, y) {
-            const isNanobotCurrentPos = gameState.map.nanobotPos.x === x && gameState.map.nanobotPos.y === y;
-            if (isNanobotCurrentPos) return 'nanobot';
-            if (!gameState.map.explored[y][x]) return 'unexplored';
-            const tileData = gameState.map.tiles[y][x]; let tileType = tileData;
-            if (typeof tileData === 'object' && tileData !== null) tileType = tileData.type;
-            switch (tileType) {
-                case TILE_TYPES.EMPTY: return 'explored'; case TILE_TYPES.BASE: return 'base';
-                case TILE_TYPES.RESOURCE_BIOMASS: return 'resource-biomass'; case TILE_TYPES.RESOURCE_NANITES: return 'resource-nanites';
-                case TILE_TYPES.ENEMY_DRONE: case TILE_TYPES.ENEMY_SAURIAN: return 'enemy';
-                case TILE_TYPES.UPGRADE_CACHE: return 'upgrade'; case TILE_TYPES.IMPASSABLE: return 'impassable';
-                default: return 'explored';
-            }
-        }
-        
-        function getTileInfo(x,y) {
-            if (!gameState.map.explored[y][x]) return "Zone non explorée.";
-            const tileData = gameState.map.tiles[y][x]; let tileType = tileData;
-            if (typeof tileData === 'object' && tileData !== null) tileType = tileData.type;
-            switch (tileType) {
-                case TILE_TYPES.EMPTY: return "Zone vide."; case TILE_TYPES.BASE: return "Noyau Central - Zone sécurisée.";
-                case TILE_TYPES.RESOURCE_BIOMASS: return `Dépôt de Biomasse (${tileData.amount}).`;
-                case TILE_TYPES.RESOURCE_NANITES: return `Fragments de Nanites (${tileData.amount}).`;
-                case TILE_TYPES.ENEMY_DRONE: return `Danger! ${tileData.details.name} détecté.`;
-                case TILE_TYPES.UPGRADE_CACHE: return "Cache de matériaux détectée.";
-                case TILE_TYPES.IMPASSABLE: return "Terrain infranchissable.";
-                default: return "Zone explorée.";
-            }
-        }
-
-        function updateExplorationDisplay() {
-            mapGridEl.innerHTML = ''; mapGridEl.style.gridTemplateColumns = `repeat(${MAP_SIZE.width}, 1fr)`;
-            for (let y = 0; y < MAP_SIZE.height; y++) {
-                for (let x = 0; x < MAP_SIZE.width; x++) {
-                    const tileDiv = document.createElement('div');
-                    tileDiv.classList.add('map-tile', getTileDisplayClass(x,y));
-                    tileDiv.dataset.x = x; tileDiv.dataset.y = y;
-                    tileDiv.addEventListener('click', () => handleTileClick(x, y));
-                    tileDiv.addEventListener('mouseover', () => { tileInfoDisplayEl.textContent = `(${x},${y}) ${getTileInfo(x,y)}`; });
-                    tileDiv.addEventListener('mouseout', () => { tileInfoDisplayEl.textContent = "Survolez une case explorée pour plus d'infos."; });
-                    mapGridEl.appendChild(tileDiv);
-                }
-            }
-            nanobotMapPosEl.textContent = `(${gameState.map.nanobotPos.x}, ${gameState.map.nanobotPos.y})`;
-        }
-
-        function handleTileClick(targetX, targetY) {
-            const currentX = gameState.map.nanobotPos.x; const currentY = gameState.map.nanobotPos.y;
-            const dx = Math.abs(targetX - currentX); const dy = Math.abs(targetY - currentY);
-            if ((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) { moveToTile(targetX, targetY); }
-            else if (dx === 0 && dy === 0) { addLogEntry("Nexus-7 est déjà sur cette position.", "info", eventLogEl); }
-            else { addLogEntry("Déplacement impossible: Cible trop éloignée.", "warning", eventLogEl); }
-        }
-
-        async function moveToTile(targetX, targetY) {
-            if (gameState.resources.energy < EXPLORATION_COST_ENERGY) { addLogEntry(`Énergie insuffisante (Requis: ${EXPLORATION_COST_ENERGY}).`, "error", eventLogEl); return; }
-            const targetTileData = gameState.map.tiles[targetY][targetX]; let targetTileType = targetTileData;
-            if (typeof targetTileData === 'object' && targetTileData !== null) targetTileType = targetTileData.type;
-            if (targetTileType === TILE_TYPES.IMPASSABLE) { addLogEntry("Terrain infranchissable.", "warning", eventLogEl); if (!gameState.map.explored[targetY][targetX]) { gameState.map.explored[targetY][targetX] = true; updateExplorationDisplay(); } return; }
-            gameState.resources.energy -= EXPLORATION_COST_ENERGY;
-            gameState.map.nanobotPos.x = targetX; gameState.map.nanobotPos.y = targetY;
-            const newTileWasUnexplored = !gameState.map.explored[targetY][targetX];
-            gameState.map.explored[targetY][targetX] = true;
-            addLogEntry(`Déplacement vers (${targetX},${targetY}). Énergie: -${EXPLORATION_COST_ENERGY}.`, "info", eventLogEl);
-            if (newTileWasUnexplored) { addLogEntry(`Nouvelle zone découverte!`, "success", eventLogEl); }
-            updateExplorationDisplay(); updateResourceDisplay();
-            await triggerTileEvent(targetX, targetY);
-        }
-
-        async function triggerTileEvent(x, y) {
-            const tileData = gameState.map.tiles[y][x]; let tileType = tileData;
-            if (typeof tileData === 'object' && tileData !== null) tileType = tileData.type;
-            switch (tileType) {
-                case TILE_TYPES.RESOURCE_BIOMASS: gameState.resources.biomass += tileData.amount; addLogEntry(`Biomasse trouvée (+${tileData.amount})!`, "success", eventLogEl); gameState.map.tiles[y][x] = TILE_TYPES.EMPTY; break;
-                case TILE_TYPES.RESOURCE_NANITES: gameState.resources.nanites += tileData.amount; addLogEntry(`Nanites trouvés (+${tileData.amount})!`, "success", eventLogEl); gameState.map.tiles[y][x] = TILE_TYPES.EMPTY; break;
-                case TILE_TYPES.ENEMY_DRONE: case TILE_TYPES.ENEMY_SAURIAN: addLogEntry(`Danger! ${tileData.details.name} rencontré!`, "warning", eventLogEl); gameState.map.currentEnemyEncounter = { x, y, details: tileData.details }; await simulateCombat(tileData.details); break;
-                case TILE_TYPES.UPGRADE_CACHE: const reward = tileData.reward; if (reward.biomass) gameState.resources.biomass += reward.biomass; if (reward.nanites) gameState.resources.nanites += reward.nanites; addLogEntry(`Cache ouverte! +${reward.biomass || 0} Biomasse, +${reward.nanites || 0} Nanites.`, "success", eventLogEl); gameState.map.tiles[y][x] = TILE_TYPES.EMPTY; break;
-                case TILE_TYPES.BASE: addLogEntry("Retour au Noyau Central.", "info", eventLogEl); if (gameState.nanobotStats.currentHealth < gameState.nanobotStats.health) { gameState.nanobotStats.currentHealth = Math.min(gameState.nanobotStats.health, gameState.nanobotStats.currentHealth + Math.ceil(gameState.nanobotStats.health * 0.1)); addLogEntry("Réparation partielle.", "info", eventLogEl); updateNanobotDisplay(); } break;
-            }
-            updateResourceDisplay(); updateExplorationDisplay();
-        }
-
-        // --- Combat Visualisation Functions ---
-        function setupCombatVisuals(nanobot, enemy) { 
-            combatModalEl.classList.remove('hidden'); 
-            combatLogVisualEl.innerHTML = '<p class="text-gray-400">Préparation du combat...</p>';
-            combatNanobotHealthbar.style.width = '100%'; combatNanobotHealthbar.classList.remove('low');
-            combatNanobotSprite.innerHTML = ''; 
-            gameState.activeModules.forEach(moduleId => { 
-                const moduleData = nanobotModulesData[moduleId]; 
-                if (moduleData) { 
-                    if (moduleData.visualClass) { const visualEl = document.createElement('div'); visualEl.className = `nanobot-module ${moduleData.visualClass}`; combatNanobotSprite.appendChild(visualEl); } 
-                    else if (moduleData.visualClasses) { moduleData.visualClasses.forEach(className => { const visualEl = document.createElement('div'); visualEl.className = `nanobot-module ${className}`; combatNanobotSprite.appendChild(visualEl); }); } 
-                } 
-            });
-            combatEnemyNameEl.textContent = enemy.name; 
-            combatEnemyHealthbar.style.width = '100%'; combatEnemyHealthbar.classList.remove('low');
-            combatEnemySprite.style.backgroundColor = enemy.color || '#c53030';
-        }
-        function updateCombatantHealthVisual(combatantElementId, currentHealth, maxHealth) { const healthBar = document.getElementById(`${combatantElementId}-healthbar`); const percentage = Math.max(0, (currentHealth / maxHealth) * 100); healthBar.style.width = `${percentage}%`; if (percentage < 30) healthBar.classList.add('low'); else healthBar.classList.remove('low'); }
-        async function showDamageFloat(targetElement, damage) { const damageEl = document.createElement('div'); damageEl.className = 'damage-float'; damageEl.textContent = `-${damage}`; targetElement.appendChild(damageEl); await sleep(1000); damageEl.remove(); }
-        async function animateAttack(attackerElement, targetElement, isNanobotAttacking) { const originalTransform = attackerElement.style.transform; const direction = isNanobotAttacking ? 1 : -1; attackerElement.style.transform = `translateX(${20 * direction}px) scale(1.05)`; targetElement.style.filter = 'brightness(1.5) saturate(2)'; await sleep(COMBAT_ANIMATION_DELAY / 2); attackerElement.style.transform = originalTransform; targetElement.style.filter = 'none'; await sleep(COMBAT_ANIMATION_DELAY / 2); }
-        
-        async function simulateCombat(enemyDetails) {
-            if (gameState.nanobotStats.currentHealth <= 0) { addLogEntry("Nexus-7 hors combat.", "error", combatLogSummaryEl, gameState.combatLogSummary); return; }
-            const enemy = { ...enemyDetails }; enemy.currentHealth = enemy.health;
-            setupCombatVisuals(gameState.nanobotStats, enemy);
-            addLogEntry(`Affrontement avec ${enemy.name}!`, "combat-visual", combatLogVisualEl, null);
-            await sleep(COMBAT_ANIMATION_DELAY);
-            let combatRound = 0; closeCombatModalBtn.disabled = true; let combatEnded = false;
-            while (gameState.nanobotStats.currentHealth > 0 && enemy.currentHealth > 0 && combatRound < 10) {
-                combatRound++; addLogEntry(`--- Round ${combatRound} ---`, "combat-visual", combatLogVisualEl, null);
-                // Nexus-7 attaque
-                addLogEntry("Nexus-7 attaque...", "combat-visual", combatLogVisualEl, null); await animateAttack(document.getElementById('combat-nanobot'), document.getElementById('combat-enemy'), true);
-                let damageToEnemy = Math.max(1, gameState.nanobotStats.attack - enemy.defense); enemy.currentHealth -= damageToEnemy;
-                await showDamageFloat(document.getElementById('combat-enemy'), damageToEnemy); updateCombatantHealthVisual('combat-enemy', enemy.currentHealth, enemy.maxHealth);
-                addLogEntry(`Nexus-7 inflige ${damageToEnemy} dégâts. PV ${enemy.name}: ${Math.max(0, enemy.currentHealth)}`, "combat-visual", combatLogVisualEl, null); addLogEntry(`Nexus-7 inflige ${damageToEnemy} à ${enemy.name}.`, "combat", combatLogSummaryEl, gameState.combatLogSummary);
-                await sleep(COMBAT_ANIMATION_DELAY);
-                if (enemy.currentHealth <= 0) {
-                    addLogEntry(`${enemy.name} détruit! Victoire!`, "success", combatLogVisualEl, null); addLogEntry(`${enemy.name} détruit! Victoire!`, "success", combatLogSummaryEl, gameState.combatLogSummary);
-                    gameState.resources.biomass += (enemy.attack * 2); gameState.resources.nanites += enemy.defense; addLogEntry(`+${enemy.attack*2} Biomasse, +${enemy.defense} Nanites.`, "success", combatLogSummaryEl, gameState.combatLogSummary);
-                    if (gameState.map.currentEnemyEncounter) { const {x, y} = gameState.map.currentEnemyEncounter; gameState.map.tiles[y][x] = TILE_TYPES.EMPTY; }
-                    combatEnded = true; break;
-                }
-                // Ennemi attaque
-                addLogEntry(`${enemy.name} attaque...`, "combat-visual", combatLogVisualEl, null); await animateAttack(document.getElementById('combat-enemy'), document.getElementById('combat-nanobot'), false);
-                let damageToNanobot = Math.max(1, enemy.attack - gameState.nanobotStats.defense); gameState.nanobotStats.currentHealth -= damageToNanobot;
-                await showDamageFloat(document.getElementById('combat-nanobot'), damageToNanobot); updateCombatantHealthVisual('combat-nanobot', gameState.nanobotStats.currentHealth, gameState.nanobotStats.health);
-                addLogEntry(`${enemy.name} inflige ${damageToNanobot} dégâts. PV Nexus-7: ${Math.max(0, gameState.nanobotStats.currentHealth)}`, "combat-visual", combatLogVisualEl, null); addLogEntry(`${enemy.name} inflige ${damageToNanobot} à Nexus-7.`, "combat", combatLogSummaryEl, gameState.combatLogSummary);
-                await sleep(COMBAT_ANIMATION_DELAY);
-                if (gameState.nanobotStats.currentHealth <= 0) {
-                    gameState.nanobotStats.currentHealth = 0; addLogEntry("Nexus-7 vaincu... Retour à la base!", "error", combatLogVisualEl, null); addLogEntry("Nexus-7 vaincu... Retour à la base.", "error", combatLogSummaryEl, gameState.combatLogSummary);
-                    gameState.map.nanobotPos = { ...BASE_COORDINATES }; gameState.nanobotStats.currentHealth = Math.max(1, Math.floor(gameState.nanobotStats.health * 0.1));
-                    addLogEntry("Systèmes critiques. Réparation à la base.", "error", eventLogEl);
-                    combatEnded = true; break;
-                }
-            }
-            if (!combatEnded && combatRound >= 10) { addLogEntry("Combat indécis. Retraite.", "warning", combatLogVisualEl, null); addLogEntry("Combat indécis.", "warning", combatLogSummaryEl, gameState.combatLogSummary); }
-            closeCombatModalBtn.disabled = false; gameState.map.currentEnemyEncounter = null;
-            calculateNanobotStats(); updateDisplays();
-        }
-        simulateCombatBtn.addEventListener('click', () => { const testEnemy = { name: "Drone d'Entraînement", health: 40, maxHealth:40, attack: 10, defense: 3, color: '#4299e1' }; simulateCombat(testEnemy); });
-        closeCombatModalBtn.addEventListener('click', () => { combatModalEl.classList.add('hidden'); updateExplorationDisplay(); });
-
-        // --- Boucle de Jeu Principale ---
-        function gameLoop() { 
-            if (gameState.resources.energy <= gameState.capacity.energy) { gameState.resources.biomass += gameState.productionRates.biomass * (TICK_SPEED / 1000); gameState.resources.nanites += gameState.productionRates.nanites * (TICK_SPEED / 1000); } 
-            if (activeResearch) { const research = researchData[activeResearch.id]; if (gameState.gameTime - activeResearch.startTime >= activeResearch.totalTime) { gameState.research[activeResearch.id] = true; addLogEntry(`Tech ${research.name} acquise!`, "success"); if (research.grantsModule || research.grantsStatBoost) calculateNanobotStats(); activeResearch = null; } } 
-            updateGameTimeAndCycle(); updateDisplays(); saveGame(); 
-        }
-
-        // --- Initialisation et Tabs ---
-        function init() {
-    
-if (!gameState.inventory) gameState.inventory = [];
-
-            for (const id in buildingsData) if (!gameState.buildings[id]) gameState.buildings[id] = 0;
-            loadGame(); 
-            if (!gameState.map.tiles || gameState.map.tiles.length === 0) { generateMap(); } // Ensure map is generated if not loaded
-            calculateProductionAndConsumption(); calculateNanobotStats();
-            updateDisplays(); 
-            
-            eventLogEl.innerHTML = '<h3 class="font-semibold mb-2 text-gray-300">Journal des événements :</h3>'; gameState.eventLog.forEach(msg => { const e = document.createElement('p'); e.innerHTML = msg; eventLogEl.appendChild(e); }); eventLogEl.scrollTop = eventLogEl.scrollHeight;
-            combatLogSummaryEl.innerHTML = '<h4 class="font-semibold mb-1 text-gray-300">Résumé Combat :</h4>'; gameState.combatLogSummary.forEach(msg => { const e = document.createElement('p'); e.innerHTML = msg; combatLogSummaryEl.appendChild(e); }); combatLogSummaryEl.scrollTop = combatLogSummaryEl.scrollHeight;
-
-            let tabs = [ { btn: tabOverview, content: overviewContent }, { btn: tabResearch, content: researchContentEl }, { btn: tabNanobot, content: nanobotContentEl }, { btn: tabExploration, content: explorationContentEl } ];
-            tabs.forEach(tabInfo => {
-                tabInfo.btn.addEventListener('click', () => {
-                    tabs.forEach(t => { t.content.classList.add('hidden'); t.btn.classList.remove('border-blue-400', 'text-blue-300'); t.btn.classList.add('text-gray-500'); });
-                    tabInfo.content.classList.remove('hidden'); tabInfo.btn.classList.add('border-blue-400', 'text-blue-300'); tabInfo.btn.classList.remove('text-gray-500');
-                    if (tabInfo.btn === tabExploration) updateExplorationDisplay(); 
-                });
-            });
-            
-const tabInventory = document.getElementById('tab-inventory');
-const inventoryContentEl = document.getElementById('inventory-content');
-tabs.push({ btn: tabInventory, content: inventoryContentEl });
-
-    tabOverview.click(); 
-            setInterval(gameLoop, TICK_SPEED);
-        }
-        
-        // --- Sauvegarde / Chargement ---
-        function saveGame() { try { localStorage.setItem('nexus7GameState_v0.4.1', JSON.stringify(gameState)); } catch (e) { console.error("Err Sauvegarde: ", e); addLogEntry("Err Sauvegarde Locale.", "error"); } }
-        function loadGame() {
-            const savedGame = localStorage.getItem('nexus7GameState_v0.4.1'); // Updated save key
-            if (savedGame) {
-                try {
-                    const loadedState = JSON.parse(savedGame);
-                    for (const key in loadedState) {
-                        if (loadedState.hasOwnProperty(key)) {
-                            if (typeof loadedState[key] === 'object' && loadedState[key] !== null && !Array.isArray(loadedState[key]) && gameState.hasOwnProperty(key) && typeof gameState[key] === 'object' && gameState[key] !== null && !Array.isArray(gameState[key])) {
-                                gameState[key] = { ...gameState[key], ...loadedState[key] }; 
-                                if (key === 'map' && loadedState.map) { 
-                                     gameState.map.tiles = loadedState.map.tiles || [];
-                                     gameState.map.explored = loadedState.map.explored || [];
-                                     gameState.map.nanobotPos = loadedState.map.nanobotPos || {...BASE_COORDINATES};
-                                }
-                            } else { gameState[key] = loadedState[key]; }
-                        }
-                    }
-                    if (!gameState.map) gameState.map = { tiles: [], explored: [], nanobotPos: { ...BASE_COORDINATES }, currentEnemyEncounter: null };
-                    if (!gameState.nanobotStats) gameState.nanobotStats = { baseHealth: 100, currentHealth: 100, baseAttack: 10, baseDefense: 5, baseSpeed:10, health: 100, attack: 10, defense: 5, speed:10 };
-                    if (!gameState.activeModules) gameState.activeModules = [];
-                    if (!gameState.combatLogSummary) gameState.combatLogSummary = ["Journal de combat initialisé."];
-                    for (const id in buildingsData) if (gameState.buildings[id] === undefined) gameState.buildings[id] = 0;
-                    for (const id in researchData) if (gameState.research[id] === undefined) gameState.research[id] = false;
-                    addLogEntry("Partie chargée (v0.4.1).", "info");
-                } catch(e) { console.error("Err Chargement: ", e); addLogEntry("Sauvegarde corrompue (v0.4.1). Nouvelle partie.", "error"); localStorage.removeItem('nexus7GameState_v0.4.1'); /* generateMap(); implicit via init logic */ }
-            } 
-            // Map generation will be handled in init if needed after load attempt
-        }
-        window.onload = init;
-    
-let combatSpeedMultiplier = 1;
-document.getElementById('toggle-speed-btn').addEventListener('click', () => {
-    combatSpeedMultiplier = (combatSpeedMultiplier === 1) ? 3 : 1;
-    document.getElementById('toggle-speed-btn').textContent = combatSpeedMultiplier === 1 ? "Vitesse x3" : "Vitesse x1";
-});
-
-document.getElementById('close-end-modal').addEventListener('click', () => {
-    document.getElementById('combat-end-modal').classList.add('hidden');
-});
-
-// Patch de simulateCombat pour montrer le modal de fin
-const originalSimulateCombat = simulateCombat;
-simulateCombat = async function(enemyDetails) {
-    await originalSimulateCombat(enemyDetails);
-    if (enemyDetails && gameState.nanobotStats.currentHealth > 0) {
-        const rewards = `+${enemyDetails.attack * 2} Biomasse<br>+${enemyDetails.defense} Nanites`;
-        document.getElementById('combat-end-rewards').innerHTML = rewards;
-        document.getElementById('combat-end-modal').classList.remove('hidden');
-    }
-}
-
-// Appliquer multiplicateur de vitesse au délai de combat
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms / combatSpeedMultiplier));
-}
-
-
-// XP & Loot
-if (!gameState.nanobotStats.level) {
-    gameState.nanobotStats.level = 1;
-    gameState.nanobotStats.xp = 0;
-    gameState.nanobotStats.xpToNext = 100;
-}
-
-function gainXP(amount) {
-    let stats = gameState.nanobotStats;
-    stats.xp += amount;
-    while (stats.xp >= stats.xpToNext) {
-        stats.xp -= stats.xpToNext;
-        stats.level++;
-        stats.xpToNext = Math.floor(stats.xpToNext * 1.5);
-        addLogEntry("Niveau atteint: " + stats.level, "success", combatLogSummaryEl, gameState.combatLogSummary);
-        stats.baseAttack += 2;
-        stats.baseDefense += 1;
-        stats.baseHealth += 10;
-    }
-    const percent = (stats.xp / stats.xpToNext) * 100;
-    document.getElementById("xp-bar").style.width = percent + "%";
-    document.getElementById("xp-gain").textContent = `+${amount} XP (Niv. ${stats.level})`;
-}
-
-// Loot générique
-function generateLoot() {
-    const possibleLoot = ["Composant Avancé", "Cristal de Stockage", "Module Prototypé", "Fragment Alien"];
-    let results = [];
-    if (Math.random() < 0.5) results.push(possibleLoot[Math.floor(Math.random() * possibleLoot.length)]);
-    if (Math.random() < 0.2) results.push("Artefact Rare");
-    return results;
-}
-
-simulateCombat = async function(enemyDetails) {
-    await originalSimulateCombat(enemyDetails);
-    if (enemyDetails && gameState.nanobotStats.currentHealth > 0) {
-        const rewards = `+${enemyDetails.attack * 2} Biomasse<br>+${enemyDetails.defense} Nanites`;
-        document.getElementById('combat-end-rewards').innerHTML = rewards;
-        document.getElementById('combat-end-modal').classList.remove('hidden');
-
-        // XP et Loot
-        const xpGain = Math.floor(enemyDetails.attack + enemyDetails.defense);
-        gainXP(xpGain);
-        const loot = generateLoot();
-        const lootList = document.getElementById("loot-list");
-        lootList.innerHTML = "";
-        loot.forEach(item => {
-            addToInventory(item);
-            const li = document.createElement("li");
-            li.textContent = "🎁 " + item;
-            lootList.appendChild(li);
-        });
-    }
-}
-
-
-// Gestion de l'inventaire
-function addToInventory(item) {
-    gameState.inventory.push(item);
-    updateInventoryDisplay();
-}
-
-function updateInventoryDisplay() {
-    const list = document.getElementById("inventory-list");
-    if (!list) return;
-    list.innerHTML = "";
-    gameState.inventory.forEach((item, index) => {
-        const li = document.createElement("li");
-        li.textContent = `• ${item}`;
-        list.appendChild(li);
-    });
-}
-
-</script>
-
-<div id="combat-end-modal" class="modal hidden">
-    <div class="modal-content text-center">
-        <h3 class="font-orbitron text-lg mb-4 text-green-300">Victoire !</h3>
-        <p id="combat-end-rewards" class="mb-2 text-sm">+50 Biomasse<br>+20 Nanites</p>
-        
-<h4 class="text-blue-300 mt-4 mb-1 font-orbitron">XP & Niveau</h4>
-<p id="xp-gain" class="text-sm mb-2">+0 XP</p>
-<div class="w-full bg-gray-700 rounded-full h-2.5 mb-2">
-    <div id="xp-bar" class="bg-blue-500 h-2.5 rounded-full" style="width: 0%"></div>
-</div>
-<h4 class="text-yellow-300 mt-4 mb-1 font-orbitron">Butin</h4>
-<ul id="loot-list" class="text-sm text-gray-300"></ul>
-
-<button id="close-end-modal" class="btn btn-primary">Fermer</button>
-    </div>
-</div>
-
+         
+<!-- Référence au fichier JavaScript externe -->
+    <script src="game_logic.js" defer></script>
 </body>
 </html>
+
+    
