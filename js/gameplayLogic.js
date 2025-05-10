@@ -1,6 +1,106 @@
-// js/gameplayLogic.js
+// js/gameplayLogic.js (suite)
 
-function calculateNanobotStats() { const stats = gameState.nanobotStats; stats.health = stats.baseHealth; stats.attack = stats.baseAttack; stats.defense = stats.baseDefense; stats.speed = stats.baseSpeed; gameState.activeModules = []; for (const researchId in gameState.research) { if (gameState.research[researchId] && researchData[researchId]) { const resData = researchData[researchId]; if (resData.grantsStatBoost) { for (const stat in resData.grantsStatBoost) { stats[stat] = (stats[stat] || 0) + resData.grantsStatBoost[stat]; } } if (resData.grantsModule && !gameState.activeModules.includes(resData.grantsModule)) { gameState.activeModules.push(resData.grantsModule); } } } for (const buildingId in gameState.buildings) { const level = gameState.buildings[buildingId]; if (level > 0) { const buildingDef = buildingsData[buildingId]; const levelData = buildingDef.levels[level-1]; if (levelData.grantsModule && nanobotModulesData[levelData.grantsModule] && !gameState.activeModules.includes(levelData.grantsModule)) { gameState.activeModules.push(levelData.grantsModule); } } } gameState.activeModules.forEach(moduleId => { const moduleData = nanobotModulesData[moduleId]; if (moduleData && moduleData.statBoost) { for (const stat in moduleData.statBoost) { stats[stat] = (stats[stat] || 0) + moduleData.statBoost[stat]; } } }); for (const slot in gameState.nanobotEquipment) { const itemId = gameState.nanobotEquipment[slot]; if (itemId && itemsData[itemId] && itemsData[itemId].statBoost) { const itemBoosts = itemsData[itemId].statBoost; for (const stat in itemBoosts) { stats[stat] = (stats[stat] || 0) + itemBoosts[stat]; } } } stats.currentHealth = Math.min(stats.currentHealth, stats.health); if (stats.currentHealth < 0) stats.currentHealth = 0; }
+function calculateNanobotStats() { 
+    const stats = gameState.nanobotStats; 
+    stats.health = stats.baseHealth; 
+    stats.attack = stats.baseAttack; 
+    stats.defense = stats.baseDefense; 
+    stats.speed = stats.baseSpeed; 
+
+    for (const researchId in gameState.research) { 
+        if (gameState.research[researchId] && researchData[researchId]) { 
+            const resData = researchData[researchId]; 
+            if (resData.grantsStatBoost) { 
+                for (const stat in resData.grantsStatBoost) { 
+                    stats[stat] = (stats[stat] || 0) + resData.grantsStatBoost[stat]; 
+                } 
+            } 
+        } 
+    } 
+    
+    for (const moduleId in gameState.nanobotModuleLevels) {
+        const currentLevel = gameState.nanobotModuleLevels[moduleId];
+        if (currentLevel > 0) {
+            const moduleData = nanobotModulesData[moduleId];
+            if (moduleData && moduleData.levels && moduleData.levels[currentLevel - 1]) {
+                const levelStats = moduleData.levels[currentLevel - 1].statBoost;
+                if (levelStats) {
+                    for (const stat in levelStats) {
+                        stats[stat] = (stats[stat] || 0) + levelStats[stat];
+                    }
+                }
+            }
+        }
+    }
+    
+    for (const slot in gameState.nanobotEquipment) { 
+        const itemId = gameState.nanobotEquipment[slot]; 
+        if (itemId && itemsData[itemId] && itemsData[itemId].statBoost) { 
+            const itemBoosts = itemsData[itemId].statBoost; 
+            for (const stat in itemBoosts) { 
+                stats[stat] = (stats[stat] || 0) + itemBoosts[stat]; 
+            } 
+        } 
+    } 
+
+    stats.currentHealth = Math.min(stats.currentHealth, stats.health); 
+    if (stats.currentHealth < 0) stats.currentHealth = 0; 
+}
+
+function upgradeNanobotModule(moduleId) {
+    const moduleData = nanobotModulesData[moduleId];
+    if (!moduleData) { addLogEntry("Module inconnu.", "error"); return; }
+
+    let currentLevel = gameState.nanobotModuleLevels[moduleId] || 0;
+    
+    if (moduleData.replaces && gameState.nanobotModuleLevels[moduleData.id] > 0) {
+         const replacedModuleData = nanobotModulesData[moduleData.replaces];
+         if (replacedModuleData && gameState.nanobotModuleLevels[moduleData.replaces] > 0){
+           addLogEntry(`Impossible d'améliorer ${replacedModuleData.name}, il est remplacé par ${moduleData.name}.`, "warning");
+           return; // This might be too restrictive, review logic if needed
+        }
+    }
+    for (const checkId in nanobotModulesData) { 
+        if (nanobotModulesData[checkId].replaces === moduleId && gameState.nanobotModuleLevels[checkId] > 0) { 
+            addLogEntry(`Impossible d'améliorer ${moduleData.name}, il est déjà remplacé par ${nanobotModulesData[checkId].name}.`, "warning"); 
+            return; 
+        } 
+    }
+
+
+    if (currentLevel >= moduleData.levels.length) { addLogEntry(`${moduleData.name} est déjà au niveau maximum.`, "info"); return; }
+
+    const costData = currentLevel === 0 ? moduleData.levels[0].costToUnlockOrUpgrade : moduleData.levels[currentLevel].costToUpgrade;
+    
+    for(const resourceId in costData) {
+        const requiredAmount = costData[resourceId];
+        if (itemsData[resourceId]) { 
+            const countInInventory = gameState.inventory.filter(itemId => itemId === resourceId).length;
+            if (countInInventory < requiredAmount) { addLogEntry(`Manque de ${itemsData[resourceId].name} (x${requiredAmount}) pour ${moduleData.name}.`, "error"); return; }
+        } else { 
+            if (gameState.resources[resourceId] < requiredAmount) { addLogEntry(`Ressources insuffisantes (${resourceId}) pour ${moduleData.name}.`, "error"); return; }
+        }
+    }
+
+    for(const resourceId in costData) {
+        const paidAmount = costData[resourceId];
+        if (itemsData[resourceId]) { for (let i = 0; i < paidAmount; i++) { removeFromInventory(resourceId); }
+        } else { gameState.resources[resourceId] -= paidAmount; }
+    }
+    
+    if (moduleData.replaces && gameState.nanobotModuleLevels[moduleData.replaces]) {
+        const replacedModuleId = moduleData.replaces;
+        addLogEntry(`${nanobotModulesData[replacedModuleId].name} désactivé et remplacé par ${moduleData.name}.`, "info");
+        delete gameState.nanobotModuleLevels[replacedModuleId]; 
+    }
+
+    gameState.nanobotModuleLevels[moduleId] = currentLevel + 1;
+    const actionText = currentLevel === 0 ? "activé/fabriqué" : "amélioré";
+    addLogEntry(`${moduleData.name} ${actionText} au Niveau ${currentLevel + 1}!`, "success");
+
+    calculateNanobotStats();
+    updateDisplays();
+}
 
 function calculateBaseStats() {
     let maxHealth = BASE_INITIAL_HEALTH; let defensePower = 0;
@@ -17,33 +117,24 @@ function calculateBaseStats() {
     gameState.baseStats.currentHealth = Math.min(gameState.baseStats.currentHealth, gameState.baseStats.maxHealth);
     if (gameState.baseStats.currentHealth <= 0 && gameState.baseStats.maxHealth > 0) { gameState.baseStats.currentHealth = 0; }
 }
-
 function calculateProductionAndConsumption() { gameState.productionRates.biomass = 0; gameState.productionRates.nanites = 0; let totalEnergyConsumption = 0; for (const buildingId in gameState.buildings) { const level = gameState.buildings[buildingId]; if (level > 0) { const buildingDef = buildingsData[buildingId]; const levelData = buildingDef.levels[level - 1]; if (buildingDef.type === "production") { if (levelData.production) { if (levelData.production.biomass) gameState.productionRates.biomass += levelData.production.biomass; if (levelData.production.nanites) gameState.productionRates.nanites += levelData.production.nanites; } } if (levelData.energyConsumption) totalEnergyConsumption += levelData.energyConsumption; } } gameState.capacity.energy = 50; const powerPlantLevel = gameState.buildings['powerPlant'] || 0; if (powerPlantLevel > 0) { gameState.capacity.energy += buildingsData['powerPlant'].levels[powerPlantLevel - 1].capacity.energy; } if (!gameState.isDay) { gameState.productionRates.biomass *= 0.7; gameState.productionRates.nanites *= 0.7; } gameState.resources.energy = totalEnergyConsumption; if (totalEnergyConsumption > gameState.capacity.energy) { const deficitFactor = gameState.capacity.energy > 0 ? gameState.capacity.energy / totalEnergyConsumption : 0; gameState.productionRates.biomass *= deficitFactor; gameState.productionRates.nanites *= deficitFactor; if (Math.random() < 0.1) addLogEntry("Surcharge énergétique! Production et défenses réduites.", "error"); gameState.baseStats.defensePower = Math.floor(gameState.baseStats.defensePower * deficitFactor); } }
-
-function build(buildingId) { const building = buildingsData[buildingId]; const currentLevel = gameState.buildings[buildingId] || 0; if (currentLevel >= building.levels.length) { addLogEntry(`${building.name} est au niveau maximum.`, "info"); return; } const nextLevelData = building.levels[currentLevel]; for (const resource in nextLevelData.cost) { if (gameState.resources[resource] < nextLevelData.cost[resource]) { addLogEntry(`Ressources insuffisantes pour ${building.name}. Requis: ${nextLevelData.cost[resource]} ${resource}.`, "error"); return; } } const title = building.type === 'defense' ? `Construire/Améliorer ${building.name}?` : `Améliorer ${building.name}?`; showModal(title, `Passer ${building.name} au Niveau ${currentLevel + 1}?`, () => { for (const resource in nextLevelData.cost) gameState.resources[resource] -= nextLevelData.cost[resource]; gameState.buildings[buildingId] = currentLevel + 1; addLogEntry(`${building.name} ${building.type === 'defense' && currentLevel === 0 ? 'construit(e)' : 'amélioré(e)'} au Niveau ${currentLevel + 1}.`, "success"); if (nextLevelData.grantsModule) calculateNanobotStats(); if (building.type === 'defense') { if (nextLevelData.stats){ gameState.defenses[buildingId] = { id: buildingId, name: building.name, level: currentLevel + 1, currentHealth: nextLevelData.stats.health, maxHealth: nextLevelData.stats.health, attack: nextLevelData.stats.attack }; } calculateBaseStats(); } calculateProductionAndConsumption(); updateDisplays(); }); }
-
+function build(buildingId) { const building = buildingsData[buildingId]; const currentLevel = gameState.buildings[buildingId] || 0; if (currentLevel >= building.levels.length) { addLogEntry(`${building.name} est au niveau maximum.`, "info"); return; } const nextLevelData = building.levels[currentLevel]; for (const resource in nextLevelData.cost) { if (gameState.resources[resource] < nextLevelData.cost[resource]) { addLogEntry(`Ressources insuffisantes pour ${building.name}. Requis: ${nextLevelData.cost[resource]} ${resource}.`, "error"); return; } } const title = building.type === 'defense' ? `Construire/Améliorer ${building.name}?` : `Améliorer ${building.name}?`; showModal(title, `Passer ${building.name} au Niveau ${currentLevel + 1}?`, () => { for (const resource in nextLevelData.cost) gameState.resources[resource] -= nextLevelData.cost[resource]; gameState.buildings[buildingId] = currentLevel + 1; addLogEntry(`${building.name} ${building.type === 'defense' && currentLevel === 0 ? 'construit(e)' : 'amélioré(e)'} au Niveau ${currentLevel + 1}.`, "success"); if (nextLevelData.grantsModule) calculateNanobotStats(); if (building.type === 'defense') { if (nextLevelData.stats){ const existingDefense = gameState.defenses[buildingId]; let currentHealthForNewLevel = nextLevelData.stats.health; if (existingDefense && existingDefense.level < (currentLevel + 1) && existingDefense.currentHealth > 0) { currentHealthForNewLevel = Math.min(nextLevelData.stats.health, Math.floor((existingDefense.currentHealth / existingDefense.maxHealth) * nextLevelData.stats.health));} gameState.defenses[buildingId] = { id: buildingId, name: building.name, level: currentLevel + 1, currentHealth: currentHealthForNewLevel, maxHealth: nextLevelData.stats.health, attack: nextLevelData.stats.attack }; } calculateBaseStats(); } calculateProductionAndConsumption(); updateDisplays(); }); }
 function startResearch(researchId) { if (activeResearch) { addLogEntry("Recherche en cours.", "info"); return; } if (gameState.research[researchId]) { addLogEntry("Technologie acquise.", "info"); return; } const research = researchData[researchId]; let labLevel = gameState.buildings['researchLab'] || 0; let researchSpeedFactor = labLevel > 0 ? buildingsData['researchLab'].levels[labLevel - 1].researchSpeedFactor : 0.5; for (const resource in research.cost) { if (gameState.resources[resource] < research.cost[resource]) { addLogEntry(`Ressources insuffisantes: ${research.name}.`, "error"); return; } } showModal(`Lancer ${research.name}?`, `Coût & Temps adaptés.`, () => { for (const resource in research.cost) gameState.resources[resource] -= research.cost[resource]; activeResearch = { id: researchId, startTime: gameState.gameTime, totalTime: research.time / researchSpeedFactor }; addLogEntry(`Recherche ${research.name} initiée.`, "success"); updateDisplays(); });}
-
 function repairBase(amount = 10) { if (gameState.baseStats.currentHealth >= gameState.baseStats.maxHealth) { addLogEntry("Le Noyau est déjà à son intégrité maximale.", "info"); return; } const healthToRestore = Math.min(amount, gameState.baseStats.maxHealth - gameState.baseStats.currentHealth); const costBiomass = healthToRestore * REPAIR_COST_BASE_HEALTH_BIOMASS; const costNanites = healthToRestore * REPAIR_COST_BASE_HEALTH_NANITES; if (gameState.resources.biomass < costBiomass || gameState.resources.nanites < costNanites) { addLogEntry(`Ressources insuffisantes pour réparer le Noyau. Requis: ${costBiomass} Biomasse, ${costNanites} Nanites.`, "error"); return; } gameState.resources.biomass -= costBiomass; gameState.resources.nanites -= costNanites; gameState.baseStats.currentHealth += healthToRestore; addLogEntry(`Noyau réparé de ${healthToRestore} PV. (-${costBiomass} Bio, -${costNanites} Nan).`, "success"); updateResourceDisplay(); updateBaseStatusDisplay(); }
-
 function repairAllDefenses() { let totalBiomassCost = 0; let totalHealthRestored = 0; let defensesToRepair = []; for (const defId in gameState.defenses) { const defense = gameState.defenses[defId]; if (defense.currentHealth < defense.maxHealth) { const healthNeeded = defense.maxHealth - defense.currentHealth; defensesToRepair.push({ defId, healthNeeded }); totalBiomassCost += healthNeeded * REPAIR_COST_DEFENSE_HEALTH_BIOMASS; } } if (defensesToRepair.length === 0) { addLogEntry("Toutes les défenses sont opérationnelles.", "info"); return; } if (gameState.resources.biomass < totalBiomassCost) { addLogEntry(`Ressources insuffisantes pour réparer toutes les défenses. Requis: ${totalBiomassCost} Biomasse.`, "error"); return; } gameState.resources.biomass -= totalBiomassCost; defensesToRepair.forEach(item => { gameState.defenses[item.defId].currentHealth += item.healthNeeded; totalHealthRestored += item.healthNeeded; }); addLogEntry(`Toutes les défenses endommagées ont été réparées (+${totalHealthRestored} PV total). (-${totalBiomassCost} Bio).`, "success"); calculateBaseStats(); updateResourceDisplay(); updateBaseStatusDisplay(); }
-
 function toggleNanobotDefendBase() { gameState.nanobotStats.isDefendingBase = !gameState.nanobotStats.isDefendingBase; if (gameState.nanobotStats.isDefendingBase) { toggleNanobotDefendBaseBtn.textContent = "Désactiver Défense du Noyau"; toggleNanobotDefendBaseBtn.classList.remove('btn-secondary'); toggleNanobotDefendBaseBtn.classList.add('btn-warning'); addLogEntry("Nexus-7 en mode défense du Noyau. Retournez à la base pour être effectif.", "info"); if (gameState.map.nanobotPos.x === BASE_COORDINATES.x && gameState.map.nanobotPos.y === BASE_COORDINATES.y) { addLogEntry("Nexus-7 est positionné pour défendre le Noyau.", "success"); } } else { toggleNanobotDefendBaseBtn.textContent = "Activer Défense du Noyau"; toggleNanobotDefendBaseBtn.classList.add('btn-secondary'); toggleNanobotDefendBaseBtn.classList.remove('btn-warning'); addLogEntry("Nexus-7 n'est plus en mode défense active du Noyau.", "info"); } calculateBaseStats(); updateBaseStatusDisplay(); }
-
 function updateGameTimeAndCycle() { 
     gameState.gameTime++; 
     gameState.currentCycleTime += TICK_SPEED; 
     const currentCycleDuration = gameState.isDay ? DAY_DURATION : NIGHT_DURATION; 
     if (gameState.currentCycleTime >= currentCycleDuration) { 
-        forceCycleChange(true); // true pour indiquer que c'est un changement de cycle naturel
+        forceCycleChange(true); 
     } 
     gameTimeEl.textContent = formatTime(gameState.gameTime); 
     cycleStatusEl.textContent = `${gameState.isDay ? "Jour" : "Nuit"} (${formatTime(Math.floor((currentCycleDuration - gameState.currentCycleTime)/1000))})`; 
 }
-
 function forceCycleChange(isNaturalChange = false) {
     if (!isNaturalChange) {
-        // Vérifier le coût si ce n'est pas un changement naturel
         if (gameState.resources.biomass < FORCE_CYCLE_CHANGE_COST.biomass || gameState.resources.nanites < FORCE_CYCLE_CHANGE_COST.nanites) {
             addLogEntry(`Ressources insuffisantes pour forcer le cycle. Requis: ${FORCE_CYCLE_CHANGE_COST.biomass} Biomasse, ${FORCE_CYCLE_CHANGE_COST.nanites} Nanites.`, "error");
             return;
@@ -66,9 +157,7 @@ function forceCycleChange(isNaturalChange = false) {
     } 
     calculateProductionAndConsumption(); 
     calculateBaseStats(); 
-    // Mettre à jour l'affichage du temps restant pour le nouveau cycle (déjà fait par updateGameTimeAndCycle dans la gameLoop)
 }
-
 
 // --- Night Assault Logic ---
 function startNightAssault() {

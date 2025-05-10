@@ -1,10 +1,10 @@
 // js/config.js
+// alert("config.js chargé !"); // Pour tester
 
 // --- Configuration du Jeu ---
 const TICK_SPEED = 1000;
 const DAY_DURATION = 5 * 60 * 1000; 
 const NIGHT_DURATION = 3 * 60 * 1000; 
-// const DAY_DURATION = 30 * 1000; const NIGHT_DURATION = 45 * 1000; // DEV: Short cycles for testing night assault
 const COMBAT_ANIMATION_DELAY_BASE = 700; 
 const EXPLORATION_COST_ENERGY = 5;
 const MAP_SIZE = { width: 15, height: 10 };
@@ -18,7 +18,6 @@ const REPAIR_COST_BASE_HEALTH_NANITES = 1;
 const REPAIR_COST_DEFENSE_HEALTH_BIOMASS = 1;
 const FORCE_CYCLE_CHANGE_COST = { biomass: 100, nanites: 50 };
 
-
 // --- Définitions de Données ---
 const buildingsData = { 
     'biomassHarvester': { name: "Collecteur de Biomasse", type:"production", description: "Récolte la Biomasse.", levels: [ { cost: { biomass: 50 }, production: { biomass: 1 }, energyConsumption: 2 }, { cost: { biomass: 120, nanites: 20 }, production: { biomass: 3 }, energyConsumption: 4 } ] },
@@ -26,29 +25,14 @@ const buildingsData = {
     'powerPlant': { name: "Générateur d'Énergie", type:"utility", description: "Fournit de l'Énergie.", levels: [ { cost: { biomass: 60, nanites: 20 }, capacity: { energy: 50 } }, { cost: { biomass: 150, nanites: 50 }, capacity: { energy: 100 } } ] },
     'researchLab': { name: "Laboratoire de Recherche", type:"utility", description: "Débloque des technologies.", levels: [ { cost: { biomass: 100, nanites: 100 }, researchSpeedFactor: 1, energyConsumption: 10 }, { cost: { biomass: 250, nanites: 250 }, researchSpeedFactor: 1.5, energyConsumption: 15 } ] },
     'defenseFoundry': { name: "Fonderie Défensive", type:"utility", description: "Fabrique modules défensifs pour Nexus-7.", levels: [ { cost: { biomass: 200, nanites: 150 }, energyConsumption: 15, grantsModule: 'shieldGeneratorMk1' }, { cost: { biomass: 500, nanites: 400 }, energyConsumption: 25, grantsModule: 'shieldGeneratorMk2' }] },
-    'laserTurret': { 
-        name: "Tourelle Laser MkI", type: "defense", 
-        description: "Tourelle défensive automatisée à courte portée.", 
-        levels: [ 
-            { cost: { biomass: 100, nanites: 75 }, stats: { attack: 5, health: 100 }, energyConsumption: 5 }, 
-            { cost: { biomass: 250, nanites: 150 }, stats: { attack: 10, health: 180 }, energyConsumption: 8 },
-            { cost: { biomass: 500, nanites: 350 }, stats: { attack: 18, health: 300 }, energyConsumption: 12 }
-        ] 
-    },
-    'reinforcedWall': {
-        name: "Mur Renforcé", type: "defense",
-        description: "Augmente les points de vie maximum du Noyau.",
-        levels: [
-            { cost: { biomass: 150, nanites: 50 }, baseHealthBonus: 200, energyConsumption: 1 },
-            { cost: { biomass: 300, nanites: 120 }, baseHealthBonus: 450, energyConsumption: 2 }
-        ]
-    }
+    'laserTurret': { name: "Tourelle Laser MkI", type: "defense", description: "Tourelle défensive automatisée à courte portée.", levels: [ { cost: { biomass: 100, nanites: 75 }, stats: { attack: 5, health: 100 }, energyConsumption: 5 }, { cost: { biomass: 250, nanites: 150 }, stats: { attack: 10, health: 180 }, energyConsumption: 8 },{ cost: { biomass: 500, nanites: 350 }, stats: { attack: 18, health: 300 }, energyConsumption: 12 } ] },
+    'reinforcedWall': { name: "Mur Renforcé", type: "defense", description: "Augmente les points de vie maximum du Noyau.", levels: [ { cost: { biomass: 150, nanites: 50 }, baseHealthBonus: 200, energyConsumption: 1 }, { cost: { biomass: 300, nanites: 120 }, baseHealthBonus: 450, energyConsumption: 2 } ] }
 };
 const nanobotModulesData = { 
-    'armBlade': { name: "Lame de Bras", description: "Un bras transformable en lame tranchante.", statBoost: { attack: 5 }, visualClass: 'module-arm-blade' },
-    'gravLegs': { name: "Jambes Anti-Grav", description: "Permet un déplacement rapide et agile.", statBoost: { speed: 5, defense: 1 }, visualClasses: ['module-legs-antigrav left', 'module-legs-antigrav right'] },
-    'shieldGeneratorMk1': { name: "Bouclier Énergétique Mk1", description: "Génère un champ de force protecteur de base.", statBoost: { defense: 10, health: 20 }, visualClass: 'module-shield' },
-    'shieldGeneratorMk2': { name: "Bouclier Énergétique Mk2", description: "Génère un champ de force protecteur amélioré.", statBoost: { defense: 20, health: 50 }, visualClass: 'module-shield' }
+    'armBlade': { id: 'armBlade', name: "Lame de Bras", description: "Un bras transformable en lame tranchante.", visualClass: 'module-arm-blade', unlockMethod: { research: 'weaponizedNanites' }, levels: [ { level: 1, statBoost: { attack: 5 }, costToUnlockOrUpgrade: { nanites: 50, comp_av: 1 } }, { level: 2, statBoost: { attack: 8, speed: 1 }, costToUpgrade: { nanites: 100, comp_av: 2, mod_proto: 1 } }, { level: 3, statBoost: { attack: 12, speed: 2 }, costToUpgrade: { nanites: 200, comp_av: 3, arte_rare: 1 } } ] },
+    'gravLegs': { id: 'gravLegs', name: "Jambes Anti-Grav", description: "Permet un déplacement rapide et agile.", visualClasses: ['module-legs-antigrav left', 'module-legs-antigrav right'], unlockMethod: { research: 'graviticManipulation' }, levels: [ { level: 1, statBoost: { speed: 5, defense: 1 }, costToUnlockOrUpgrade: { nanites: 75, crist_stock: 2 } }, { level: 2, statBoost: { speed: 8, defense: 2 }, costToUpgrade: { nanites: 150, crist_stock: 3, mod_proto: 1 } } ] },
+    'shieldGeneratorMk1': { id: 'shieldGeneratorMk1', name: "Bouclier Énergétique Mk1", description: "Génère un champ de force protecteur de base.", visualClass: 'module-shield', unlockMethod: { building: 'defenseFoundry', buildingLevel: 1 }, levels: [ { level: 1, statBoost: { defense: 10, health: 20 }, costToUnlockOrUpgrade: { nanites: 100, biomass: 50 } }, { level: 2, statBoost: { defense: 15, health: 35 }, costToUpgrade: { nanites: 180, biomass: 100, comp_av: 1 } } ] },
+    'shieldGeneratorMk2': { id: 'shieldGeneratorMk2', name: "Bouclier Énergétique Mk2", description: "Génère un champ de force protecteur amélioré. Remplace Mk1.", visualClass: 'module-shield', unlockMethod: { building: 'defenseFoundry', buildingLevel: 2 }, replaces: 'shieldGeneratorMk1', levels: [ { level: 1, statBoost: { defense: 20, health: 50 }, costToUnlockOrUpgrade: { nanites: 250, biomass: 150, mod_proto: 2 } }, { level: 2, statBoost: { defense: 30, health: 75 }, costToUpgrade: { nanites: 400, biomass: 250, arte_rare: 1 } } ] }
 };
 const researchData = { 
     'naniteSwarm': { name: "Tempête de Nanites", description: "Arme dévastatrice.", cost: { biomass: 500, nanites: 1000 }, time: 300, requirements: { buildings: { researchLab: 1 } }, grantsStatBoost: { attack: 15 } },
@@ -69,7 +53,7 @@ const itemsData = {
     'arte_rare': { id: 'arte_rare', name: "Artefact Rare", slot: null, description: "Objet de grande valeur ou puissant.", cost: null, rarity: "rare_material" }
 };
 const nightAssaultEnemies = [ 
-    { id: 'swarm_drone', name: "Drone d'Essaim", baseHealth: 15, baseAttack: 2, reward: { biomass: 2, nanites: 1 }, spritePath: 'images/assault_drone.png' }, // Exemple de spritePath
+    { id: 'swarm_drone', name: "Drone d'Essaim", baseHealth: 15, baseAttack: 2, reward: { biomass: 2, nanites: 1 }, spritePath: 'images/assault_drone.png' }, 
     { id: 'assault_bot', name: "Bot d'Assaut", baseHealth: 40, baseAttack: 5, reward: { biomass: 5, nanites: 3 }, spritePath: 'images/assault_bot.png' },
     { id: 'heavy_crawler', name: "Rampant Lourd", baseHealth: 80, baseAttack: 3, reward: { biomass: 8, nanites: 2 }, spritePath: 'images/assault_crawler.png' } 
 ];

@@ -1,9 +1,10 @@
 // js/gameState.js
+// alert("gameState.js chargé !"); // Pour tester
 
 let gameState = {
-    resources: { biomass: 200 * 1000, nanites: 100 * 1000, energy: 50 * 10 }, // Ressources de départ x1000 (sauf énergie)
+    resources: { biomass: 200 * 1000, nanites: 100 * 1000, energy: 50 * 10 }, 
     productionRates: { biomass: 0, nanites: 0 },
-    capacity: { energy: 50 * 10 }, // Capacité énergie augmentée aussi
+    capacity: { energy: 50 * 10 }, 
     buildings: {}, 
     research: {}, 
     gameTime: 0, 
@@ -18,17 +19,18 @@ let gameState = {
         rage: 0,
         focusStacks: 0
     },
-    activeModules: [],
+    nanobotModuleLevels: {}, 
     inventory: [], 
     nanobotEquipment: { weapon: null, armor: null, utility1: null, utility2: null },
     combatLogSummary: ["Journal de combat initialisé."],
     map: { 
         tiles: [], 
         explored: [], 
-        nanobotPos: { ...BASE_COORDINATES }, // Copie de BASE_COORDINATES
+        nanobotPos: { x: BASE_COORDINATES.x, y: BASE_COORDINATES.y }, 
         currentEnemyEncounter: null 
     },
     shopStock: ['item_laser_mk1', 'item_plating_basic', 'item_repair_kit_s'],
+    purchasedShopItems: [],
     baseStats: {
         currentHealth: BASE_INITIAL_HEALTH,
         maxHealth: BASE_INITIAL_HEALTH,

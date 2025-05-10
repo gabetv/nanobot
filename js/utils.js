@@ -1,4 +1,5 @@
 // js/utils.js
+// alert("utils.js chargé !"); // Pour tester
 
 function sleep(ms) { 
     return new Promise(resolve => setTimeout(resolve, ms)); 
@@ -8,7 +9,7 @@ function formatTime(seconds) { return `${Math.floor(seconds / 60).toString().pad
 let modalConfirmCallback = null; 
 function showModal(title, message, onConfirm, showCancel = true) { 
     if (modalTitle) modalTitle.textContent = title; 
-    if (modalMessage) modalMessage.innerHTML = message; // Use innerHTML for potential HTML in message
+    if (modalMessage) modalMessage.innerHTML = message; 
     modalConfirmCallback = onConfirm; 
     if (modalConfirm) modalConfirm.classList.toggle('hidden', !onConfirm); 
     if (modalCancel) modalCancel.classList.toggle('hidden', !showCancel); 
