@@ -1,23 +1,13 @@
 // js/config.js
 // console.log("config.js - Fichier chargé."); 
 
-// --- Configuration du Jeu ---
-const TICK_SPEED = 1000; // Millisecondes par tick de jeu
-
-// Augmenter la durée de la nuit
-const DAY_DURATION = 5 * 60 * 1000; // 5 minutes pour le jour
-const NIGHT_DURATION = 5 * 60 * 1000; // NOUVEAU: 5 minutes pour la nuit 
-// Pour tester rapidement :
-// const DAY_DURATION = 30 * 1000; 
-// const NIGHT_DURATION = 45 * 1000; 
-
+const TICK_SPEED = 1000;
+const DAY_DURATION = 5 * 60 * 1000; 
+const NIGHT_DURATION = 5 * 60 * 1000; // Nuit plus longue
 const COMBAT_ANIMATION_DELAY_BASE = 700; 
 const EXPLORATION_COST_ENERGY = 5;
 const MAP_SIZE = { width: 15, height: 10 }; 
-
-// Agrandir la grille de la base
-const BASE_GRID_SIZE = { rows: 9, cols: 13 }; 
-
+const BASE_GRID_SIZE = { rows: 9, cols: 13 }; // Grille de base agrandie
 const TILE_TYPES = { 
     UNEXPLORED: 0, EMPTY: 1, BASE: 2, 
     RESOURCE_BIOMASS: 10, RESOURCE_NANITES: 11, RESOURCE_CRYSTAL_SHARDS: 12,
@@ -78,7 +68,6 @@ const buildingsData = {
     'reinforcedWall': { name: "Mur Renforcé", type: "defense", description: "Augmente les points de vie maximum du Noyau et constitue une barrière.", placementCost: { biomass: 30, nanites: 10 }, levels: [ { level: 1, baseHealthBonus: 200, stats: { health: 250 }, costToUnlockOrUpgrade: { biomass: 150, nanites: 50 }, energyConsumption: 1 }, { level: 2, baseHealthBonus: 450, stats: { health: 500 }, costToUpgrade: { biomass: 300, nanites: 120 }, energyConsumption: 2 } ] }
 };
 
-// Validation de la structure de buildingsData 
 for (const id in buildingsData) {
     if (!buildingsData[id].levels || !Array.isArray(buildingsData[id].levels) || buildingsData[id].levels.length === 0) {
         console.error(`ERREUR buildingsData: Bâtiment '${id}' n'a pas de tableau 'levels' valide ou est vide.`);

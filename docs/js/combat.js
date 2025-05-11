@@ -300,7 +300,7 @@ var simulateCombat = async function(enemyDetailsInput) {
     enemyCombatData.attack = enemyCombatData.attack || 0;
     enemyCombatData.defense = enemyCombatData.defense || 0;
     enemyCombatData.name = enemyCombatData.name || "Ennemi Inconnu";
-    enemyCombatData.currentHealth = enemyCombatData.health; // S'assurer que currentHealth est bien initialisé
+    enemyCombatData.currentHealth = enemyCombatData.health; 
 
     await _simulateCombat(enemyCombatData); 
     
@@ -338,5 +338,4 @@ var simulateCombat = async function(enemyDetailsInput) {
     if(closeCombatModalBtn) closeCombatModalBtn.disabled = false; 
     if(toggleSpeedBtn) toggleSpeedBtn.disabled = false;
 };
-
 // console.log("combat.js - Fin du fichier.");

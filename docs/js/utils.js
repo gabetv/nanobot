@@ -7,12 +7,18 @@ function sleep(ms) {
 function formatTime(seconds) { return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`; }
 
 let modalConfirmCallback = null; 
-function showModal(title, message, onConfirm, showCancel = true) { 
+function showModal(title, message, onConfirm, showCancel = true, confirmText = "Confirmer", cancelText = "Annuler") { 
     if (typeof modalTitle !== 'undefined' && modalTitle) modalTitle.textContent = title; 
     if (typeof modalMessage !== 'undefined' && modalMessage) modalMessage.innerHTML = message; 
     modalConfirmCallback = onConfirm; 
-    if (typeof modalConfirm !== 'undefined' && modalConfirm) modalConfirm.classList.toggle('hidden', !onConfirm); 
-    if (typeof modalCancel !== 'undefined' && modalCancel) modalCancel.classList.toggle('hidden', !showCancel); 
+    if (typeof modalConfirm !== 'undefined' && modalConfirm) {
+        modalConfirm.textContent = confirmText;
+        modalConfirm.classList.toggle('hidden', !onConfirm); 
+    }
+    if (typeof modalCancel !== 'undefined' && modalCancel) {
+        modalCancel.textContent = cancelText;
+        modalCancel.classList.toggle('hidden', !showCancel);
+    }
     if (typeof modal !== 'undefined' && modal) modal.classList.remove('hidden'); 
 } 
 function hideModal() { 
@@ -49,22 +55,24 @@ function addLogEntry(message, type = "info", logElement = null, logArray = null)
         const firstChild = logElement.firstChild;
         const firstChildText = firstChild ? firstChild.textContent : "";
         const initialMessages = ["En attente d'événements...", "Journal d'assaut initialisé."];
-        const titleElements = logElement.querySelectorAll('h3, h4'); // Chercher h3 ou h4
-
-        let titleTextContent = "";
-        if (titleElements.length > 0) {
-            titleTextContent = titleElements[0].outerHTML; // Garder le HTML du titre
+        // Conserver les titres H3/H4
+        const titleElement = logElement.querySelector('h3, h4');
+        let titleHTML = "";
+        if (titleElement) {
+            titleHTML = titleElement.outerHTML;
         }
         
-        if (logElement.children.length === (titleElements.length > 0 ? 1 : 0) && initialMessages.includes(firstChildText) && firstChild.tagName === 'P') {
-             logElement.innerHTML = titleTextContent; // Remettre le titre s'il existait, puis vider le reste
-        } else if (logElement.children.length > titleElements.length && logElement.children[titleElements.length] && logElement.children[titleElements.length].tagName === 'P' && initialMessages.includes(logElement.children[titleElements.length].textContent)) {
-             logElement.children[titleElements.length].remove();
-        } else if (logElement.children.length === 0 && initialMessages.includes(firstChildText)){ // Si vide et que le texte était le placeholder
-             logElement.innerHTML = titleTextContent;
+        if (initialMessages.includes(firstChildText) && firstChild.tagName === 'P') {
+             logElement.innerHTML = titleHTML; // Remettre le titre s'il existait, puis vider le reste (le placeholder P)
+        } else if (logElement.children.length === (titleElement ? 1 : 0) && initialMessages.includes(firstChildText)) {
+             logElement.innerHTML = titleHTML; // Si seulement le titre + placeholder P, ou juste placeholder P
+        } else if (logElement.children.length > (titleElement ? 1 : 0) && 
+                   logElement.children[(titleElement ? 1 : 0)] && 
+                   logElement.children[(titleElement ? 1 : 0)].tagName === 'P' && 
+                   initialMessages.includes(logElement.children[(titleElement ? 1 : 0)].textContent)) {
+             logElement.children[(titleElement ? 1 : 0)].remove(); // Enlever juste le <p> initial après le H3/H4
         }
-
-
+        
         logElement.appendChild(entry); 
         logElement.scrollTop = logElement.scrollHeight; 
     } 

@@ -6,7 +6,7 @@ function gainXP(amount) {
     if (!stats) { console.error("gameState.nanobotStats non défini dans gainXP"); return; }
     if (stats.level === undefined) { stats.level = 1; stats.xp = 0; stats.xpToNext = 100; } 
     stats.xp += amount; 
-    while (stats.xp >= stats.xpToNext && stats.xpToNext > 0) { 
+    while (stats.xpToNext > 0 && stats.xp >= stats.xpToNext) { 
         stats.xp -= stats.xpToNext; 
         stats.level++; 
         stats.xpToNext = Math.floor(stats.xpToNext * 1.5); 
