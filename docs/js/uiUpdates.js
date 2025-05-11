@@ -1,5 +1,5 @@
 // js/uiUpdates.js
-// alert("uiUpdates.js chargé !");
+// console.log("uiUpdates.js - Fichier chargé.");
 
 function updateResourceDisplay() { 
     if(biomassEl) biomassEl.textContent = Math.floor(gameState.resources.biomass); 
@@ -14,7 +14,7 @@ function updateResourceDisplay() {
 }
 
 function updateBuildingDisplay() { 
-    if(!buildingsSection) return;
+    if(!buildingsSection) { /* console.warn("updateBuildingDisplay: buildingsSection non trouvé.");*/ return; }
     buildingsSection.innerHTML = '<h2 class="font-orbitron text-xl mb-3 text-blue-300 border-b border-gray-600 pb-2">Modules Structurels & Défensifs</h2>'; 
     for (const id in buildingsData) { 
         const building = buildingsData[id]; 
@@ -111,7 +111,7 @@ function updateResearchDisplay() {
 
 function updateNanobotModulesDisplay() {
     const container = equippedModulesDisplayEl; 
-    if (!container) return;
+    if (!container) { /* console.warn("equippedModulesDisplayEl non trouvé"); */ return; }
     container.innerHTML = '<h3 class="font-orbitron text-lg mb-2 text-blue-200">Modules du Nanobot</h3>';
     let hasModules = false;
     for (const moduleId in nanobotModulesData) {
@@ -246,6 +246,8 @@ function updateBasePreview() {
         for (let c = 0; c < BASE_GRID_SIZE.cols; c++) {
             const cell = document.createElement('div');
             cell.className = 'map-tile'; 
+            cell.style.width = `100%`; 
+            cell.style.height = `100%`;
             cell.style.backgroundColor = '#222938'; 
             cell.style.border = '1px dashed #4a5568'; 
             cell.dataset.row = r;
@@ -254,41 +256,54 @@ function updateBasePreview() {
             const coreCol = Math.floor(BASE_GRID_SIZE.cols / 2);
             if (r === coreRow && c === coreCol) {
                 cell.style.backgroundColor = '#48bb78'; 
-                cell.innerHTML = `<div class="base-core-visual" style="position:relative; transform:none; top:auto; left:auto; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">N</div>`;
+                cell.innerHTML = `<div class="base-core-visual" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center;">N</div>`;
                 cell.classList.add('base-core-cell');
                 cell.id = 'base-core-visual-cell'; 
             } else {
                 const defenseInstanceId = Object.keys(gameState.defenses).find(id => gameState.defenses[id].gridPos && gameState.defenses[id].gridPos.r === r && gameState.defenses[id].gridPos.c === c);
                 if (defenseInstanceId) {
-                    const defenseState = gameState.defenses[defenseInstanceId];
-                    const buildingDef = buildingsData[defenseState.id];
-                    cell.classList.add('defense-visual-cell'); 
-                    const defenseVisual = document.createElement('div');
-                    defenseVisual.classList.add('defense-visual');
-                    if(buildingDef) defenseVisual.classList.add(defenseState.id); 
-                    defenseVisual.textContent = `L${defenseState.level}`;
-                    const healthPercentage = (defenseState.maxHealth > 0 ? (defenseState.currentHealth / defenseState.maxHealth) : 0) * 100;
-                    defenseVisual.style.opacity = 0.6 + (healthPercentage / 250); 
-                    if (healthPercentage < 30) defenseVisual.style.backgroundColor = '#e53e3e'; 
-                    else if (healthPercentage < 60) defenseVisual.style.backgroundColor = '#ecc94b'; 
-                    else if (buildingDef && buildingDef.name.toLowerCase().includes("wall")) defenseVisual.style.backgroundColor = '#718096';
-                    else defenseVisual.style.backgroundColor = '#fbd38d'; 
-                    defenseVisual.style.position = 'absolute';
-                    defenseVisual.style.left = `${c * cellWidth + (cellWidth / 2) - 10}px`; 
-                    defenseVisual.style.top = `${r * cellHeight + (cellHeight / 2) - 10}px`; 
-                    previewContainer.appendChild(defenseVisual);
+                    if (gameState.placementMode.isActive) { 
+                        cell.style.backgroundColor = '#384252'; 
+                        cell.style.cursor = 'not-allowed';
+                    } else {
+                         cell.style.cursor = 'pointer'; 
+                    }
                 } else if (gameState.placementMode.isActive) {
                     cell.style.cursor = 'copy';
                     cell.title = `Placer ${buildingsData[gameState.placementMode.selectedDefenseType]?.name || 'défense'}`;
+                    cell.style.backgroundColor = '#3b475c'; 
                 }
             }
-            // Assurer que handleGridCellClick est défini avant d'ajouter l'écouteur
-            if(typeof handleGridCellClick === 'function') {
+            if(typeof handleGridCellClick === 'function') { 
                 cell.addEventListener('click', () => handleGridCellClick(r, c));
             }
             previewContainer.appendChild(cell);
         }
     }
+    
+    for (const instanceId in gameState.defenses) {
+        const defenseState = gameState.defenses[instanceId];
+        const buildingDef = buildingsData[defenseState.id];
+        if (defenseState.currentHealth > 0 && buildingDef && defenseState.gridPos) {
+            const defenseVisual = document.createElement('div');
+            defenseVisual.classList.add('defense-visual');
+            if(buildingDef) defenseVisual.classList.add(defenseState.id); 
+            defenseVisual.textContent = `L${defenseState.level}`;
+            const healthPercentage = (defenseState.maxHealth > 0 ? (defenseState.currentHealth / defenseState.maxHealth) : 0) * 100;
+            defenseVisual.style.opacity = 0.6 + (healthPercentage / 250); 
+            if (healthPercentage < 30) defenseVisual.style.backgroundColor = '#e53e3e'; 
+            else if (healthPercentage < 60) defenseVisual.style.backgroundColor = '#ecc94b'; 
+            else if (buildingDef && buildingDef.name.toLowerCase().includes("wall")) defenseVisual.style.backgroundColor = '#718096';
+            else defenseVisual.style.backgroundColor = '#fbd38d'; 
+            defenseVisual.style.position = 'absolute';
+            const visualWidth = parseInt(getComputedStyle(defenseVisual).width) || 20;
+            const visualHeight = parseInt(getComputedStyle(defenseVisual).height) || 20;
+            defenseVisual.style.left = `${defenseState.gridPos.c * cellWidth + (cellWidth / 2) - (visualWidth / 2)}px`; 
+            defenseVisual.style.top = `${defenseState.gridPos.r * cellHeight + (cellHeight / 2) - (visualHeight / 2)}px`;  
+            previewContainer.appendChild(defenseVisual);
+        }
+    }
+
     if (nightAssaultEnemiesDisplayEl) { 
         if (gameState.nightAssault.isActive && gameState.nightAssault.enemies.length > 0) {
             nightAssaultEnemiesDisplayEl.innerHTML = ''; 
@@ -301,6 +316,7 @@ function updateBasePreview() {
                     enemyVisual.style.height = `${enemy.typeInfo.visualSize.height}px`; 
                     enemyVisual.style.zIndex = '5'; 
                     enemyVisual.style.border = '1px solid gold'; 
+                    enemyVisual.style.borderRadius = '3px'; 
                 } else { 
                     enemyVisual.classList.add('base-enemy-visual'); 
                 }
@@ -309,6 +325,7 @@ function updateBasePreview() {
                     enemyVisual.style.backgroundSize = 'contain';
                     enemyVisual.style.backgroundRepeat = 'no-repeat';
                     enemyVisual.style.backgroundPosition = 'center';
+                    enemyVisual.style.backgroundColor = 'transparent'; 
                     if (!isBoss) { 
                          enemyVisual.style.width = '10px'; 
                          enemyVisual.style.height = '10px';
@@ -494,25 +511,11 @@ function managePlacedDefense(instanceId, row, col) {
     
     let totalInvestedBiomass = (defenseTypeData.placementCost ? defenseTypeData.placementCost.biomass : 0) || 0;
     let totalInvestedNanites = (defenseTypeData.placementCost ? defenseTypeData.placementCost.nanites : 0) || 0;
-    for(let i=0; i < defenseInstance.level; i++){ // Somme des coûts des niveaux de l'instance (placementCost + upgrades successives)
-        const levelDataForCost = defenseTypeData.levels[i]; 
-        if (levelDataForCost) {
-            const costObject = (i === 0) ? levelDataForCost.costToUnlockOrUpgrade : levelDataForCost.costToUpgrade;
-            if(costObject){ 
-                // Note: pour la vente, on ne rembourse que sur le coût de PLACEMENT et les améliorations D'INSTANCE.
-                // Le coût de "déblocage de technologie" n'est pas remboursé ici.
-                // Cette logique de remboursement peut être complexe.
-                // Pour l'instant, on va simplifier et dire que le remboursement est basé sur le coût de placement
-                // + les coûts d'amélioration d'instance (qui sont les mêmes que ceux de la technologie pour l'instant).
-                if (i > 0 && levelDataForCost.costToUpgrade) { // Coûts des upgrades d'instance
-                     totalInvestedBiomass += levelDataForCost.costToUpgrade.biomass || 0;
-                     totalInvestedNanites += levelDataForCost.costToUpgrade.nanites || 0;
-                } else if (i === 0 && levelDataForCost.costToUnlockOrUpgrade) { // Coût initial de la technologie (que l'on considère comme le coût de la première instance)
-                    // Ne rien ajouter ici si on considère que `placementCost` couvre l'instance de niveau 1.
-                    // Si le `costToUnlockOrUpgrade` représente le coût de la *première* instance, alors il faut l'ajouter.
-                    // Actuellement, le build() de la technologie est séparé du placement.
-                }
-            }
+    for(let i=0; i < defenseInstance.level; i++){ 
+        const levelIndex = defenseTypeData.levels.findIndex(l => l.level === i + 1);
+        if(levelIndex !== -1){ 
+            const levelCostData = (i === 0) ? defenseTypeData.levels[levelIndex].costToUnlockOrUpgrade : defenseTypeData.levels[levelIndex].costToUpgrade; 
+            if(levelCostData){ totalInvestedBiomass += levelCostData.biomass || 0; totalInvestedNanites += levelCostData.nanites || 0; }
         }
     }
     const sellValueBiomass = Math.floor(totalInvestedBiomass * SELL_REFUND_FACTOR);
@@ -549,3 +552,4 @@ function updateDisplays() {
         if(typeof updateExplorationDisplay === 'function') updateExplorationDisplay(); 
     }
 }
+// console.log("uiUpdates.js - Fin du fichier.");

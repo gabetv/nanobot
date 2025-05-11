@@ -1,5 +1,5 @@
 // js/combat.js
-// console.log("combat.js chargé !");
+// console.log("combat.js - Fichier chargé.");
 
 let combatSpeedMultiplier = 1; 
 let COMBAT_ANIMATION_DELAY = COMBAT_ANIMATION_DELAY_BASE;
@@ -112,12 +112,10 @@ function checkAndActivateSkill(skillId, nanobot, enemy, currentCombatLog) {
 
     if (skill.cost) {
         if (skill.cost.rage && nanobot.rage >= skill.cost.rage) {
-            canActivate = true; // La condition de coût peut permettre l'activation même si un trigger n'est pas rempli
-        } else if (!skill.trigger) { // Si c'est une compétence à coût SANS trigger, alors le coût est la seule condition (en dehors du cooldown)
-             canActivate = false; // Bloqué si pas assez de rage
+            canActivate = true; 
+        } else if (!skill.trigger) { 
+             canActivate = false;
         }
-        // Si un trigger existe ET un coût existe, les deux doivent être valides si on veut que le trigger soit la condition principale
-        // Pour l'instant, un trigger OU un coût suffisant (pour les compétences à coût) peuvent activer.
     } else if (!skill.trigger && skill.id !== 'adaptiveFocus') { 
         canActivate = true; 
     }
@@ -141,7 +139,7 @@ function checkAndActivateSkill(skillId, nanobot, enemy, currentCombatLog) {
         
 async function _simulateCombat(enemyDetailsInput) { 
     if (!gameState || !gameState.nanobotStats || gameState.nanobotStats.currentHealth <= 0) { 
-        if(typeof addLogEntry === 'function') addLogEntry("Nexus-7 hors combat ou état du jeu invalide.", "error", combatLogSummaryEl, gameState ? gameState.combatLogSummary : null); 
+        if(typeof addLogEntry === 'function' && typeof combatLogSummaryEl !== 'undefined' && combatLogSummaryEl) addLogEntry("Nexus-7 hors combat ou état du jeu invalide.", "error", combatLogSummaryEl, gameState ? gameState.combatLogSummary : null); 
         return; 
     }
     
@@ -157,7 +155,7 @@ async function _simulateCombat(enemyDetailsInput) {
         damageType: enemyData.damageType || DAMAGE_TYPES.KINETIC,
         resistances: enemyData.resistances || {},
         reward: enemyData.reward || {biomass:0, nanites:0, xp:0}, 
-        currentHealth: enemyData.health || enemyData.maxHealth || 1 // Assurer que currentHealth est bien initialisé
+        currentHealth: enemyData.health || enemyData.maxHealth || 1
     };
 
     let nanobotCombatStats = { ...gameState.nanobotStats }; 
@@ -302,7 +300,7 @@ var simulateCombat = async function(enemyDetailsInput) {
     enemyCombatData.attack = enemyCombatData.attack || 0;
     enemyCombatData.defense = enemyCombatData.defense || 0;
     enemyCombatData.name = enemyCombatData.name || "Ennemi Inconnu";
-    enemyCombatData.currentHealth = enemyCombatData.health; 
+    enemyCombatData.currentHealth = enemyCombatData.health; // S'assurer que currentHealth est bien initialisé
 
     await _simulateCombat(enemyCombatData); 
     
@@ -340,3 +338,5 @@ var simulateCombat = async function(enemyDetailsInput) {
     if(closeCombatModalBtn) closeCombatModalBtn.disabled = false; 
     if(toggleSpeedBtn) toggleSpeedBtn.disabled = false;
 };
+
+// console.log("combat.js - Fin du fichier.");

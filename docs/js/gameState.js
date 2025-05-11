@@ -28,7 +28,7 @@ let gameState = {
     map: { 
         tiles: [], 
         explored: [], 
-        nanobotPos: { x: 0, y: 0 }, // Sera correctement initialisé dans init() après chargement de config.js
+        nanobotPos: { x: 0, y: 0 }, 
         zoneId: 'sector_x9', 
         currentEnemyEncounter: null 
     },
@@ -41,7 +41,7 @@ let gameState = {
         selectedDefenseLevel: 1 
     },
     baseStats: {
-        currentHealth: (typeof BASE_INITIAL_HEALTH !== 'undefined' ? BASE_INITIAL_HEALTH : 500), // Utiliser la constante si définie
+        currentHealth: (typeof BASE_INITIAL_HEALTH !== 'undefined' ? BASE_INITIAL_HEALTH : 500),
         maxHealth: (typeof BASE_INITIAL_HEALTH !== 'undefined' ? BASE_INITIAL_HEALTH : 500),
         defensePower: 0 
     },
@@ -59,5 +59,9 @@ let gameState = {
     activeResearch: null 
 };
 
-// S'assurer que nanobotPos est initialisé avec les valeurs de config.js si elles sont disponibles
-// Cela se fera plus proprement dans init() après que tous les scripts soient chargés.
+if (typeof ZONE_DATA !== 'undefined' && ZONE_DATA[gameState.currentZoneId] && ZONE_DATA[gameState.currentZoneId].entryPoint) {
+    gameState.map.nanobotPos = { ...ZONE_DATA[gameState.currentZoneId].entryPoint };
+} else if (typeof BASE_COORDINATES !== 'undefined') {
+    gameState.map.nanobotPos = { ...BASE_COORDINATES }; 
+}
+// console.log("gameState.js - Fin du fichier.");

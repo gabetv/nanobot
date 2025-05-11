@@ -1,23 +1,27 @@
 // js/config.js
-// console.log("config.js - Fichier chargé."); // Pour débogage initial
+// console.log("config.js - Fichier chargé."); 
 
 // --- Configuration du Jeu ---
 const TICK_SPEED = 1000; // Millisecondes par tick de jeu
-// Pour tester rapidement le cycle :
-const DAY_DURATION = 30 * 1000; // 30 secondes pour le jour
-const NIGHT_DURATION = 20 * 1000; // 20 secondes pour la nuit
-// Valeurs normales (à décommenter une fois le débogage terminé)
-// const DAY_DURATION = 5 * 60 * 1000; 
-// const NIGHT_DURATION = 3 * 60 * 1000; 
+
+// Augmenter la durée de la nuit
+const DAY_DURATION = 5 * 60 * 1000; // 5 minutes pour le jour
+const NIGHT_DURATION = 5 * 60 * 1000; // NOUVEAU: 5 minutes pour la nuit 
+// Pour tester rapidement :
+// const DAY_DURATION = 30 * 1000; 
+// const NIGHT_DURATION = 45 * 1000; 
 
 const COMBAT_ANIMATION_DELAY_BASE = 700; 
 const EXPLORATION_COST_ENERGY = 5;
 const MAP_SIZE = { width: 15, height: 10 }; 
-const BASE_GRID_SIZE = { rows: 7, cols: 9 }; 
+
+// Agrandir la grille de la base
+const BASE_GRID_SIZE = { rows: 9, cols: 13 }; 
+
 const TILE_TYPES = { 
     UNEXPLORED: 0, EMPTY: 1, BASE: 2, 
     RESOURCE_BIOMASS: 10, RESOURCE_NANITES: 11, RESOURCE_CRYSTAL_SHARDS: 12,
-    ENEMY_DRONE: 20, ENEMY_SAURIAN: 21, ENEMY_CRYSTAL_GOLEM: 22, ENEMY_SPARK_WISP: 23, // Nouveaux types pour exploration
+    ENEMY_DRONE: 20, ENEMY_SAURIAN: 21, ENEMY_CRYSTAL_GOLEM: 22, ENEMY_SPARK_WISP: 23,
     UPGRADE_CACHE: 30, 
     IMPASSABLE: 99, IMPASSABLE_CRYSTAL: 100
 };
@@ -74,7 +78,30 @@ const buildingsData = {
     'reinforcedWall': { name: "Mur Renforcé", type: "defense", description: "Augmente les points de vie maximum du Noyau et constitue une barrière.", placementCost: { biomass: 30, nanites: 10 }, levels: [ { level: 1, baseHealthBonus: 200, stats: { health: 250 }, costToUnlockOrUpgrade: { biomass: 150, nanites: 50 }, energyConsumption: 1 }, { level: 2, baseHealthBonus: 450, stats: { health: 500 }, costToUpgrade: { biomass: 300, nanites: 120 }, energyConsumption: 2 } ] }
 };
 
-for (const id in buildingsData) { /* ... (Validation de buildingsData, identique à la version précédente) ... */ }
+// Validation de la structure de buildingsData 
+for (const id in buildingsData) {
+    if (!buildingsData[id].levels || !Array.isArray(buildingsData[id].levels) || buildingsData[id].levels.length === 0) {
+        console.error(`ERREUR buildingsData: Bâtiment '${id}' n'a pas de tableau 'levels' valide ou est vide.`);
+    } else {
+        buildingsData[id].levels.forEach((lvlData, index) => {
+            if (index === 0) { 
+                if (!lvlData.costToUnlockOrUpgrade) {
+                    console.error(`ERREUR buildingsData: Niveau 1 de '${id}' manque 'costToUnlockOrUpgrade'.`);
+                }
+            } else { 
+                if (!lvlData.costToUpgrade && index < buildingsData[id].levels.length - 1) {
+                     console.error(`ERREUR buildingsData: Niveau ${lvlData.level} de '${id}' manque 'costToUpgrade'.`);
+                }
+            }
+            if (buildingsData[id].type === "defense" && (!lvlData.stats || lvlData.stats.health === undefined)) {
+                 console.error(`ERREUR buildingsData: Défense '${id}' niveau ${lvlData.level} manque stats.health.`);
+            }
+        });
+    }
+    if (buildingsData[id].type === "defense" && !buildingsData[id].placementCost) {
+        console.error(`ERREUR buildingsData: Défense '${id}' manque 'placementCost'.`);
+    }
+}
 
 const nanobotModulesData = { 
     'armBlade': { id: 'armBlade', name: "Lame de Bras", description: "Un bras transformable en lame tranchante.", visualClass: 'module-arm-blade', unlockMethod: { research: 'weaponizedNanites' }, levels: [ { level: 1, statBoost: { attack: 5 }, costToUnlockOrUpgrade: { nanites: 50, comp_av: 1 } }, { level: 2, statBoost: { attack: 8, speed: 1 }, costToUpgrade: { nanites: 100, comp_av: 2, mod_proto: 1 } }, { level: 3, statBoost: { attack: 12, speed: 2 }, costToUpgrade: { nanites: 200, comp_av: 3, arte_rare: 1 } } ] },

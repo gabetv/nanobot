@@ -107,7 +107,10 @@ function calculateBaseStats() {
     for (const buildingId in gameState.buildings) {
         const level = gameState.buildings[buildingId];
         if (level > 0 && buildingsData[buildingId] && buildingsData[buildingId].type === 'defense') {
-            const defData = buildingsData[buildingId]; const currentLevelData = defData.levels[level - 1];
+            const defData = buildingsData[buildingId]; 
+            if (!defData.levels || !defData.levels[level - 1]) continue; // Vérifier que les niveaux existent
+            const currentLevelData = defData.levels[level - 1];
+            
             if (currentLevelData && currentLevelData.stats) { 
                 for(const instanceId in gameState.defenses){ 
                     const defenseInstance = gameState.defenses[instanceId];
@@ -126,6 +129,7 @@ function calculateBaseStats() {
     gameState.baseStats.currentHealth = Math.min(gameState.baseStats.currentHealth, gameState.baseStats.maxHealth);
     if (gameState.baseStats.currentHealth <= 0 && gameState.baseStats.maxHealth > 0) { gameState.baseStats.currentHealth = 0; }
 }
+
 function calculateProductionAndConsumption() { 
     // console.log("gameplayLogic.js: calculateProductionAndConsumption appelée");
     gameState.productionRates.biomass = 0; gameState.productionRates.nanites = 0; let totalEnergyConsumption = 0; 
@@ -133,7 +137,7 @@ function calculateProductionAndConsumption() {
         const level = gameState.buildings[buildingId]; 
         if (level > 0) { 
             const buildingDef = buildingsData[buildingId]; 
-            if(buildingDef){ 
+            if(buildingDef && buildingDef.levels && buildingDef.levels[level - 1]){ 
                 const levelData = buildingDef.levels[level - 1]; 
                 if (buildingDef.type === "production") { 
                     if (levelData && levelData.production) { 
@@ -163,14 +167,17 @@ function calculateProductionAndConsumption() {
         gameState.baseStats.defensePower = Math.floor(gameState.baseStats.defensePower * deficitFactor); 
     } 
 }
+
 function build(buildingId) { 
     // console.log(`gameplayLogic.js: build appelée pour ${buildingId}`);
     const building = buildingsData[buildingId]; 
+    if (!building || !building.levels) { 
+        addLogEntry(`Données de bâtiment invalides pour ID: ${buildingId}`, "error");
+        return;
+    }
     const currentLevel = gameState.buildings[buildingId] || 0; 
-    if (!building || !building.levels || currentLevel >= building.levels.length) { 
-        addLogEntry(`${building ? building.name : 'Bâtiment inconnu'} est au niveau maximum de technologie ou n'existe pas.`, "info"); 
-        return; 
-    } 
+    if (currentLevel >= building.levels.length) { addLogEntry(`${building.name} est au niveau maximum de technologie.`, "info"); return; } 
+    
     const nextLevelData = building.levels[currentLevel]; 
     const costObject = nextLevelData.costToUnlockOrUpgrade || nextLevelData.costToUpgrade; 
     if (!costObject) {
@@ -178,35 +185,48 @@ function build(buildingId) {
         return;
     }
     for (const resource in costObject) { if ((gameState.resources[resource]||0) < costObject[resource]) { addLogEntry(`Ressources insuffisantes pour ${building.name}. Requis: ${costObject[resource]} ${resource}.`, "error"); return; } } 
+    
     const title = building.type === 'defense' ? `Débloquer/Améliorer Technologie ${building.name}?` : `Améliorer ${building.name}?`; 
     showModal(title, `Passer la technologie ${building.name} au Niveau ${currentLevel + 1}?`, () => { 
         for (const resource in costObject) gameState.resources[resource] -= costObject[resource]; 
         gameState.buildings[buildingId] = currentLevel + 1; 
         addLogEntry(`Technologie ${building.name} ${currentLevel === 0 ? 'débloquée' : 'améliorée'} au Niveau ${currentLevel + 1}.`, "success"); 
-        if (nextLevelData.grantsModule) calculateNanobotStats(); 
-        if (building.type === 'defense') { calculateBaseStats(); } 
-        calculateProductionAndConsumption(); 
-        updateDisplays(); 
+        if (nextLevelData.grantsModule && typeof calculateNanobotStats === 'function') calculateNanobotStats(); 
+        if (building.type === 'defense' && typeof calculateBaseStats === 'function') { calculateBaseStats(); } 
+        if (typeof calculateProductionAndConsumption === 'function') calculateProductionAndConsumption(); 
+        if (typeof updateDisplays === 'function') updateDisplays(); 
     }); 
 }
+
 function startResearch(researchId) { 
     // console.log(`gameplayLogic.js: startResearch appelée pour ${researchId}`);
     if (gameState.activeResearch) { addLogEntry("Recherche en cours.", "info"); return; } 
     if (gameState.research[researchId]) { addLogEntry("Technologie acquise.", "info"); return; } 
+    
     const research = researchData[researchId]; 
+    if (!research) { addLogEntry("Recherche inconnue.", "error"); return; }
+
     let labLevel = gameState.buildings['researchLab'] || 0; 
     let researchSpeedFactor = 0.5;
     if (labLevel > 0 && buildingsData['researchLab'] && buildingsData['researchLab'].levels[labLevel-1]) {
         researchSpeedFactor = buildingsData['researchLab'].levels[labLevel - 1].researchSpeedFactor;
     }
-    for (const resource in research.cost) { if ((gameState.resources[resource]||0) < research.cost[resource]) { addLogEntry(`Ressources insuffisantes: ${research.name}.`, "error"); return; } } 
+    
+    for (const resource in research.cost) { 
+        if ((gameState.resources[resource]||0) < research.cost[resource]) { 
+            addLogEntry(`Ressources (${resource}) insuffisantes pour: ${research.name}. Requis: ${research.cost[resource]}`, "error"); 
+            return; 
+        } 
+    } 
+    
     showModal(`Lancer ${research.name}?`, `Coût & Temps adaptés.`, () => { 
         for (const resource in research.cost) gameState.resources[resource] -= research.cost[resource]; 
         gameState.activeResearch = { id: researchId, startTime: gameState.gameTime, totalTime: research.time / researchSpeedFactor }; 
         addLogEntry(`Recherche ${research.name} initiée.`, "success"); 
-        updateDisplays(); 
+        if(typeof updateDisplays === 'function') updateDisplays(); 
     });
 }
+
 function repairBase(amount = 10) { if (gameState.baseStats.currentHealth >= gameState.baseStats.maxHealth) { addLogEntry("Le Noyau est déjà à son intégrité maximale.", "info"); return; } const healthToRestore = Math.min(amount, gameState.baseStats.maxHealth - gameState.baseStats.currentHealth); const costBiomass = healthToRestore * REPAIR_COST_BASE_HEALTH_BIOMASS; const costNanites = healthToRestore * REPAIR_COST_BASE_HEALTH_NANITES; if (gameState.resources.biomass < costBiomass || gameState.resources.nanites < costNanites) { addLogEntry(`Ressources insuffisantes pour réparer le Noyau. Requis: ${costBiomass} Biomasse, ${costNanites} Nanites.`, "error"); return; } gameState.resources.biomass -= costBiomass; gameState.resources.nanites -= costNanites; gameState.baseStats.currentHealth += healthToRestore; addLogEntry(`Noyau réparé de ${healthToRestore} PV. (-${costBiomass} Bio, -${costNanites} Nan).`, "success"); updateResourceDisplay(); updateBaseStatusDisplay(); }
 function repairAllDefenses() { let totalBiomassCost = 0; let totalHealthRestored = 0; let defensesToRepair = []; for (const defId in gameState.defenses) { const defense = gameState.defenses[defId]; if (defense.currentHealth < defense.maxHealth) { const healthNeeded = defense.maxHealth - defense.currentHealth; defensesToRepair.push({ defId, healthNeeded }); totalBiomassCost += healthNeeded * REPAIR_COST_DEFENSE_HEALTH_BIOMASS; } } if (defensesToRepair.length === 0) { addLogEntry("Toutes les défenses sont opérationnelles.", "info"); return; } if (gameState.resources.biomass < totalBiomassCost) { addLogEntry(`Ressources insuffisantes pour réparer toutes les défenses. Requis: ${totalBiomassCost} Biomasse.`, "error"); return; } gameState.resources.biomass -= totalBiomassCost; defensesToRepair.forEach(item => { gameState.defenses[item.defId].currentHealth += item.healthNeeded; totalHealthRestored += item.healthNeeded; }); addLogEntry(`Toutes les défenses endommagées ont été réparées (+${totalHealthRestored} PV total). (-${totalBiomassCost} Bio).`, "success"); calculateBaseStats(); updateResourceDisplay(); updateBaseStatusDisplay(); }
 function toggleNanobotDefendBase() { gameState.nanobotStats.isDefendingBase = !gameState.nanobotStats.isDefendingBase; if (gameState.nanobotStats.isDefendingBase) { if(toggleNanobotDefendBaseBtn) {toggleNanobotDefendBaseBtn.textContent = "Désactiver Défense du Noyau"; toggleNanobotDefendBaseBtn.classList.remove('btn-secondary'); toggleNanobotDefendBaseBtn.classList.add('btn-warning');} addLogEntry("Nexus-7 en mode défense du Noyau. Retournez à la base pour être effectif.", "info"); if (gameState.currentZoneId === 'sector_x9' && gameState.map.nanobotPos.x === BASE_COORDINATES.x && gameState.map.nanobotPos.y === BASE_COORDINATES.y) { addLogEntry("Nexus-7 est positionné pour défendre le Noyau.", "success"); } } else { if(toggleNanobotDefendBaseBtn) {toggleNanobotDefendBaseBtn.textContent = "Activer Défense du Noyau"; toggleNanobotDefendBaseBtn.classList.add('btn-secondary'); toggleNanobotDefendBaseBtn.classList.remove('btn-warning');} addLogEntry("Nexus-7 n'est plus en mode défense active du Noyau.", "info"); } calculateBaseStats(); updateBaseStatusDisplay(); }
@@ -290,7 +310,7 @@ function cancelPlacementMode() {
     if(typeof updateBasePreview === 'function') updateBasePreview();
 }
 
-function handleGridCellClick(row, col) { // Pour la grille de BASE
+function handleGridCellClick(row, col) { 
     // console.log(`gameplayLogic.js: handleGridCellClick (base) pour (${row},${col})`);
     const coreRow = Math.floor(BASE_GRID_SIZE.rows / 2);
     const coreCol = Math.floor(BASE_GRID_SIZE.cols / 2);
@@ -330,56 +350,353 @@ function handleGridCellClick(row, col) { // Pour la grille de BASE
     }
 }
 
-function executeUpgradePlacedDefense(instanceId) { /* ... (identique à la version précédente) ... */ }
-function sellPlacedDefense(instanceId, row, col) { /* ... (identique à la version précédente) ... */ }
+function executeUpgradePlacedDefense(instanceId) {
+    const defenseInstance = gameState.defenses[instanceId];
+    if (!defenseInstance) { addLogEntry("Défense introuvable.", "error"); return; }
+    const defenseTypeData = buildingsData[defenseInstance.id];
+    const currentInstanceLevel = defenseInstance.level;
+    const currentTechLevel = gameState.buildings[defenseInstance.id] || 0;
 
-// --- Night Assault Logic ---
-function startNightAssault() { /* ... (identique à la version précédente) ... */ }
-function endNightAssault() { /* ... (identique à la version précédente) ... */ }
-function processNightAssaultTick() { /* ... (identique à la version précédente, s'assurer que les console.warn sont là pour les éléments DOM si besoin) ... */ }
+    if (currentInstanceLevel >= currentTechLevel) { addLogEntry(`${defenseInstance.name} ne peut pas être amélioré au-delà du niveau technologique actuel (${currentTechLevel}). Améliorez d'abord la technologie via la section Modules.`, "warning"); return; }
+    if (currentInstanceLevel >= defenseTypeData.levels.length) { addLogEntry(`${defenseInstance.name} est déjà au niveau maximum possible pour son type.`, "info"); return; }
+    
+    const nextLevelData = defenseTypeData.levels.find(l => l.level === currentInstanceLevel + 1);
+    if (!nextLevelData) { addLogEntry("Niveau suivant non défini pour cette défense.", "error"); return; }
 
-// --- Exploration Logic ---
-function generateMap(zoneIdToGenerate = gameState.currentZoneId) { 
-    // console.log(`gameplayLogic.js: generateMap appelée pour ${zoneIdToGenerate}`);
-    const zone = ZONE_DATA[zoneIdToGenerate];
-    if (!zone) { console.error("Zone invalide pour generateMap:", zoneIdToGenerate); return; }
-    gameState.map = { tiles: [], explored: [], nanobotPos: { ...(zone.entryPoint || BASE_COORDINATES) }, zoneId: zoneIdToGenerate, currentEnemyEncounter: null };
-    for (let y = 0; y < zone.mapSize.height; y++) {
-        const tileRow = []; const exploredRow = [];
-        for (let x = 0; x < zone.mapSize.width; x++) { tileRow.push(TILE_TYPES.EMPTY); exploredRow.push(false); }
-        gameState.map.tiles.push(tileRow); gameState.map.explored.push(exploredRow);
-    }
-    if (gameState.map.explored[zone.entryPoint.y] && gameState.map.explored[zone.entryPoint.y][zone.entryPoint.x] !== undefined) { gameState.map.explored[zone.entryPoint.y][zone.entryPoint.x] = true;
-    } else { if(!gameState.map.explored[zone.entryPoint.y]) gameState.map.explored[zone.entryPoint.y] = []; gameState.map.explored[zone.entryPoint.y][zone.entryPoint.x] = true;}
-    if (zoneIdToGenerate === 'sector_x9' && gameState.map.tiles[BASE_COORDINATES.y] && gameState.map.explored[BASE_COORDINATES.y]) { gameState.map.tiles[BASE_COORDINATES.y][BASE_COORDINATES.x] = TILE_TYPES.BASE; gameState.map.explored[BASE_COORDINATES.y][BASE_COORDINATES.x] = true;}
-    const totalTiles = zone.mapSize.width * zone.mapSize.height;
-    if (zone.tileDistribution) { 
-        for (const tileKeyString in zone.tileDistribution) {
-            let tileTypeEnum; let isEnemyType = false;
-            if (TILE_TYPES[tileKeyString] !== undefined) { tileTypeEnum = TILE_TYPES[tileKeyString]; } 
-            else if (explorationEnemyData[tileKeyString]) { tileTypeEnum = explorationEnemyData[tileKeyString].tileTypeEnum; isEnemyType = true; } 
-            else { console.warn(`Type de tuile inconnu dans tileDistribution: ${tileKeyString} pour zone ${zoneIdToGenerate}`); continue; }
-            const probability = zone.tileDistribution[tileKeyString];
-            const count = Math.floor(totalTiles * probability);
-            for (let i = 0; i < count; i++) {
-                let rx, ry; let attempts = 0;
-                do { rx = Math.floor(Math.random() * zone.mapSize.width); ry = Math.floor(Math.random() * zone.mapSize.height); attempts++; } 
-                while ( (gameState.map.tiles[ry][rx] !== TILE_TYPES.EMPTY || (rx === zone.entryPoint.x && ry === zone.entryPoint.y) || (zoneIdToGenerate === 'sector_x9' && rx === BASE_COORDINATES.x && ry === BASE_COORDINATES.y) ) && attempts < 100);
-                if (gameState.map.tiles[ry][rx] === TILE_TYPES.EMPTY) {
-                    if (tileKeyString.startsWith("RESOURCE_")) { gameState.map.tiles[ry][rx] = { type: tileTypeEnum, amount: Math.floor(Math.random() * 50) + 20 }; } 
-                    else if (isEnemyType) { const enemyData = explorationEnemyData[tileKeyString]; if (enemyData) { gameState.map.tiles[ry][rx] = { type: tileTypeEnum, details: { ...enemyData } }; } } 
-                    else if (tileTypeEnum === TILE_TYPES.UPGRADE_CACHE) { gameState.map.tiles[ry][rx] = { type: TILE_TYPES.UPGRADE_CACHE, reward: { biomass: Math.floor(Math.random()*50)+25, nanites: Math.floor(Math.random()*30)+15 } } ; } 
-                    else if (tileTypeEnum) { gameState.map.tiles[ry][rx] = tileTypeEnum; }
-                }
+    const upgradeCost = nextLevelData.costToUpgrade; 
+    for(const resourceId in upgradeCost) { const requiredAmount = upgradeCost[resourceId]; if (itemsData[resourceId]) { const countInInventory = gameState.inventory.filter(itemId => itemId === resourceId).length; if (countInInventory < requiredAmount) { addLogEntry(`Manque de ${itemsData[resourceId].name} (x${requiredAmount}) pour améliorer ${defenseInstance.name}.`, "error"); return; } } else { if ((gameState.resources[resourceId]||0) < requiredAmount) { addLogEntry(`Ressources (${resourceId}) insuffisantes pour améliorer ${defenseInstance.name}.`, "error"); return; } } }
+    for(const resourceId in upgradeCost) { const paidAmount = upgradeCost[resourceId]; if (itemsData[resourceId]) { for (let i = 0; i < paidAmount; i++) { removeFromInventory(resourceId); } } else { gameState.resources[resourceId] -= paidAmount; } }
+
+    defenseInstance.level = nextLevelData.level;
+    const healthPercentageBeforeUpgrade = defenseInstance.maxHealth > 0 ? defenseInstance.currentHealth / defenseInstance.maxHealth : 1;
+    defenseInstance.maxHealth = nextLevelData.stats.health;
+    defenseInstance.currentHealth = Math.floor(defenseInstance.maxHealth * healthPercentageBeforeUpgrade); 
+    defenseInstance.attack = nextLevelData.stats.attack || 0;
+    if(nextLevelData.stats.damageType) defenseInstance.damageType = nextLevelData.stats.damageType;
+    if(nextLevelData.stats.range) defenseInstance.range = nextLevelData.stats.range;
+
+    addLogEntry(`${defenseInstance.name} amélioré(e) au Niveau ${defenseInstance.level}!`, "success");
+    calculateBaseStats();
+    updateDisplays();
+}
+
+function sellPlacedDefense(instanceId, row, col) {
+    const defenseInstance = gameState.defenses[instanceId];
+    if (!defenseInstance) { addLogEntry("Défense introuvable pour la vente.", "error"); return; }
+    const defenseTypeData = buildingsData[defenseInstance.id];
+    
+    let totalInvestedBiomass = (defenseTypeData.placementCost ? defenseTypeData.placementCost.biomass : 0) || 0;
+    let totalInvestedNanites = (defenseTypeData.placementCost ? defenseTypeData.placementCost.nanites : 0) || 0;
+    
+    // Itérer sur les niveaux de l'instance pour sommer les coûts d'upgrade de cette instance
+    for(let i = 0; i < defenseInstance.level -1; i++){ // Pour les niveaux 2 et plus (l'upgrade de 1 à 2, 2 à 3, etc.)
+        const levelIndex = defenseTypeData.levels.findIndex(l => l.level === i + 1); // Coût pour passer du niveau i au niveau i+1
+        if(levelIndex !== -1 && defenseTypeData.levels[levelIndex+1]){ // S'assurer que le niveau suivant existe
+            const levelCostData = defenseTypeData.levels[levelIndex+1].costToUpgrade; 
+            if(levelCostData){ 
+                totalInvestedBiomass += levelCostData.biomass || 0;
+                totalInvestedNanites += levelCostData.nanites || 0;
             }
         }
     }
-    addLogEntry(`Carte pour ${zone.name} générée.`, "map-event");
+    // Ajouter le coût de "déblocage/fabrication" du niveau 1 de la technologie (si l'instance est au moins niveau 1)
+    // Ce coût est dans costToUnlockOrUpgrade du premier niveau.
+    if (defenseInstance.level >= 1 && defenseTypeData.levels[0] && defenseTypeData.levels[0].costToUnlockOrUpgrade) {
+        // Non, on ne rembourse pas le coût de la recherche/technologie, juste le coût de placement et les upgrades de l'instance.
+        // La logique actuelle de totalInvestedBiomass/Nanites est basée sur le placementCost + coûts d'upgrade.
+        // Si le "placementCost" est le coût de fabrication de l'instance de niveau 1, c'est correct.
+        // Si "costToUnlockOrUpgrade" du niveau 1 de la *technologie* est différent du coût de *placement*, il faut clarifier.
+        // Pour l'instant, on se base sur le `placementCost` pour l'unité initiale.
+    }
+
+    const refundBiomass = Math.floor(totalInvestedBiomass * SELL_REFUND_FACTOR);
+    const refundNanites = Math.floor(totalInvestedNanites * SELL_REFUND_FACTOR);
+
+    gameState.resources.biomass += refundBiomass;
+    gameState.resources.nanites += refundNanites;
+
+    delete gameState.defenses[instanceId];
+    if (gameState.baseGrid[row] && gameState.baseGrid[row][col] && gameState.baseGrid[row][col].instanceId === instanceId) {
+        gameState.baseGrid[row][col] = null; 
+    }
+
+    addLogEntry(`${defenseInstance.name} vendu(e). +${refundBiomass} Biomasse, +${refundNanites} Nanites.`, "info");
+    calculateBaseStats();
+    updateDisplays();
 }
 
-function attemptTravelToZone(zoneId) { /* ... (identique à la version précédente) ... */ }
-function handleTileClickExploration(targetX, targetY) { /* ... (identique à la version précédente) ... */ }
-async function moveToTile(targetX, targetY) { /* ... (identique à la version précédente) ... */ }
-async function triggerTileEvent(x, y) { /* ... (identique à la version précédente, mais assurez-vous que les console.log/warn sont là si des éléments ne sont pas trouvés ou des types de tuiles non gérés) ... */ }
+
+// --- Night Assault Logic ---
+function startNightAssault() {
+    if (!gameState || !gameState.baseStats || gameState.baseStats.currentHealth <= 0) { 
+        if(typeof addLogEntry === 'function') addLogEntry("Le Noyau est détruit ou état invalide. Impossible de subir un assaut.", "error", eventLogEl, gameState ? gameState.eventLog : null); 
+        if(gameState && gameState.nightAssault) gameState.nightAssault.isActive = false; 
+        return; 
+    }
+    gameState.nightAssault.isActive = true; 
+    gameState.nightAssault.wave++; 
+    gameState.nightAssault.enemies = []; 
+    gameState.nightAssault.lastAttackTime = gameState.gameTime; 
+    gameState.nightAssault.log = [`Début de l'assaut nocturne - Vague ${gameState.nightAssault.wave}`]; 
+    if(nightAssaultLogEl) nightAssaultLogEl.innerHTML = '<h3 class="font-orbitron text-lg mb-2 text-red-300 border-b border-gray-600 pb-1">Journal d\'Assaut Nocturne</h3>'; 
+    
+    gameState.nightAssault.currentEvent = null; 
+    gameState.nightAssault.globalModifiers = {}; 
+
+    const wave = gameState.nightAssault.wave;
+    const previewContainer = basePreviewContainerEl; 
+    const containerWidth = previewContainer ? previewContainer.offsetWidth : 300;
+    const containerHeight = previewContainer ? previewContainer.offsetHeight : 200;
+
+    let isBossWave = (wave % BOSS_WAVE_INTERVAL === 0 && wave > 0);
+    let enemySummary = "";
+
+    if (isBossWave) {
+        const bossKeys = Object.keys(bossDefinitions);
+        if (bossKeys.length > 0) {
+            const bossType = bossKeys[Math.floor(Math.random() * bossKeys.length)]; 
+            const bossData = bossDefinitions[bossType];
+            if (bossData) {
+                let bossX, bossY; const edge = Math.floor(Math.random() * 4);
+                const bossWidth = bossData.visualSize ? bossData.visualSize.width : 8;
+                const bossHeight = bossData.visualSize ? bossData.visualSize.height : 8;
+                const offset = 15 + (bossWidth / 2); 
+                if (edge === 0) { bossX = Math.random() * (containerWidth - bossWidth) + (bossWidth/2) ; bossY = -offset; } 
+                else if (edge === 1) { bossX = containerWidth + offset; bossY = Math.random() * (containerHeight - bossHeight) + (bossHeight/2); } 
+                else if (edge === 2) { bossX = Math.random() * (containerWidth - bossWidth) + (bossWidth/2); bossY = containerHeight + offset; } 
+                else { bossX = -offset; bossY = Math.random() * (containerHeight - bossHeight) + (bossHeight/2); }
+
+                gameState.nightAssault.enemies.push({
+                    id: `${bossData.id}_${gameState.gameTime}`, typeInfo: { ...bossData }, 
+                    currentHealth: Math.floor(bossData.baseHealth * (1 + (wave / BOSS_WAVE_INTERVAL -1) * 0.3)), 
+                    maxHealth: Math.floor(bossData.baseHealth * (1 + (wave / BOSS_WAVE_INTERVAL -1) * 0.3)),
+                    x: bossX, y: bossY, targetDefenseInstanceId: null, isAttacking: false, attackCooldown: 0, isBoss: true
+                });
+                enemySummary = `BOSS - ${bossData.name} en approche !`;
+                addLogEntry(enemySummary, "error", nightAssaultLogEl, gameState.nightAssault.log);
+            }
+        } else { isBossWave = false; }
+    } 
+    
+    if (!isBossWave) { 
+        let enemyCounts = { 
+            'swarm_drone': wave * 2 + Math.floor(Math.random() * wave * 1.5), 
+            'assault_bot': Math.floor(wave / 2.5) + Math.floor(Math.random() * (wave/2 +1)), 
+            'heavy_crawler': wave > 1 ? Math.floor(wave / 3.5) + Math.floor(Math.random() * (wave/3+1)) : 0 
+         };
+        for (const enemyTypeId in enemyCounts) {
+            const count = enemyCounts[enemyTypeId]; 
+            const typeInfo = nightAssaultEnemies.find(e => e.id === enemyTypeId);
+            if (!typeInfo || count === 0) continue;
+            for (let i = 0; i < count; i++) {
+                let x, y; const edge = Math.floor(Math.random() * 4); const offset = 5; 
+                if (edge === 0) { x = Math.random() * containerWidth; y = offset; } 
+                else if (edge === 1) { x = containerWidth - offset; y = Math.random() * containerHeight; } 
+                else if (edge === 2) { x = Math.random() * containerWidth; y = containerHeight - offset; } 
+                else { x = offset; y = Math.random() * containerHeight; }
+                gameState.nightAssault.enemies.push({ 
+                    id: `${enemyTypeId}_${gameState.gameTime}_${i}`, 
+                    typeInfo: {...typeInfo}, 
+                    currentHealth: typeInfo.baseHealth, 
+                    maxHealth: typeInfo.baseHealth, 
+                    x: x, y: y, 
+                    targetDefenseInstanceId: null, 
+                    isAttacking: false, 
+                    attackCooldown: 0 
+                });
+            }
+        }
+        enemySummary = Object.entries(enemyCounts).filter(([id,count])=> count > 0).map(([id, count]) => `${count} ${nightAssaultEnemies.find(e=>e.id===id)?.name || 'Inconnu'}(s)`).join(', ');
+        if (Math.random() < SPECIAL_EVENT_CHANCE && nightEvents.length > 0) {
+            const randomEvent = nightEvents[Math.floor(Math.random() * nightEvents.length)];
+            gameState.nightAssault.currentEvent = { id: randomEvent.id, startTime: gameState.gameTime };
+            addLogEntry(`ÉVÉNEMENT SPÉCIAL: ${randomEvent.name} - ${randomEvent.description}`, "warning", nightAssaultLogEl, gameState.nightAssault.log);
+            if (typeof randomEvent.effect === 'function') { randomEvent.effect(gameState.nightAssault, gameState.baseGrid, gameState.defenses); }
+        }
+    }
+    
+    if (gameState.nightAssault.enemies.length === 0) enemySummary = "Vague de reconnaissance très faible";
+    addLogEntry(`ALERTE! Vague ${gameState.nightAssault.wave}: ${enemySummary}.`, "error", eventLogEl); 
+    if(!isBossWave && enemySummary !== "Vague de reconnaissance très faible") addLogEntry(`Vague ${gameState.nightAssault.wave} en approche: ${enemySummary}.`, "base-assault-event", nightAssaultLogEl, gameState.nightAssault.log); 
+    
+    if(typeof updateBaseStatusDisplay === 'function') updateBaseStatusDisplay(); 
+}
+
+function endNightAssault() {
+    gameState.nightAssault.isActive = false;
+    if (gameState.nightAssault.currentEvent) {
+        const eventData = nightEvents.find(e => e.id === gameState.nightAssault.currentEvent.id);
+        if (eventData && typeof eventData.revertEffect === 'function') { eventData.revertEffect(gameState.nightAssault); }
+    }
+    gameState.nightAssault.currentEvent = null;
+    gameState.nightAssault.globalModifiers = {};
+
+    if (gameState.nightAssault.enemies.length > 0 && gameState.baseStats.currentHealth > 0) { 
+        let remainingEnemies = gameState.nightAssault.enemies.map(g => `${g.typeInfo.name}(s)`).join(', '); 
+        addLogEntry(`L'aube arrive. Les ennemis restants (${remainingEnemies}) se retirent.`, "base-defense-event", nightAssaultLogEl, gameState.nightAssault.log);
+    } else if (gameState.baseStats.currentHealth > 0 && gameState.nightAssault.wave > 0) { 
+        addLogEntry(`Nuit ${gameState.nightAssault.wave} survivée ! Les défenses ont tenu.`, "success", nightAssaultLogEl, gameState.nightAssault.log);
+    } else if (gameState.baseStats.currentHealth <=0) { 
+        addLogEntry(`Le Noyau a été détruit pendant la vague ${gameState.nightAssault.wave}.`, "error", nightAssaultLogEl, gameState.nightAssault.log); 
+    }
+    gameState.nightAssault.enemies = []; 
+    if(typeof updateBaseStatusDisplay === 'function') updateBaseStatusDisplay();
+}
+
+function processNightAssaultTick() {
+    if (!gameState.nightAssault.isActive || gameState.isDay || gameState.baseStats.currentHealth <= 0) return;
+    
+    const previewContainer = basePreviewContainerEl;
+    if (!previewContainer) { console.error("processNightAssaultTick: basePreviewContainerEl est null !"); return; }
+    const cellWidth = previewContainer.offsetWidth / BASE_GRID_SIZE.cols;
+    const cellHeight = previewContainer.offsetHeight / BASE_GRID_SIZE.rows;
+    
+    const coreVisualCell = document.getElementById('base-core-visual-cell'); 
+    let coreCenterX = previewContainer.offsetWidth / 2;
+    let coreCenterY = previewContainer.offsetHeight / 2;
+    if (coreVisualCell) { 
+        const coreRect = coreVisualCell.getBoundingClientRect();
+        const containerRect = previewContainer.getBoundingClientRect();
+        coreCenterX = (coreRect.left - (containerRect ? containerRect.left : 0)) + coreRect.width / 2; 
+        coreCenterY = (coreRect.top - (containerRect ? containerRect.top : 0)) + coreRect.height / 2;
+    }
+
+    let enemiesTargetedByDefenses = new Set(); 
+
+    for (const defenseInstanceId in gameState.defenses) {
+        const defense = gameState.defenses[defenseInstanceId];
+        if (defense.currentHealth <= 0 || !defense.gridPos) continue; 
+        const buildingDef = buildingsData[defense.id];
+        if (!buildingDef || !buildingDef.levels[defense.level - 1] || !buildingDef.levels[defense.level - 1].stats) continue;
+        const defenseStats = buildingDef.levels[defense.level - 1].stats;
+        const defenseDamageType = defense.damageType || defenseStats.damageType || DAMAGE_TYPES.KINETIC; 
+        let defenseRange = defense.range || defenseStats.range || 75; 
+        if (gameState.nightAssault.globalModifiers && gameState.nightAssault.globalModifiers.turretRangeFactor) { 
+            defenseRange *= gameState.nightAssault.globalModifiers.turretRangeFactor; 
+        }
+        const defensePixelX = defense.gridPos.c * cellWidth + (cellWidth / 2);
+        const defensePixelY = defense.gridPos.r * cellHeight + (cellHeight / 2);
+        let bestTarget = null; let minDistanceSq = defenseRange * defenseRange;
+        gameState.nightAssault.enemies.forEach(enemy => {
+            if (enemy.currentHealth > 0) {
+                const dx = enemy.x - defensePixelX; const dy = enemy.y - defensePixelY;
+                const distSq = dx*dx + dy*dy;
+                if (distSq < minDistanceSq) { minDistanceSq = distSq; bestTarget = enemy; }
+            }
+        });
+        if (bestTarget) {
+            let damageDealt = calculateModifiedDamage(defense.attack, defenseDamageType, bestTarget.typeInfo.resistances);
+            bestTarget.currentHealth -= damageDealt;
+            drawLaserShot(defensePixelX, defensePixelY, bestTarget.x, bestTarget.y); 
+            if (!enemiesTargetedByDefenses.has(bestTarget.id)) { addLogEntry(`${defense.name} tire sur ${bestTarget.typeInfo.name}, infligeant ${damageDealt} dégâts ${defenseDamageType}.`, "base-defense-event", nightAssaultLogEl, gameState.nightAssault.log); enemiesTargetedByDefenses.add(bestTarget.id); }
+            if (bestTarget.currentHealth <= 0) { addLogEntry(`${bestTarget.typeInfo.name} détruit par ${defense.name} !`, "success", nightAssaultLogEl, gameState.nightAssault.log); gameState.resources.biomass += bestTarget.typeInfo.reward.biomass || 0; gameState.resources.nanites += bestTarget.typeInfo.reward.nanites || 0; }
+        }
+    }
+    gameState.nightAssault.enemies = gameState.nightAssault.enemies.filter(e => e.currentHealth > 0);
+
+    if (gameState.gameTime < gameState.nightAssault.lastAttackTime + (NIGHT_ASSAULT_TICK_INTERVAL / TICK_SPEED)) return; 
+    gameState.nightAssault.lastAttackTime = gameState.gameTime;
+    if (gameState.nightAssault.enemies.length === 0 && gameState.nightAssault.isActive) { if(!gameState.isDay) addLogEntry("Secteur calme...", "base-info-event", nightAssaultLogEl, gameState.nightAssault.log); }
+
+    gameState.nightAssault.enemies.forEach(enemy => {
+        if (enemy.currentHealth <= 0 || !enemy.typeInfo) return;
+        enemy.isAttacking = false; 
+        let targetX = coreCenterX; let targetY = coreCenterY;
+        let closestDefenseInstanceId = null; 
+        let minDistanceToTargetSq = Math.pow(targetX - enemy.x, 2) + Math.pow(targetY - enemy.y, 2); 
+        let canTargetWalls = !enemy.isFlying; 
+
+        for (const defenseInstanceId_loop in gameState.defenses) {
+            const defense = gameState.defenses[defenseInstanceId_loop];
+            const defenseType = buildingsData[defense.id];
+            if (defense.currentHealth > 0 && defense.gridPos) {
+                if (!canTargetWalls && defenseType && defenseType.name.toLowerCase().includes("wall")) { continue; }
+                const defPixelX = defense.gridPos.c * cellWidth + (cellWidth / 2);
+                const defPixelY = defense.gridPos.r * cellHeight + (cellHeight / 2);
+                const dx = defPixelX - enemy.x; const dy = defPixelY - enemy.y;
+                const distSq = dx*dx + dy*dy;
+                if (distSq < minDistanceToTargetSq) { minDistanceToTargetSq = distSq; closestDefenseInstanceId = defenseInstanceId_loop; targetX = defPixelX; targetY = defPixelY; }
+            }
+        }
+        
+        const enemyAttackRange = enemy.typeInfo.attackRange || 20; 
+        const enemyAttackRangeSq = enemyAttackRange * enemyAttackRange; 
+
+        if (minDistanceToTargetSq < enemyAttackRangeSq) { 
+            enemy.isAttacking = true;
+            if (closestDefenseInstanceId) { 
+                const defenseInstance = gameState.defenses[closestDefenseInstanceId]; 
+                const damageToDefense = enemy.typeInfo.baseAttack;
+                defenseInstance.currentHealth -= damageToDefense;
+                addLogEntry(`${enemy.typeInfo.name} attaque ${defenseInstance.name}, infligeant ${damageToDefense} dégâts. (PV Déf: ${Math.floor(defenseInstance.currentHealth)})`, "base-assault-event", nightAssaultLogEl, gameState.nightAssault.log);
+                if (defenseInstance.currentHealth <= 0) {
+                    addLogEntry(`${defenseInstance.name} détruit par ${enemy.typeInfo.name}!`, "error", nightAssaultLogEl, gameState.nightAssault.log);
+                    const {r, c} = defenseInstance.gridPos;
+                    if(gameState.baseGrid[r] && gameState.baseGrid[r][c] && gameState.baseGrid[r][c].instanceId === closestDefenseInstanceId) { gameState.baseGrid[r][c] = null; }
+                    delete gameState.defenses[closestDefenseInstanceId];
+                    calculateBaseStats(); calculateProductionAndConsumption();
+                }
+            } else { 
+                 const damageToCore = enemy.typeInfo.baseAttack;
+                 let actualDamageToCore = damageToCore;
+                if (gameState.nanobotStats.isDefendingBase && gameState.currentZoneId === 'sector_x9' && gameState.map.nanobotPos.x === BASE_COORDINATES.x && gameState.map.nanobotPos.y === BASE_COORDINATES.y && gameState.nanobotStats.currentHealth > 0) {
+                    const damageToNanobot = Math.min(Math.floor(damageToCore * 0.5), gameState.nanobotStats.currentHealth);
+                    actualDamageToCore -= damageToNanobot;
+                    if (damageToNanobot > 0) { gameState.nanobotStats.currentHealth -= damageToNanobot; addLogEntry(`Nexus-7 intercepte ${damageToNanobot} dégâts pour le Noyau!`, "base-defense-event", nightAssaultLogEl, gameState.nightAssault.log); updateNanobotDisplay(); if (gameState.nanobotStats.currentHealth <= 0) { addLogEntry("Nexus-7 est hors de combat!", "error", nightAssaultLogEl, gameState.nightAssault.log); calculateBaseStats(); } }
+                }
+                if (actualDamageToCore > 0) { gameState.baseStats.currentHealth -= actualDamageToCore; addLogEntry(`${enemy.typeInfo.name} attaque le Noyau, infligeant ${actualDamageToCore} dégâts!`, "base-assault-event", nightAssaultLogEl, gameState.nightAssault.log); }
+            }
+        }
+
+        if (!enemy.isAttacking) {
+            const moveSpeed = enemy.typeInfo.speed || (enemy.isBoss ? 1.5 : 3); 
+            const dxMove = targetX - enemy.x; const dyMove = targetY - enemy.y;
+            const distMove = Math.sqrt(dxMove*dxMove + dyMove*dyMove);
+            if (distMove > moveSpeed) { 
+                enemy.x += (dxMove / distMove) * moveSpeed;
+                enemy.y += (dyMove / distMove) * moveSpeed;
+            } else { 
+                enemy.x = targetX; enemy.y = targetY; 
+            }
+        }
+        if (enemy.isBoss && enemy.typeInfo.abilities) { 
+            enemy.typeInfo.abilities.forEach(ability => {
+                if (Math.random() < (ability.chance || 0.1)) { 
+                    if (ability.type === 'aoe_stomp' && ability.damage && ability.radius) {
+                        addLogEntry(`${enemy.typeInfo.name} déchaîne un Piétinement Destructeur !`, "error", nightAssaultLogEl, gameState.nightAssault.log);
+                        let affectedDefenses = 0;
+                        for (const defId in gameState.defenses) {
+                            const d = gameState.defenses[defId];
+                            if(d.gridPos){ // S'assurer que la défense a une position
+                                const dx_aoe = (d.gridPos.c * cellWidth + cellWidth/2) - enemy.x;
+                                const dy_aoe = (d.gridPos.r * cellHeight + cellHeight/2) - enemy.y;
+                                if (dx_aoe*dx_aoe + dy_aoe*dy_aoe < ability.radius * ability.radius) {
+                                    d.currentHealth -= ability.damage;
+                                    affectedDefenses++;
+                                    if (d.currentHealth <=0) { 
+                                        addLogEntry(`${d.name} détruit par le Piétinement !`, "error", nightAssaultLogEl, gameState.nightAssault.log);
+                                        const {r, c} = d.gridPos;
+                                        if(gameState.baseGrid[r] && gameState.baseGrid[r][c] && gameState.baseGrid[r][c].instanceId === defId) { gameState.baseGrid[r][c] = null; }
+                                        delete gameState.defenses[defId];                                     
+                                    }
+                                }
+                            }
+                        }
+                         if (affectedDefenses > 0) {
+                            addLogEntry(`Le piétinement touche ${affectedDefenses} défenses pour ${ability.damage} dégâts !`, "base-assault-event", nightAssaultLogEl, gameState.nightAssault.log);
+                            calculateBaseStats(); 
+                         }
+                    } else if (ability.type === 'regen' && ability.amount) {
+                        enemy.currentHealth = Math.min(enemy.maxHealth, enemy.currentHealth + ability.amount);
+                        addLogEntry(`${enemy.typeInfo.name} se régénère de ${ability.amount} PV !`, "base-info-event", nightAssaultLogEl, gameState.nightAssault.log);
+                    }
+                }
+            });
+        }
+    });
+
+    if (gameState.baseStats.currentHealth <= 0) { gameState.baseStats.currentHealth = 0; addLogEntry("ALERTE CRITIQUE! L'INTÉGRITÉ DU NOYAU EST COMPROMISE!", "error", nightAssaultLogEl, gameState.nightAssault.log); let biomassLoss = Math.floor(gameState.resources.biomass * 0.25); let naniteLoss = Math.floor(gameState.resources.nanites * 0.25); gameState.resources.biomass -= biomassLoss; gameState.resources.nanites -= naniteLoss; addLogEntry(`Perte de ressources: -${biomassLoss} Biomasse, -${naniteLoss} Nanites.`, "error", nightAssaultLogEl, gameState.nightAssault.log); addLogEntry("Le Noyau est détruit. L'assaut prend fin.", "error", eventLogEl); endNightAssault(); }
+    if(typeof updateBaseStatusDisplay === 'function') updateBaseStatusDisplay(); 
+}
 
 // console.log("gameplayLogic.js - Fin du fichier.");

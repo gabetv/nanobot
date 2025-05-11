@@ -1,5 +1,5 @@
 // js/inventoryShop.js
-// console.log("inventoryShop.js chargé !");
+// console.log("inventoryShop.js - Fichier chargé.");
 
 function gainXP(amount) { 
     let stats = gameState.nanobotStats; 
@@ -86,6 +86,7 @@ function buyItem(itemId) {
     addToInventory(itemId); 
     addLogEntry(`${item.name} acheté !`, "success");
     if (gameState.shopStock.includes(itemId)) { gameState.purchasedShopItems.push(itemId); }
-    updateResourceDisplay(); 
-    updateShopDisplay(); 
+    if(typeof updateResourceDisplay === 'function') updateResourceDisplay(); 
+    if(typeof updateShopDisplay === 'function') updateShopDisplay(); 
 }
+// console.log("inventoryShop.js - Fin du fichier.");

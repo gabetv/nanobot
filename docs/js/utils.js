@@ -8,15 +8,15 @@ function formatTime(seconds) { return `${Math.floor(seconds / 60).toString().pad
 
 let modalConfirmCallback = null; 
 function showModal(title, message, onConfirm, showCancel = true) { 
-    if (modalTitle) modalTitle.textContent = title; 
-    if (modalMessage) modalMessage.innerHTML = message; 
+    if (typeof modalTitle !== 'undefined' && modalTitle) modalTitle.textContent = title; 
+    if (typeof modalMessage !== 'undefined' && modalMessage) modalMessage.innerHTML = message; 
     modalConfirmCallback = onConfirm; 
-    if (modalConfirm) modalConfirm.classList.toggle('hidden', !onConfirm); 
-    if (modalCancel) modalCancel.classList.toggle('hidden', !showCancel); 
-    if (modal) modal.classList.remove('hidden'); 
+    if (typeof modalConfirm !== 'undefined' && modalConfirm) modalConfirm.classList.toggle('hidden', !onConfirm); 
+    if (typeof modalCancel !== 'undefined' && modalCancel) modalCancel.classList.toggle('hidden', !showCancel); 
+    if (typeof modal !== 'undefined' && modal) modal.classList.remove('hidden'); 
 } 
 function hideModal() { 
-    if (modal) modal.classList.add('hidden'); 
+    if (typeof modal !== 'undefined' && modal) modal.classList.add('hidden'); 
     modalConfirmCallback = null; 
 }
 
@@ -49,34 +49,22 @@ function addLogEntry(message, type = "info", logElement = null, logArray = null)
         const firstChild = logElement.firstChild;
         const firstChildText = firstChild ? firstChild.textContent : "";
         const initialMessages = ["En attente d'événements...", "Journal d'assaut initialisé."];
-        const titleMessages = ["Journal Principal des Événements :", "Résumé Combat :", "Journal d'Assaut Nocturne"];
+        const titleElements = logElement.querySelectorAll('h3, h4'); // Chercher h3 ou h4
+
+        let titleTextContent = "";
+        if (titleElements.length > 0) {
+            titleTextContent = titleElements[0].outerHTML; // Garder le HTML du titre
+        }
         
-        let shouldClearP = false;
-        if (initialMessages.includes(firstChildText) && firstChild.tagName === 'P') {
-            shouldClearP = true;
-        } else if (logElement.children.length > 0 && logElement.children[0].tagName && titleMessages.some(title => logElement.children[0].textContent.includes(title))) {
-             if(logElement.children.length === 1){ // Only title, no other p
-                // Don't clear, just append
-             } else if (logElement.children.length > 1 && logElement.children[1].tagName === 'P' && initialMessages.includes(logElement.children[1].textContent)) {
-                logElement.children[1].remove();
-             }
-        } else if (logElement.children.length === 0 || (logElement.children.length === 1 && initialMessages.includes(firstChildText))) {
-            // If empty or only contains the initial placeholder P (not a title H3/H4)
-            logElement.innerHTML = ""; // Clear completely
+        if (logElement.children.length === (titleElements.length > 0 ? 1 : 0) && initialMessages.includes(firstChildText) && firstChild.tagName === 'P') {
+             logElement.innerHTML = titleTextContent; // Remettre le titre s'il existait, puis vider le reste
+        } else if (logElement.children.length > titleElements.length && logElement.children[titleElements.length] && logElement.children[titleElements.length].tagName === 'P' && initialMessages.includes(logElement.children[titleElements.length].textContent)) {
+             logElement.children[titleElements.length].remove();
+        } else if (logElement.children.length === 0 && initialMessages.includes(firstChildText)){ // Si vide et que le texte était le placeholder
+             logElement.innerHTML = titleTextContent;
         }
 
 
-        if (shouldClearP) {
-            logElement.innerHTML = ""; 
-            if (logElement === eventLogEl && typeof eventLogEl !== 'undefined' && eventLogEl.querySelector('h3') === null) {
-                 eventLogEl.insertAdjacentHTML('afterbegin', '<h3 class="font-semibold mb-2 text-gray-300">Journal Principal des Événements :</h3>');
-            } else if (logElement === combatLogSummaryEl && typeof combatLogSummaryEl !== 'undefined' && combatLogSummaryEl.querySelector('h4') === null) {
-                 combatLogSummaryEl.insertAdjacentHTML('afterbegin', '<h4 class="font-semibold mb-1 text-gray-300">Résumé Combat :</h4>');
-            } else if (logElement === nightAssaultLogEl && typeof nightAssaultLogEl !== 'undefined' && nightAssaultLogEl.querySelector('h3') === null) {
-                 nightAssaultLogEl.insertAdjacentHTML('afterbegin', '<h3 class="font-orbitron text-lg mb-2 text-red-300 border-b border-gray-600 pb-1">Journal d\'Assaut Nocturne</h3>');
-            }
-        }
-        
         logElement.appendChild(entry); 
         logElement.scrollTop = logElement.scrollHeight; 
     } 
@@ -95,3 +83,4 @@ function calculateModifiedDamage(baseDamage, damageType, targetResistances) {
     const resistanceValue = targetResistances[damageType] || 0; 
     return Math.max(0, Math.floor(baseDamage * (1 - resistanceValue)));
 }
+// console.log("utils.js - Fin du fichier.");

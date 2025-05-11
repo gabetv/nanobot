@@ -108,7 +108,6 @@ function initDOMReferences() {
         nightAssaultLogEl = document.getElementById('night-assault-log');
         forceCycleChangeBtn = document.getElementById('force-cycle-change-btn');
     } catch (e) {
-        // alert("Erreur DANS initDOMReferences: " + e.message);
         console.error("Erreur DANS initDOMReferences: ", e);
     }
     // console.log("main.js: initDOMReferences - Fin");
@@ -148,6 +147,7 @@ function setupEventListeners() {
         tabs.forEach((tabInfo, index) => {
             if (tabInfo.btn && tabInfo.content) { 
                 tabInfo.btn.addEventListener('click', () => {
+                    // console.log(`Clic sur onglet: ${tabInfo.name || tabInfo.btn.id}`); 
                     tabs.forEach(t => { 
                         if(t.content) t.content.classList.add('hidden'); 
                         if(t.btn) { t.btn.classList.remove('border-blue-400', 'text-blue-300'); t.btn.classList.add('text-gray-500'); } 
@@ -171,10 +171,9 @@ function setupEventListeners() {
             console.error("ERREUR CRITIQUE: Onglet Overview (tabOverview) non trouvé pour clic initial !"); 
         }
     } catch (e) {
-        // alert("Erreur DANS setupEventListeners: " + e.message + "\nStack: " + e.stack);
         console.error("Erreur DANS setupEventListeners: ", e);
     }
-    // alert("main.js: setupEventListeners - Fin");
+    // console.log("main.js: setupEventListeners - Fin");
 }
 
 let gameLoopCounter = 0; 
@@ -185,13 +184,13 @@ function gameLoop() {
     // if (gameLoopCounter <= 5) { console.log("gameLoop - Tick " + gameLoopCounter + ", Temps Jeu: " + (gameState ? gameState.gameTime : 'gameState_ND')); }
 
     try {
-        if (gameState && gameState.capacity && gameState.resources && gameState.productionRates) { 
+        if (typeof gameState !== 'undefined' && gameState && gameState.capacity && gameState.resources && gameState.productionRates) { 
             if (gameState.capacity.energy >= gameState.resources.energy) { 
                 gameState.resources.biomass += gameState.productionRates.biomass * (TICK_SPEED / 1000); 
                 gameState.resources.nanites += gameState.productionRates.nanites * (TICK_SPEED / 1000); 
             } 
         } else {
-            if (gameLoopCounter <= 3) console.warn("gameLoop - gameState ou ses propriétés (capacity/resources/productionRates) non défini au début de la boucle !");
+            if (gameLoopCounter <= 3) console.warn("gameLoop - gameState ou propriétés critiques non initialisées.");
         }
 
         if (gameState && gameState.activeResearch && typeof researchData !== 'undefined' && researchData[gameState.activeResearch.id]) { 
@@ -249,7 +248,6 @@ function gameLoop() {
         if (gameIntervalId) { 
             clearInterval(gameIntervalId);
             addLogEntry("ERREUR CRITIQUE dans gameLoop. Boucle de jeu arrêtée. Vérifiez la console.", "error");
-            // alert("ERREUR CRITIQUE dans gameLoop. Boucle arrêtée. " + e.message);
         }
     }
 }
@@ -257,7 +255,7 @@ function gameLoop() {
 function init() {
     // console.log("init() - Début");
     try {
-        if (typeof initDOMReferences !== 'function') { alert("ERREUR CRITIQUE: initDOMReferences n'est PAS une fonction !"); return; }
+        if (typeof initDOMReferences !== 'function') { console.error("ERREUR CRITIQUE: initDOMReferences n'est PAS une fonction !"); return; }
         initDOMReferences(); 
         // console.log("init() - Après initDOMReferences");
         
@@ -296,28 +294,28 @@ function init() {
         else { console.error("buildingsData n'est pas défini avant son utilisation dans init()."); return;}
 
         // console.log("init() - Avant loadGame");
-        if(typeof loadGame === 'function') loadGame(); else { console.error("ERREUR: loadGame n'est pas défini !"); return; }
+        if(typeof loadGame === 'function') loadGame(); else { console.error("ERREUR: loadGame n'est pas défini !"); }
         // console.log("init() - Après loadGame");
         
         // console.log("init() - Avant generateMap/initializeBaseGrid");
         if (!gameState.map.tiles || gameState.map.tiles.length === 0 || gameState.map.zoneId !== gameState.currentZoneId) {
             if(typeof generateMap === 'function') generateMap(gameState.currentZoneId); 
-            else { console.error("generateMap n'est pas défini dans init"); }
+            else console.error("generateMap n'est pas défini dans init");
         }
          if (!gameState.baseGrid || gameState.baseGrid.length === 0 || (gameState.baseGrid.length > 0 && typeof BASE_GRID_SIZE !== 'undefined' && gameState.baseGrid.length !== BASE_GRID_SIZE.rows) ) { 
             if(typeof initializeBaseGrid === 'function') initializeBaseGrid();
-            else { console.error("initializeBaseGrid n'est pas défini dans init"); }
+            else console.error("initializeBaseGrid n'est pas défini dans init");
         }
         // console.log("init() - Après generateMap/initializeBaseGrid");
         
         // console.log("init() - Avant calculs");
-        if(typeof calculateNanobotStats === 'function') calculateNanobotStats(); else { console.error("calculateNanobotStats n'est pas défini dans init"); }
-        if(typeof calculateBaseStats === 'function') calculateBaseStats();  else { console.error("calculateBaseStats n'est pas défini dans init"); }
-        if(typeof calculateProductionAndConsumption === 'function') calculateProductionAndConsumption(); else { console.error("calculateProductionAndConsumption n'est pas défini dans init"); }
+        if(typeof calculateNanobotStats === 'function') calculateNanobotStats(); else console.error("calculateNanobotStats n'est pas défini dans init");
+        if(typeof calculateBaseStats === 'function') calculateBaseStats();  else console.error("calculateBaseStats n'est pas défini dans init");
+        if(typeof calculateProductionAndConsumption === 'function') calculateProductionAndConsumption(); else console.error("calculateProductionAndConsumption n'est pas défini dans init");
         // console.log("init() - Après calculs");
         
         // console.log("init() - Avant updateDisplays");
-        if(typeof updateDisplays === 'function') updateDisplays(); else { console.error("updateDisplays n'est pas défini dans init"); }
+        if(typeof updateDisplays === 'function') updateDisplays(); else console.error("updateDisplays n'est pas défini dans init");
         // console.log("init() - Après updateDisplays");
         
         // console.log("init() - Avant remplissage des logs");
@@ -325,7 +323,7 @@ function init() {
         if(combatLogSummaryEl) { combatLogSummaryEl.innerHTML = '<h4 class="font-semibold mb-1 text-gray-300">Résumé Combat :</h4>'; (gameState.combatLogSummary || ["Initialisé."]).forEach(msg => { const e = document.createElement('p'); e.innerHTML = msg; combatLogSummaryEl.appendChild(e); }); combatLogSummaryEl.scrollTop = combatLogSummaryEl.scrollHeight; }
         if(nightAssaultLogEl) { 
             const h3Title = nightAssaultLogEl.querySelector('h3');
-            if (h3Title) nightAssaultLogEl.innerHTML = h3Title.outerHTML; else nightAssaultLogEl.innerHTML = ""; // Garder titre si existe, sinon vider
+            if (h3Title) nightAssaultLogEl.innerHTML = h3Title.outerHTML; else nightAssaultLogEl.innerHTML = ""; 
             (gameState.nightAssault.log || ["Initialisé."]).forEach(msg => { 
                 const entry = document.createElement('p'); 
                 if (msg.includes("subit") || msg.includes("ALERTE CRITIQUE") || msg.includes("détruit")) entry.classList.add("text-red-400");
@@ -337,7 +335,7 @@ function init() {
                 nightAssaultLogEl.appendChild(entry); 
             }); 
             if (!gameState.nightAssault.log || gameState.nightAssault.log.length === 0 || (gameState.nightAssault.log.length === 1 && gameState.nightAssault.log[0].includes("initialisé"))) { 
-                if(!nightAssaultLogEl.querySelector('p.text-gray-500.italic')) { // Éviter d'ajouter plusieurs fois
+                if(!nightAssaultLogEl.querySelector('p.text-gray-500.italic')) { 
                     nightAssaultLogEl.insertAdjacentHTML('beforeend', '<p class="text-gray-500 italic">En attente d\'événements...</p>'); 
                 }
             }
@@ -346,7 +344,7 @@ function init() {
         // console.log("init() - Après remplissage des logs");
 
         // console.log("init() - Avant setupEventListeners");
-        if(typeof setupEventListeners === 'function') setupEventListeners(); else { console.error("ERREUR: setupEventListeners n'est pas défini !"); return; }
+        if(typeof setupEventListeners === 'function') setupEventListeners(); else console.error("ERREUR: setupEventListeners n'est pas défini !");
         // console.log("init() - Après setupEventListeners");
 
         // console.log("init() - Avant setInterval(gameLoop)");
@@ -358,12 +356,12 @@ function init() {
         // console.log("init() - Après setInterval(gameLoop) - Fin normale de init");
 
     } catch (e) {
-        alert("Erreur majeure DANS init(): " + e.message + "\nLigne: " + (e.lineNumber || 'N/A') + "\nFichier: " + (e.fileName || 'N/A') + "\nStack: " + e.stack);
+        // alert("Erreur majeure DANS init(): " + e.message + "\nLigne: " + (e.lineNumber || 'N/A') + "\nFichier: " + (e.fileName || 'N/A') + "\nStack: " + e.stack);
         console.error("Erreur majeure DANS init(): ", e);
     }
 }
         
-const SAVE_KEY = 'nexus7GameState_v1.0.0'; 
+const SAVE_KEY = 'nexus7GameState_v1.0.1'; // Incrément pour robustesse init/load
 function saveGame() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(gameState)); } catch (e) { console.error("Err Sauvegarde: ", e); if(typeof addLogEntry === 'function' && eventLogEl) addLogEntry("Err Sauvegarde Locale.", "error"); } }
 function loadGame() {
     const savedGame = localStorage.getItem(SAVE_KEY);
@@ -408,7 +406,6 @@ function loadGame() {
             localStorage.removeItem(SAVE_KEY); 
         }
     } 
-    // S'assurer que toutes les nouvelles propriétés ont une valeur par défaut après une tentative de chargement.
     const defaultGameStateForLoad = { 
         currentZoneId: 'sector_x9', unlockedZones: ['sector_x9'], inventory: [],
         nanobotEquipment: { weapon: null, armor: null, utility1: null, utility2: null },
@@ -435,7 +432,7 @@ function loadGame() {
             gameState[key] = JSON.parse(JSON.stringify(defaultGameStateForLoad[key])); 
         }
     }
-    if(ZONE_DATA && ZONE_DATA[gameState.currentZoneId] && !gameState.map.nanobotPos){
+    if(typeof ZONE_DATA !== 'undefined' && ZONE_DATA[gameState.currentZoneId] && !gameState.map.nanobotPos){
         gameState.map.nanobotPos = {...ZONE_DATA[gameState.currentZoneId].entryPoint};
     } else if (!gameState.map.nanobotPos) { 
         gameState.map.nanobotPos = {x:0, y:0};
@@ -444,4 +441,4 @@ function loadGame() {
 }
 
 window.onload = init; 
-// console.log("main.js - Fin du fichier, window.onload assigné."); 
+// console.log("main.js - Fin du fichier.");
