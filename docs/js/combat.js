@@ -1,41 +1,49 @@
 // js/combat.js
-// (Collez le contenu de js/combat.js de la réponse précédente ici)
-// alert("combat.js chargé"); // Test
+// console.log("combat.js chargé !");
+
 let combatSpeedMultiplier = 1; 
 let COMBAT_ANIMATION_DELAY = COMBAT_ANIMATION_DELAY_BASE;
 
 function setupCombatVisuals(nanobot, enemy) { 
+    if(!combatModalEl || !combatLogVisualEl || !combatNanobotHealthbar || !combatNanobotSprite || !combatEnemyNameEl || !combatEnemyHealthbar || !combatEnemySprite) {
+        console.warn("Éléments DOM manquants pour setupCombatVisuals");
+        return;
+    }
     combatModalEl.classList.remove('hidden'); 
     combatLogVisualEl.innerHTML = '<p class="text-gray-400">Préparation du combat...</p>'; 
     combatNanobotHealthbar.style.width = '100%'; 
     combatNanobotHealthbar.classList.remove('low'); 
     combatNanobotSprite.innerHTML = ''; 
-    // Afficher modules actifs du gameState (pas nanobotCombatStats car les visuels sont fixes)
-    for (const moduleId in gameState.nanobotModuleLevels) {
-        const currentLevel = gameState.nanobotModuleLevels[moduleId];
-        if (currentLevel > 0) {
-            const moduleData = nanobotModulesData[moduleId];
-            if (moduleData) {
-                if (moduleData.visualClass) { const visualEl = document.createElement('div'); visualEl.className = `nanobot-module ${moduleData.visualClass}`; combatNanobotSprite.appendChild(visualEl); } 
-                else if (moduleData.visualClasses) { moduleData.visualClasses.forEach(className => { const visualEl = document.createElement('div'); visualEl.className = `nanobot-module ${className}`; combatNanobotSprite.appendChild(visualEl); }); } 
+    
+    if (gameState && gameState.nanobotModuleLevels && typeof nanobotModulesData !== 'undefined') {
+        for (const moduleId in gameState.nanobotModuleLevels) {
+            const currentLevel = gameState.nanobotModuleLevels[moduleId];
+            if (currentLevel > 0) {
+                const moduleData = nanobotModulesData[moduleId];
+                if (moduleData) {
+                    if (moduleData.visualClass) { const visualEl = document.createElement('div'); visualEl.className = `nanobot-module ${moduleData.visualClass}`; combatNanobotSprite.appendChild(visualEl); } 
+                    else if (moduleData.visualClasses) { moduleData.visualClasses.forEach(className => { const visualEl = document.createElement('div'); visualEl.className = `nanobot-module ${className}`; combatNanobotSprite.appendChild(visualEl); }); } 
+                }
             }
         }
     }
-    for (const slot in gameState.nanobotEquipment) { 
-        const itemId = gameState.nanobotEquipment[slot]; 
-        if (itemId && itemsData[itemId] && itemsData[itemId].visualClass) { 
-            const item = itemsData[itemId]; 
-            const visualEl = document.createElement('div'); 
-            visualEl.className = `nanobot-item-visual ${item.visualClass}`; 
-            combatNanobotSprite.appendChild(visualEl); 
+    if (gameState && gameState.nanobotEquipment && typeof itemsData !== 'undefined') {
+        for (const slot in gameState.nanobotEquipment) { 
+            const itemId = gameState.nanobotEquipment[slot]; 
+            if (itemId && itemsData[itemId] && itemsData[itemId].visualClass) { 
+                const item = itemsData[itemId]; 
+                const visualEl = document.createElement('div'); 
+                visualEl.className = `nanobot-item-visual ${item.visualClass}`; 
+                combatNanobotSprite.appendChild(visualEl); 
+            } 
         } 
-    } 
-    combatEnemyNameEl.textContent = enemy.name; 
+    }
+    combatEnemyNameEl.textContent = enemy.name || "Ennemi"; 
     combatEnemyHealthbar.style.width = '100%'; 
     combatEnemyHealthbar.classList.remove('low'); 
     
     let enemySpriteSource = enemy.spritePath || (enemy.details ? enemy.details.spritePath : null);
-    if (enemySpriteSource) {
+    if (enemySpriteSource && enemySpriteSource.startsWith('http')) { 
         combatEnemySprite.style.backgroundImage = `url('${enemySpriteSource}')`;
         combatEnemySprite.style.backgroundColor = 'transparent';
     } else if (enemy.color) {
@@ -47,13 +55,41 @@ function setupCombatVisuals(nanobot, enemy) {
     }
 }
 
-function updateCombatantHealthVisual(combatantElementId, currentHealth, maxHealth) { const healthBar = document.getElementById(`${combatantElementId}-healthbar`); const percentage = Math.max(0, (maxHealth > 0 ? (currentHealth / maxHealth) : 0) * 100); healthBar.style.width = `${percentage}%`; healthBar.classList.toggle('low', percentage < 30); }
+function updateCombatantHealthVisual(combatantElementId, currentHealth, maxHealth) { 
+    const healthBar = document.getElementById(`${combatantElementId}-healthbar`); 
+    if(!healthBar) return;
+    const percentage = Math.max(0, (maxHealth > 0 ? (currentHealth / maxHealth) : 0) * 100); 
+    healthBar.style.width = `${percentage}%`; 
+    healthBar.classList.toggle('low', percentage < 30); 
+}
 
-async function showDamageFloat(targetElement, damage) { const damageEl = document.createElement('div'); damageEl.className = 'damage-float'; damageEl.textContent = `-${damage}`; targetElement.appendChild(damageEl); await sleep(1000 / combatSpeedMultiplier); damageEl.remove(); } 
+async function showDamageFloat(targetElement, damage) { 
+    if(!targetElement) return;
+    const damageEl = document.createElement('div'); 
+    damageEl.className = 'damage-float'; 
+    damageEl.textContent = `-${damage}`; 
+    targetElement.appendChild(damageEl); 
+    await sleep(1000 / combatSpeedMultiplier); 
+    if(damageEl.parentElement) damageEl.remove(); 
+} 
 
-async function animateAttack(attackerElement, targetElement, isNanobotAttacking) { const originalTransform = attackerElement.style.transform; const direction = isNanobotAttacking ? 1 : -1; attackerElement.style.transform = `translateX(${20 * direction}px) scale(1.05)`; targetElement.style.filter = 'brightness(1.5) saturate(2)'; await sleep( (COMBAT_ANIMATION_DELAY / 2) ); attackerElement.style.transform = originalTransform; targetElement.style.filter = 'none'; await sleep( (COMBAT_ANIMATION_DELAY / 2) ); }
+async function animateAttack(attackerElement, targetElement, isNanobotAttacking) { 
+    if(!attackerElement || !targetElement) return;
+    const originalTransform = attackerElement.style.transform; 
+    const direction = isNanobotAttacking ? 1 : -1; 
+    attackerElement.style.transform = `translateX(${20 * direction}px) scale(1.05)`; 
+    targetElement.style.filter = 'brightness(1.5) saturate(2)'; 
+    await sleep( (COMBAT_ANIMATION_DELAY / 2) ); 
+    attackerElement.style.transform = originalTransform; 
+    targetElement.style.filter = 'none'; 
+    await sleep( (COMBAT_ANIMATION_DELAY / 2) ); 
+}
 
 function checkAndActivateSkill(skillId, nanobot, enemy, currentCombatLog) {
+    if (typeof nanobotSkills === 'undefined' || typeof gameState === 'undefined' || !gameState.activeCombatSkills) {
+        console.error("Dépendances manquantes pour checkAndActivateSkill (nanobotSkills ou gameState.activeCombatSkills)");
+        return null;
+    }
     const skill = nanobotSkills[skillId];
     if (!skill) return null;
 
@@ -66,7 +102,7 @@ function checkAndActivateSkill(skillId, nanobot, enemy, currentCombatLog) {
 
     let canActivate = false;
     if (skill.trigger) {
-        if (skill.trigger.healthPercentBelow && (nanobot.currentHealth / nanobot.health * 100) < skill.trigger.healthPercentBelow) {
+        if (skill.trigger.healthPercentBelow && nanobot.health > 0 && (nanobot.currentHealth / nanobot.health * 100) < skill.trigger.healthPercentBelow) {
             canActivate = true;
         }
         if (skill.trigger.onNanobotAttackHit && skill.id === 'adaptiveFocus') { 
@@ -76,14 +112,15 @@ function checkAndActivateSkill(skillId, nanobot, enemy, currentCombatLog) {
 
     if (skill.cost) {
         if (skill.cost.rage && nanobot.rage >= skill.cost.rage) {
-            canActivate = true; 
-        } else if (!skill.trigger) { // Si c'est une compétence à coût SANS trigger, alors le coût bloque si pas trigger.
-             canActivate = false;
+            canActivate = true; // La condition de coût peut permettre l'activation même si un trigger n'est pas rempli
+        } else if (!skill.trigger) { // Si c'est une compétence à coût SANS trigger, alors le coût est la seule condition (en dehors du cooldown)
+             canActivate = false; // Bloqué si pas assez de rage
         }
-    } else if (!skill.trigger && skill.id !== 'adaptiveFocus') { // Compétence sans coût et sans trigger (sauf cas spécial)
+        // Si un trigger existe ET un coût existe, les deux doivent être valides si on veut que le trigger soit la condition principale
+        // Pour l'instant, un trigger OU un coût suffisant (pour les compétences à coût) peuvent activer.
+    } else if (!skill.trigger && skill.id !== 'adaptiveFocus') { 
         canActivate = true; 
     }
-    // Pour adaptiveFocus, canActivate est déjà géré par le trigger onNanobotAttackHit. Il n'a pas de coût.
 
 
     if (canActivate) {
@@ -102,17 +139,26 @@ function checkAndActivateSkill(skillId, nanobot, enemy, currentCombatLog) {
     return null; 
 }
         
-async function _simulateCombat(enemyDetails) {
-    if (gameState.nanobotStats.currentHealth <= 0) { addLogEntry("Nexus-7 hors combat.", "error", combatLogSummaryEl, gameState.combatLogSummary); return; }
-    const enemy = { ...enemyDetails }; 
-    enemy.currentHealth = enemy.health || (enemy.details ? enemy.details.health : 0); 
-    enemy.maxHealth = enemy.maxHealth || enemy.health || (enemy.details ? enemy.details.health : 0);
-    enemy.attack = enemy.attack || (enemy.details ? enemy.details.attack : 0);
-    enemy.defense = enemy.defense || (enemy.details ? enemy.details.defense : 0);
-    enemy.name = enemy.name || (enemy.details ? enemy.details.name : "Ennemi Inconnu");
-    enemy.color = enemy.color || (enemy.details ? enemy.details.color : "#e53e3e");
-    enemy.spritePath = enemy.spritePath || (enemy.details ? enemy.details.spritePath : null);
-
+async function _simulateCombat(enemyDetailsInput) { 
+    if (!gameState || !gameState.nanobotStats || gameState.nanobotStats.currentHealth <= 0) { 
+        if(typeof addLogEntry === 'function') addLogEntry("Nexus-7 hors combat ou état du jeu invalide.", "error", combatLogSummaryEl, gameState ? gameState.combatLogSummary : null); 
+        return; 
+    }
+    
+    const enemyData = enemyDetailsInput.details ? { ...enemyDetailsInput.details } : { ...enemyDetailsInput };
+    const enemy = {
+        name: enemyData.name || "Ennemi Inconnu",
+        health: enemyData.health || 1,
+        maxHealth: enemyData.maxHealth || enemyData.health || 1,
+        attack: enemyData.attack || 0,
+        defense: enemyData.defense || 0,
+        color: enemyData.color || '#e53e3e',
+        spritePath: enemyData.spritePath || null,
+        damageType: enemyData.damageType || DAMAGE_TYPES.KINETIC,
+        resistances: enemyData.resistances || {},
+        reward: enemyData.reward || {biomass:0, nanites:0, xp:0}, 
+        currentHealth: enemyData.health || enemyData.maxHealth || 1 // Assurer que currentHealth est bien initialisé
+    };
 
     let nanobotCombatStats = { ...gameState.nanobotStats }; 
     nanobotCombatStats.rage = (nanobotCombatStats.rage || 0) + 10; 
@@ -120,13 +166,13 @@ async function _simulateCombat(enemyDetails) {
     let activeShield = null; 
 
     setupCombatVisuals(nanobotCombatStats, enemy);
-    combatLogVisualEl.innerHTML = ''; 
+    if(combatLogVisualEl) combatLogVisualEl.innerHTML = ''; 
     addLogEntry(`Affrontement avec ${enemy.name}!`, "combat-visual", combatLogVisualEl, null);
     
     await sleep(COMBAT_ANIMATION_DELAY); 
     let combatRound = 0; 
-    closeCombatModalBtn.disabled = true; 
-    toggleSpeedBtn.disabled = true; 
+    if(closeCombatModalBtn) closeCombatModalBtn.disabled = true; 
+    if(toggleSpeedBtn) toggleSpeedBtn.disabled = true; 
     let combatEnded = false;
             
     while (nanobotCombatStats.currentHealth > 0 && enemy.currentHealth > 0 && combatRound < 20) { 
@@ -136,47 +182,45 @@ async function _simulateCombat(enemyDetails) {
 
         let nanobotDamageMultiplier = 1.0;
         let nanobotAttackMessageSuffix = "";
+        let nanobotFinalDamageType = DAMAGE_TYPES.KINETIC; 
+        if(gameState.nanobotEquipment.weapon && itemsData[gameState.nanobotEquipment.weapon] && itemsData[gameState.nanobotEquipment.weapon].damageType){
+            nanobotFinalDamageType = itemsData[gameState.nanobotEquipment.weapon].damageType;
+        }
 
         const emergencyShieldSkill = checkAndActivateSkill('emergencyShield', nanobotCombatStats, enemy, combatLogVisualEl);
         if (emergencyShieldSkill) {
-            activeShield = { 
-                amount: emergencyShieldSkill.effect.damageAbsorption, 
-                duration: emergencyShieldSkill.effect.duration 
-            };
+            activeShield = { amount: emergencyShieldSkill.effect.damageAbsorption, duration: emergencyShieldSkill.effect.duration };
             addLogEntry(`<span class="skill-effect">${emergencyShieldSkill.effectMessage}</span>`, "combat-visual", combatLogVisualEl, null);
         }
 
         const powerStrikeSkill = checkAndActivateSkill('powerStrike', nanobotCombatStats, enemy, combatLogVisualEl);
-        if (powerStrikeSkill) {
-            nanobotDamageMultiplier = powerStrikeSkill.effect.damageMultiplier;
-        }
+        if (powerStrikeSkill) { nanobotDamageMultiplier = powerStrikeSkill.effect.damageMultiplier; }
 
         addLogEntry("Nexus-7 attaque...", "combat-visual", combatLogVisualEl, null); 
         await animateAttack(document.getElementById('combat-nanobot'), document.getElementById('combat-enemy'), true);
         
         let baseDamage = nanobotCombatStats.attack;
-        if (nanobotCombatStats.focusStacks > 0) {
+        if (nanobotCombatStats.focusStacks > 0 && typeof nanobotSkills !== 'undefined' && nanobotSkills.adaptiveFocus) {
             baseDamage += (nanobotSkills.adaptiveFocus.effect.damageBonusPerStack * nanobotCombatStats.focusStacks);
             nanobotAttackMessageSuffix += ` (Concentration x${nanobotCombatStats.focusStacks})`;
         }
 
-        let damageToEnemy = Math.max(1, Math.floor(baseDamage * nanobotDamageMultiplier) - enemy.defense); 
+        let damageToEnemyPreDefense = calculateModifiedDamage(baseDamage * nanobotDamageMultiplier, nanobotFinalDamageType, enemy.resistances);
+        let damageToEnemy = Math.max(1, Math.floor(damageToEnemyPreDefense) - enemy.defense); 
+        
         enemy.currentHealth -= damageToEnemy;
         
-        if (powerStrikeSkill) {
-             addLogEntry(`<span class="skill-effect">${powerStrikeSkill.effectMessage(damageToEnemy)}</span>`, "combat-visual", combatLogVisualEl, null);
-        }
+        if (powerStrikeSkill) { addLogEntry(`<span class="skill-effect">${powerStrikeSkill.effectMessage(damageToEnemy)}</span>`, "combat-visual", combatLogVisualEl, null); }
 
         await showDamageFloat(document.getElementById('combat-enemy'), damageToEnemy); 
         updateCombatantHealthVisual('combat-enemy', enemy.currentHealth, enemy.maxHealth);
-        addLogEntry(`Nexus-7 inflige ${damageToEnemy} dégâts${nanobotAttackMessageSuffix}. PV ${enemy.name}: ${Math.max(0, Math.floor(enemy.currentHealth))}`, "combat-visual", combatLogVisualEl, null); 
+        addLogEntry(`Nexus-7 inflige ${damageToEnemy} dégâts ${nanobotFinalDamageType}${nanobotAttackMessageSuffix}. PV ${enemy.name}: ${Math.max(0, Math.floor(enemy.currentHealth))}`, "combat-visual", combatLogVisualEl, null); 
         addLogEntry(`Nexus-7 inflige ${damageToEnemy} à ${enemy.name}.`, "combat", combatLogSummaryEl, gameState.combatLogSummary);
         
-        nanobotCombatStats.focusStacks = Math.min((nanobotCombatStats.focusStacks + 1), nanobotSkills.adaptiveFocus.effect.maxStacks);
-        if (nanobotCombatStats.focusStacks > 0) { // Seulement log si la concentration augmente ou est maintenue
-             addLogEntry(`<span class="skill-activation">${nanobotSkills.adaptiveFocus.activationMessage(nanobotCombatStats.focusStacks)}</span>`, "combat-visual", combatLogVisualEl, null);
+        if(typeof nanobotSkills !== 'undefined' && nanobotSkills.adaptiveFocus){ 
+            nanobotCombatStats.focusStacks = Math.min((nanobotCombatStats.focusStacks + 1), nanobotSkills.adaptiveFocus.effect.maxStacks);
+            if (nanobotCombatStats.focusStacks > 0) { addLogEntry(`<span class="skill-activation">${nanobotSkills.adaptiveFocus.activationMessage(nanobotCombatStats.focusStacks)}</span>`, "combat-visual", combatLogVisualEl, null); }
         }
-
 
         nanobotCombatStats.rage = Math.min(100, (nanobotCombatStats.rage || 0) + 5); 
 
@@ -184,30 +228,33 @@ async function _simulateCombat(enemyDetails) {
         if (enemy.currentHealth <= 0) { 
             addLogEntry(`${enemy.name} détruit! Victoire!`, "success", combatLogVisualEl, null); 
             addLogEntry(`${enemy.name} détruit! Victoire!`, "success", combatLogSummaryEl, gameState.combatLogSummary); 
-            if (gameState.map.currentEnemyEncounter) { const {x, y} = gameState.map.currentEnemyEncounter; gameState.map.tiles[y][x] = TILE_TYPES.EMPTY; } 
+            if (gameState.map.currentEnemyEncounter) { 
+                const {x, y} = gameState.map.currentEnemyEncounter; 
+                if(gameState.map.tiles && gameState.map.tiles[y]) gameState.map.tiles[y][x] = TILE_TYPES.EMPTY; 
+            } 
             combatEnded = true; break; 
         }
         
         addLogEntry(`${enemy.name} attaque...`, "combat-visual", combatLogVisualEl, null); 
         await animateAttack(document.getElementById('combat-enemy'), document.getElementById('combat-nanobot'), false);
         
-        let damageToNanobotCalc = Math.max(1, enemy.attack - nanobotCombatStats.defense); 
+        let enemyBaseAttackDamage = enemy.attack;
+        let enemyDamageType = enemy.damageType || DAMAGE_TYPES.KINETIC;
+
+        let damageToNanobotCalc = calculateModifiedDamage(enemyBaseAttackDamage, enemyDamageType, null); 
+        damageToNanobotCalc = Math.max(1, damageToNanobotCalc - nanobotCombatStats.defense); 
         let actualDamageToNanobot = damageToNanobotCalc;
         
         if (activeShield && activeShield.amount > 0) {
             const absorbed = Math.min(actualDamageToNanobot, activeShield.amount);
-            actualDamageToNanobot -= absorbed;
-            activeShield.amount -= absorbed;
+            actualDamageToNanobot -= absorbed; activeShield.amount -= absorbed;
             addLogEntry(`Bouclier absorbe ${absorbed} dégâts !`, "combat-visual", combatLogVisualEl, null);
-            if (activeShield.amount <= 0) {
-                addLogEntry("Bouclier d'urgence épuisé.", "combat-visual", combatLogVisualEl, null);
-                activeShield = null; 
-            }
+            if (activeShield.amount <= 0) { addLogEntry("Bouclier d'urgence épuisé.", "combat-visual", combatLogVisualEl, null); activeShield = null; }
         }
         
         if (actualDamageToNanobot > 0) {
             nanobotCombatStats.currentHealth -= actualDamageToNanobot;
-            if (nanobotCombatStats.focusStacks > 0 && nanobotSkills.adaptiveFocus.resetCondition.onNanobotHit) {
+            if (nanobotCombatStats.focusStacks > 0 && typeof nanobotSkills !== 'undefined' && nanobotSkills.adaptiveFocus && nanobotSkills.adaptiveFocus.resetCondition.onNanobotHit) {
                 addLogEntry("<span class='skill-effect'>Concentration perdue !</span>", "combat-visual", combatLogVisualEl, null);
                 nanobotCombatStats.focusStacks = 0;
             }
@@ -216,15 +263,12 @@ async function _simulateCombat(enemyDetails) {
 
         await showDamageFloat(document.getElementById('combat-nanobot'), actualDamageToNanobot); 
         updateCombatantHealthVisual('combat-nanobot', nanobotCombatStats.currentHealth, nanobotCombatStats.health);
-        addLogEntry(`${enemy.name} inflige ${actualDamageToNanobot} dégâts. PV Nexus-7: ${Math.max(0, Math.floor(nanobotCombatStats.currentHealth))}`, "combat-visual", combatLogVisualEl, null); 
+        addLogEntry(`${enemy.name} inflige ${actualDamageToNanobot} dégâts ${enemyDamageType}. PV Nexus-7: ${Math.max(0, Math.floor(nanobotCombatStats.currentHealth))}`, "combat-visual", combatLogVisualEl, null); 
         addLogEntry(`${enemy.name} inflige ${actualDamageToNanobot} à Nexus-7.`, "combat", combatLogSummaryEl, gameState.combatLogSummary);
         
         if (activeShield) {
             activeShield.duration--;
-            if (activeShield.duration <= 0 && activeShield.amount > 0) {
-                 addLogEntry("Bouclier d'urgence se dissipe.", "combat-visual", combatLogVisualEl, null);
-                 activeShield = null;
-            }
+            if (activeShield.duration <= 0 && activeShield.amount > 0) { addLogEntry("Bouclier d'urgence se dissipe.", "combat-visual", combatLogVisualEl, null); activeShield = null; }
         }
 
         await sleep(COMBAT_ANIMATION_DELAY);
@@ -244,46 +288,55 @@ async function _simulateCombat(enemyDetails) {
 
     if (!combatEnded && combatRound >= 20) { addLogEntry("Combat indécis. Retraite.", "warning", combatLogVisualEl, null); addLogEntry("Combat indécis.", "warning", combatLogSummaryEl, gameState.combatLogSummary); }
     
-    closeCombatModalBtn.disabled = false; 
-    toggleSpeedBtn.disabled = false; 
+    if(closeCombatModalBtn) closeCombatModalBtn.disabled = false; 
+    if(toggleSpeedBtn) toggleSpeedBtn.disabled = false; 
     gameState.map.currentEnemyEncounter = null;
-    calculateNanobotStats(); 
-    updateDisplays(); 
+    if(typeof calculateNanobotStats === 'function') calculateNanobotStats(); 
+    if(typeof updateDisplays === 'function') updateDisplays(); 
 }
 
-var originalSimulateCombat = _simulateCombat; 
 var simulateCombat = async function(enemyDetailsInput) { 
-    // Assurer que enemyDetails est un objet propre pour le combat
-    const enemyDetails = enemyDetailsInput.details ? {...enemyDetailsInput.details} : {...enemyDetailsInput};
-    if(!enemyDetails.health) enemyDetails.health = enemyDetails.maxHealth || 1; // Fallback
+    const enemyCombatData = enemyDetailsInput.details ? { ...enemyDetailsInput.details } : { ...enemyDetailsInput };
+    enemyCombatData.health = enemyCombatData.health || enemyCombatData.maxHealth || 1;
+    enemyCombatData.maxHealth = enemyCombatData.maxHealth || enemyCombatData.health || 1;
+    enemyCombatData.attack = enemyCombatData.attack || 0;
+    enemyCombatData.defense = enemyCombatData.defense || 0;
+    enemyCombatData.name = enemyCombatData.name || "Ennemi Inconnu";
+    enemyCombatData.currentHealth = enemyCombatData.health; 
 
-    await _simulateCombat(enemyDetails); 
+    await _simulateCombat(enemyCombatData); 
     
-    const enemyAttackForReward = enemyDetails.attack;
-    const enemyDefenseForReward = enemyDetails.defense;
-    const enemyMaxHealthForReward = enemyDetails.maxHealth;
+    const enemyAttackForReward = enemyCombatData.attack;
+    const enemyDefenseForReward = enemyCombatData.defense;
+    const enemyMaxHealthForReward = enemyCombatData.maxHealth;
 
-    if (enemyDetails && gameState.nanobotStats.currentHealth > 0 && enemyDetails.currentHealth <=0 ) { 
-        combatEndTitleEl.textContent = "Victoire !";
-        combatEndTitleEl.className = "font-orbitron text-lg mb-4 text-green-300";
+    if (enemyCombatData && gameState.nanobotStats.currentHealth > 0 && enemyCombatData.currentHealth <=0 ) { 
+        if(combatEndTitleEl) combatEndTitleEl.textContent = "Victoire !";
+        if(combatEndTitleEl) combatEndTitleEl.className = "font-orbitron text-lg mb-4 text-green-300";
         
         const biomassReward = enemyAttackForReward * 2; 
         const naniteReward = enemyDefenseForReward;
-        combatEndRewardsEl.innerHTML = `+${biomassReward} Biomasse<br>+${naniteReward} Nanites`;
+        if(combatEndRewardsEl) combatEndRewardsEl.innerHTML = `+${biomassReward} Biomasse<br>+${naniteReward} Nanites`;
         gameState.resources.biomass += biomassReward; gameState.resources.nanites += naniteReward;
         addLogEntry(`Récompenses: +${biomassReward} Biomasse, +${naniteReward} Nanites.`, "success", combatLogSummaryEl, gameState.combatLogSummary);
-        const xpAmount = Math.floor(enemyAttackForReward + enemyDefenseForReward + (enemyMaxHealthForReward / 5)); gainXP(xpAmount);
-        const lootItems = generateLoot(enemyDetails); lootListEl.innerHTML = ""; 
-        if (lootItems.length > 0) { lootItems.forEach(itemId => { addToInventory(itemId); const itemData = itemsData[itemId]; if (itemData) { const li = document.createElement("li"); li.textContent = `🎁 ${itemData.name}`; lootListEl.appendChild(li); } });
-        } else { lootListEl.innerHTML = "<li>Aucun butin spécifique trouvé.</li>"; }
-        updateResourceDisplay(); combatEndModalEl.classList.remove('hidden');
-    } else if (enemyDetails && gameState.nanobotStats.currentHealth <= 0) { 
-        combatEndTitleEl.textContent = "Défaite...";
-        combatEndTitleEl.className = "font-orbitron text-lg mb-4 text-red-400";
-        combatEndRewardsEl.innerHTML = "Aucune récompense.";
-        xpGainEl.textContent = "+0 XP";
-        lootListEl.innerHTML = "<li>Aucun butin récupéré.</li>";
-        combatEndModalEl.classList.remove('hidden'); 
+        const xpAmount = Math.floor(enemyAttackForReward + enemyDefenseForReward + (enemyMaxHealthForReward / 5)); 
+        if(typeof gainXP === 'function') gainXP(xpAmount);
+        
+        const lootItems = typeof generateLoot === 'function' ? generateLoot(enemyCombatData) : []; 
+        if(lootListEl) lootListEl.innerHTML = ""; 
+        if (lootItems.length > 0) { lootItems.forEach(itemId => { addToInventory(itemId); const itemData = itemsData[itemId]; if (itemData) { const li = document.createElement("li"); li.textContent = `🎁 ${itemData.name}`; if(lootListEl) lootListEl.appendChild(li); } });
+        } else { if(lootListEl) lootListEl.innerHTML = "<li>Aucun butin spécifique trouvé.</li>"; }
+        
+        if(typeof updateResourceDisplay === 'function') updateResourceDisplay(); 
+        if(combatEndModalEl) combatEndModalEl.classList.remove('hidden');
+    } else if (enemyCombatData && gameState.nanobotStats.currentHealth <= 0) { 
+        if(combatEndTitleEl) combatEndTitleEl.textContent = "Défaite...";
+        if(combatEndTitleEl) combatEndTitleEl.className = "font-orbitron text-lg mb-4 text-red-400";
+        if(combatEndRewardsEl) combatEndRewardsEl.innerHTML = "Aucune récompense.";
+        if(xpGainEl) xpGainEl.textContent = "+0 XP";
+        if(lootListEl) lootListEl.innerHTML = "<li>Aucun butin récupéré.</li>";
+        if(combatEndModalEl) combatEndModalEl.classList.remove('hidden'); 
     }
-    closeCombatModalBtn.disabled = false; toggleSpeedBtn.disabled = false;
+    if(closeCombatModalBtn) closeCombatModalBtn.disabled = false; 
+    if(toggleSpeedBtn) toggleSpeedBtn.disabled = false;
 };

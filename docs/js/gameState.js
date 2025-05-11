@@ -1,8 +1,8 @@
 // js/gameState.js
-// alert("gameState.js chargé !"); // Pour tester
+// console.log("gameState.js - Fichier chargé.");
 
 let gameState = {
-    resources: { biomass: 200 * 1000, nanites: 100 * 1000, energy: 50 * 10 }, 
+    resources: { biomass: 200 * 1000, nanites: 100 * 1000, energy: 50 * 10, crystal_shards: 0 }, 
     productionRates: { biomass: 0, nanites: 0 },
     capacity: { energy: 50 * 10 }, 
     buildings: {}, 
@@ -23,17 +23,26 @@ let gameState = {
     inventory: [], 
     nanobotEquipment: { weapon: null, armor: null, utility1: null, utility2: null },
     combatLogSummary: ["Journal de combat initialisé."],
+    currentZoneId: 'sector_x9', 
+    unlockedZones: ['sector_x9'], 
     map: { 
         tiles: [], 
         explored: [], 
-        nanobotPos: { x: BASE_COORDINATES.x, y: BASE_COORDINATES.y }, 
+        nanobotPos: { x: 0, y: 0 }, // Sera correctement initialisé dans init() après chargement de config.js
+        zoneId: 'sector_x9', 
         currentEnemyEncounter: null 
     },
-    shopStock: ['item_laser_mk1', 'item_plating_basic', 'item_repair_kit_s'],
+    shopStock: ['item_laser_mk1', 'item_nanosword', 'item_plating_basic', 'item_repair_kit_s'],
     purchasedShopItems: [],
+    baseGrid: [],
+    placementMode: { 
+        isActive: false, 
+        selectedDefenseType: null,
+        selectedDefenseLevel: 1 
+    },
     baseStats: {
-        currentHealth: BASE_INITIAL_HEALTH,
-        maxHealth: BASE_INITIAL_HEALTH,
+        currentHealth: (typeof BASE_INITIAL_HEALTH !== 'undefined' ? BASE_INITIAL_HEALTH : 500), // Utiliser la constante si définie
+        maxHealth: (typeof BASE_INITIAL_HEALTH !== 'undefined' ? BASE_INITIAL_HEALTH : 500),
         defensePower: 0 
     },
     defenses: {}, 
@@ -42,7 +51,13 @@ let gameState = {
         wave: 0,
         enemies: [], 
         lastAttackTime: 0,
-        log: ["Journal d'assaut initialisé."] 
+        log: ["Journal d'assaut initialisé."],
+        currentEvent: null, 
+        globalModifiers: {} 
     },
-    activeCombatSkills: {}
+    activeCombatSkills: {},
+    activeResearch: null 
 };
+
+// S'assurer que nanobotPos est initialisé avec les valeurs de config.js si elles sont disponibles
+// Cela se fera plus proprement dans init() après que tous les scripts soient chargés.
