@@ -13,22 +13,25 @@ var uiUpdates = {
         if(biomassEl) biomassEl.textContent = Math.floor(gameState.resources.biomass);
         if(nanitesEl) nanitesEl.textContent = Math.floor(gameState.resources.nanites);
         if(typeof gameState.resources.crystal_shards !== 'undefined'){
-            if(crystalShardsDisplayContainer) crystalShardsDisplayContainer.classList.toggle('hidden', gameState.resources.crystal_shards <= 0 && !crystalShardsDisplayContainer.classList.contains('always-visible')); // Keep visible if it has a specific class
+            if(crystalShardsDisplayContainer) crystalShardsDisplayContainer.classList.toggle('hidden', gameState.resources.crystal_shards <= 0 && !crystalShardsDisplayContainer.classList.contains('always-visible'));
             if(crystalShardsEl) crystalShardsEl.textContent = Math.floor(gameState.resources.crystal_shards || 0);
         } else if (crystalShardsDisplayContainer) {
             crystalShardsDisplayContainer.classList.add('hidden');
         }
 
-        if(energyEl && typeof gameState.resources.totalEnergyConsumed !== 'undefined') {
+        // Affichage de l'énergie : Consommée / Capacité Totale
+        if(energyEl && typeof gameState.resources.totalEnergyConsumed !== 'undefined' && typeof gameState.capacity.energy !== 'undefined') {
              energyEl.textContent = `${Math.floor(gameState.resources.totalEnergyConsumed)} / ${gameState.capacity.energy}`;
-        } else if (energyEl) { // Fallback if totalEnergyConsumed is not yet calculated
+        } else if (energyEl && typeof gameState.capacity.energy !== 'undefined') { // Fallback if totalEnergyConsumed is not yet calculated
              energyEl.textContent = `? / ${gameState.capacity.energy}`;
+        } else if (energyEl) {
+            energyEl.textContent = `? / ?`;
         }
 
 
         if(biomassRateEl) biomassRateEl.textContent = gameState.productionRates.biomass.toFixed(1);
         if(nanitesRateEl) nanitesRateEl.textContent = gameState.productionRates.nanites.toFixed(1);
-        // energyCapacityEl is part of the energy display string now
+        
         if(energyCostMoveEl && typeof EXPLORATION_COST_ENERGY !== 'undefined') energyCostMoveEl.textContent = EXPLORATION_COST_ENERGY;
     },
 
@@ -45,7 +48,6 @@ var uiUpdates = {
             buildingsSection.innerHTML = '<h2 class="font-orbitron text-xl mb-3 text-blue-300 border-b border-gray-600 pb-2">Modules Structurels & Défensifs</h2><p class="text-gray-500 italic">État des bâtiments non initialisé.</p>';
             return;
         }
-        // console.log("UI: updateBuildingDisplay - gameState.buildings:", JSON.parse(JSON.stringify(gameState.buildings)), "- buildingsData keys:", Object.keys(buildingsData).length);
 
         buildingsSection.innerHTML = '<h2 class="font-orbitron text-xl mb-3 text-blue-300 border-b border-gray-600 pb-2">Modules Structurels & Défensifs</h2>';
         let buildingCount = 0;
@@ -54,7 +56,7 @@ var uiUpdates = {
             const building = buildingsData[id];
             const level = gameState.buildings[id] || 0;
             const currentLevelData = level > 0 && building.levels && building.levels[level - 1] ? building.levels[level - 1] : null;
-            const nextLevelDefinition = building.levels && building.levels[level] ? building.levels[level] : null; // Data for level + 1
+            const nextLevelDefinition = building.levels && building.levels[level] ? building.levels[level] : null;
 
             const div = document.createElement('div');
             div.className = 'mb-4 p-3 bg-gray-800 rounded shadow';
@@ -74,7 +76,7 @@ var uiUpdates = {
             div.innerHTML = content;
 
             if (nextLevelDefinition) { 
-                const costObject = level === 0 ? nextLevelDefinition.costToUnlockOrUpgrade : nextLevelDefinition.costToUpgrade; // Corrected access
+                const costObject = level === 0 ? nextLevelDefinition.costToUnlockOrUpgrade : nextLevelDefinition.costToUpgrade;
                 if (!costObject) {
                     console.warn(`UI: Coût manquant pour ${building.name} Niv. ${level + 1}`);
                 } else {
@@ -103,8 +105,7 @@ var uiUpdates = {
                 placeButton.className = 'btn btn-info btn-sm mt-2 ml-2';
                 placeButton.textContent = `Placer ${building.name}`;
                 placeButton.onclick = () => {
-                    console.log(`Bouton 'Placer ${building.name}' (ID: ${id}) cliqué. Appel de enterPlacementMode.`); // LOG ADDED
-                    if(typeof enterPlacementMode === 'function') enterPlacementMode(id);
+                    if(typeof enterPlacementMode === 'function') enterPlacementMode(id); else console.error("enterPlacementMode non défini");
                 };
                 div.appendChild(placeButton);
             }
@@ -525,12 +526,12 @@ var uiUpdates = {
             return;
         }
 
+        previewContainer.style.setProperty('--base-grid-cols', BASE_GRID_SIZE.cols);
+        previewContainer.style.setProperty('--base-grid-rows', BASE_GRID_SIZE.rows);
+        
         previewContainer.innerHTML = ''; 
         previewContainer.style.gridTemplateRows = `repeat(${BASE_GRID_SIZE.rows}, 1fr)`;
         previewContainer.style.gridTemplateColumns = `repeat(${BASE_GRID_SIZE.cols}, 1fr)`;
-
-        const cellWidth = previewContainer.offsetWidth / BASE_GRID_SIZE.cols;
-        const cellHeight = previewContainer.offsetHeight / BASE_GRID_SIZE.rows;
 
         for (let r = 0; r < BASE_GRID_SIZE.rows; r++) {
             for (let c = 0; c < BASE_GRID_SIZE.cols; c++) {
@@ -544,7 +545,7 @@ var uiUpdates = {
 
                 if (r === coreRow && c === coreCol) {
                     cell.classList.add('core'); 
-                    cell.innerHTML = `<div class="base-core-visual" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center;">N</div>`;
+                    cell.innerHTML = `<div class="base-core-visual">N</div>`;
                     cell.id = 'base-core-visual-cell'; 
                 } else {
                     const defenseOnCell = gameState.baseGrid[r] && gameState.baseGrid[r][c];
@@ -565,6 +566,10 @@ var uiUpdates = {
             }
         }
         
+        const firstCell = previewContainer.querySelector('.base-preview-cell');
+        const cellWidth = firstCell ? firstCell.offsetWidth : (previewContainer.offsetWidth / BASE_GRID_SIZE.cols);
+        const cellHeight = firstCell ? firstCell.offsetHeight : (previewContainer.offsetHeight / BASE_GRID_SIZE.rows);
+
         for (const instanceId in gameState.defenses) {
             const defenseState = gameState.defenses[instanceId];
             const buildingDef = typeof buildingsData !== 'undefined' ? buildingsData[defenseState.id] : null;
@@ -580,8 +585,8 @@ var uiUpdates = {
                 else if (healthPercentage < 60) defenseVisual.style.backgroundColor = '#ecc94b'; 
 
                 defenseVisual.style.position = 'absolute';
-                const visualWidth = parseInt(getComputedStyle(defenseVisual).width) || 20; 
-                const visualHeight = parseInt(getComputedStyle(defenseVisual).height) || 20;
+                const visualWidth = parseInt(getComputedStyle(defenseVisual).width) || 18; 
+                const visualHeight = parseInt(getComputedStyle(defenseVisual).height) || 18;
                 
                 defenseVisual.style.left = `${defenseState.gridPos.c * cellWidth + (cellWidth / 2) - (visualWidth / 2)}px`;
                 defenseVisual.style.top = `${defenseState.gridPos.r * cellHeight + (cellHeight / 2) - (visualHeight / 2)}px`;
@@ -621,10 +626,16 @@ var uiUpdates = {
                     }
 
                     enemyVisual.style.position = 'absolute';
-                    const visualWidth = parseInt(enemyVisual.style.width) || (isBoss ? 30 : 8);
-                    const visualHeight = parseInt(enemyVisual.style.height) || (isBoss ? 30 : 8);
-                    enemyVisual.style.left = `${enemy.x - (visualWidth / 2)}px`;
-                    enemyVisual.style.top = `${enemy.y - (visualHeight / 2)}px`;
+                    // Les tailles sont maintenant issues du CSS ou des données du boss
+                    const visualWidth = parseInt(enemyVisual.style.width) || (isBoss ? (enemy.typeInfo.visualSize?.width || 28) : 7);
+                    const visualHeight = parseInt(enemyVisual.style.height) || (isBoss ? (enemy.typeInfo.visualSize?.height || 28) : 7);
+
+                    // Assurer que les positions des ennemis restent dans les limites du conteneur pour le rendu
+                    let clampedX = Math.max(visualWidth / 2, Math.min(enemy.x, previewContainer.offsetWidth - visualWidth / 2));
+                    let clampedY = Math.max(visualHeight / 2, Math.min(enemy.y, previewContainer.offsetHeight - visualHeight / 2));
+
+                    enemyVisual.style.left = `${clampedX - (visualWidth / 2)}px`;
+                    enemyVisual.style.top = `${clampedY - (visualHeight / 2)}px`;
                     enemyVisual.title = `${enemy.typeInfo.name} (PV: ${Math.ceil(enemy.currentHealth)})`;
                     previewContainer.appendChild(enemyVisual);
                 });

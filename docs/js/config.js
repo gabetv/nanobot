@@ -11,8 +11,8 @@ var BASE_GRID_SIZE = { rows: 9, cols: 13 };
 var SCAN_ENERGY_COST = 15;
 var SCAN_COOLDOWN_DURATION_SECONDS = 10;
 var SCAN_REVEAL_DURATION_SECONDS = 20;
-var SCAN_COOLDOWN_DURATION = SCAN_COOLDOWN_DURATION_SECONDS;
-var SCAN_REVEAL_DURATION = SCAN_REVEAL_DURATION_SECONDS;
+var SCAN_COOLDOWN_DURATION = SCAN_COOLDOWN_DURATION_SECONDS; // Sera calculé en ticks dans main.js
+var SCAN_REVEAL_DURATION = SCAN_REVEAL_DURATION_SECONDS;   // Sera calculé en ticks dans main.js
 
 var TILE_TYPES = {
     UNEXPLORED: 0, EMPTY_GRASSLAND: 1, EMPTY_DESERT: 2, EMPTY_WATER: 3, FOREST: 4, MOUNTAIN: 5, RUINS: 6, PLAYER_BASE: 7,
@@ -133,13 +133,66 @@ var researchData = { // time est en secondes, sera converti en ticks dans la log
     'graviticManipulation': { name: "Manipulation Gravitique", description: "Développement de modules de déplacement avancés.", cost: { biomass: 300, nanites: 200, arte_rare: 1 }, time: 180, requirements: { buildings: { researchLab: 2 } }, grantsModule: 'gravLegs' },
 };
 
+var TILE_TYPES_TO_RESOURCE_KEY = {
+    [TILE_TYPES.RESOURCE_BIOMASS_PATCH]: 'biomass',
+    [TILE_TYPES.RESOURCE_NANITE_DEPOSIT]: 'nanites',
+    [TILE_TYPES.RESOURCE_CRYSTAL_VEIN]: 'crystal_shards'
+};
+
+var ZONE_DATA = {
+    'verdant_archipelago': {
+        id: 'verdant_archipelago',
+        name: "Archipel Verdoyant",
+        mapSize: { width: 25, height: 20 },
+        entryPoint: { x: 3, y: 3 },
+        basePlayerCoordinates: { x: 3, y: 3 },
+        baseTerrainLayout: [], // Sera rempli par mapManager.js ou défini statiquement ici
+        visibleStructureLayout: [], // Sera rempli par mapManager.js ou défini statiquement ici
+        tileContentDistribution: { // Chance de trouver ce contenu sur une tuile générique explorable
+            [TILE_TYPES.RESOURCE_BIOMASS_PATCH]: 0.12,
+            [TILE_TYPES.RESOURCE_NANITE_DEPOSIT]: 0.04,
+            [TILE_TYPES.FOREST]: 0.15,
+            [TILE_TYPES.RUINS]: 0.03,
+            [TILE_TYPES.UPGRADE_CACHE]: 0.02,
+            [TILE_TYPES.POI_ANCIENT_STRUCTURE]: 0.01,
+            'drone_scout': 0.04, // Clé de explorationEnemyData
+            'raider_grunt': 0.03, // Clé de explorationEnemyData
+            'outpost_alpha': 0.01, // Clé de enemyBaseDefinitions
+        },
+        patrolEnemyPool: ['drone_scout', 'raider_grunt']
+    },
+    'crystal_caves': {
+        id: 'crystal_caves',
+        name: "Grottes Cristallines",
+        mapSize: { width: 20, height: 20 },
+        entryPoint: { x: 1, y: 10 },
+        baseTerrainLayout: [],
+        visibleStructureLayout: [],
+        tileContentDistribution: {
+            [TILE_TYPES.RESOURCE_NANITE_DEPOSIT]: 0.10,
+            [TILE_TYPES.RESOURCE_CRYSTAL_VEIN]: 0.15,
+            [TILE_TYPES.MOUNTAIN]: 0.20,
+            'enemy_crystal_golem_weak': 0.08,
+            [TILE_TYPES.UPGRADE_CACHE]: 0.04,
+            'crystal_hive_node': 0.015,
+        },
+        patrolEnemyPool: ['enemy_crystal_golem_weak', 'enemy_spark_wisp_scout'],
+        unlockCondition: { research: 'advanced_geology' } // Exemple: ID d'une recherche
+    }
+};
+
+var BASE_COORDINATES = (ZONE_DATA['verdant_archipelago'] && ZONE_DATA['verdant_archipelago'].basePlayerCoordinates)
+                       ? { ...ZONE_DATA['verdant_archipelago'].basePlayerCoordinates }
+                       : { x: Math.floor((typeof DEFAULT_MAP_SIZE !== 'undefined' ? DEFAULT_MAP_SIZE.width : 10) / 2), y: Math.floor((typeof DEFAULT_MAP_SIZE !== 'undefined' ? DEFAULT_MAP_SIZE.height : 10) / 2) };
+
+
 var nightAssaultEnemies = [
-    { id: 'swarm_drone', name: "Drone d'Essaim", baseHealth: 15, baseAttack: 2, damageType: DAMAGE_TYPES.KINETIC, resistances: { kinetic: 0, energy: 0.2 }, reward: { biomass: 2, nanites: 1 }, spritePath: 'https://placehold.co/10x10/e53e3e/e2e8f0?text=D' },
-    { id: 'assault_bot', name: "Bot d'Assaut", baseHealth: 40, baseAttack: 5, damageType: DAMAGE_TYPES.ENERGY, resistances: { kinetic: 0.1, energy: -0.15 }, reward: { biomass: 5, nanites: 3 }, spritePath: 'https://placehold.co/10x10/dd6b20/e2e8f0?text=B' },
-    { id: 'heavy_crawler', name: "Rampant Lourd", baseHealth: 80, baseAttack: 3, damageType: DAMAGE_TYPES.KINETIC, resistances: { kinetic: 0.25, energy: 0.1 }, reward: { biomass: 8, nanites: 2 }, spritePath: 'https://placehold.co/10x10/d69e2e/e2e8f0?text=C' }
+    { id: 'swarm_drone', name: "Drone d'Essaim", baseHealth: 15, baseAttack: 2, speed: 4, attackRange: 5, damageType: DAMAGE_TYPES.KINETIC, resistances: { kinetic: 0, energy: 0.2 }, reward: { biomass: 2, nanites: 1 }, spritePath: 'https://placehold.co/8x8/e53e3e/ffffff?text=d', visualClass: 'drone' },
+    { id: 'assault_bot', name: "Bot d'Assaut", baseHealth: 40, baseAttack: 5, speed: 2.5, attackRange: 10, damageType: DAMAGE_TYPES.ENERGY, resistances: { kinetic: 0.1, energy: -0.15 }, reward: { biomass: 5, nanites: 3 }, spritePath: 'https://placehold.co/10x10/dd6b20/ffffff?text=B', visualClass: 'bot' },
+    { id: 'heavy_crawler', name: "Rampant Lourd", baseHealth: 80, baseAttack: 3, speed: 1.5, attackRange: 15, damageType: DAMAGE_TYPES.KINETIC, resistances: { kinetic: 0.25, energy: 0.1 }, reward: { biomass: 8, nanites: 2 }, spritePath: 'https://placehold.co/12x12/d69e2e/1a202c?text=C', visualClass: 'crawler' }
 ];
 var bossDefinitions = {
-    'siegeBreaker': { id: 'siegeBreaker', name: "Briseur de Siège Alpha", baseHealth: 500, baseAttack: 25, defense: 5, speed: 0.8, damageType: DAMAGE_TYPES.KINETIC, resistances: { kinetic: 0.3, energy: 0.1 }, reward: { biomass: 150, nanites: 75, xp: 200, loot: ['arte_rare', 'mod_proto'] }, spritePath: 'https://placehold.co/100x120/7f1d1d/fef2f2?text=BOSS', abilities: [ { type: 'aoe_stomp', chance: 0.2, damage: 15, radius: 60 }, { type: 'regen', chance: 0.1, amount: 25 } ], visualSize: { width: 30, height: 30 } }
+    'siegeBreaker': { id: 'siegeBreaker', name: "Briseur de Siège Alpha", baseHealth: 500, baseAttack: 25, defense: 5, speed: 0.8, attackRange: 25, damageType: DAMAGE_TYPES.KINETIC, resistances: { kinetic: 0.3, energy: 0.1 }, reward: { biomass: 150, nanites: 75, xp: 200, loot: ['arte_rare', 'mod_proto'] }, spritePath: 'https://placehold.co/100x120/7f1d1d/fef2f2?text=BOSS', abilities: [ { type: 'aoe_stomp', name: "Piétinement Destructeur", chance: 0.2, damage: 15, radius: 60, cooldown: 3, lastUsed: 0 }, { type: 'regen', name: "Régénération d'Urgence", chance: 0.1, amount: 25, healthThreshold: 0.4, cooldown: 5, lastUsed: 0 } ], visualSize: { width: 30, height: 30 } }
 };
 var nightEvents = [
     { id: 'flying_swarm', name: "Vol Nuptial Agressif", description: "Une nuée d'unités volantes ignore vos défenses au sol et cible directement le noyau !",
@@ -206,7 +259,7 @@ if (typeof ZONE_DATA === 'undefined' || typeof buildingsData === 'undefined' || 
     typeof TILE_TYPES === 'undefined' || typeof DAMAGE_TYPES === 'undefined' || typeof explorationEnemyData === 'undefined' ||
     typeof enemyBaseDefinitions === 'undefined' || typeof nanobotModulesData === 'undefined' || typeof researchData === 'undefined' ||
     typeof nightAssaultEnemies === 'undefined' || typeof bossDefinitions === 'undefined' || typeof nightEvents === 'undefined' ||
-    typeof nanobotSkills === 'undefined' || typeof QUEST_STATUS === 'undefined') {
+    typeof nanobotSkills === 'undefined' || typeof QUEST_STATUS === 'undefined' || typeof TILE_TYPES_TO_RESOURCE_KEY === 'undefined') {
     console.error("config.js - ERREUR CRITIQUE POST-VERIFICATION: Une ou plusieurs structures de données de config ne sont pas définies !");
 } else {
     console.log("config.js - POST-VERIFICATION: Toutes les structures de données principales semblent définies.");

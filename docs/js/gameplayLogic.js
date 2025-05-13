@@ -160,15 +160,12 @@ function calculateBaseStats() {
     }
 
     // Calculate defense power from placed and powered defenses
-    // gameState.resources.energyConsumedByDefenses = 0; // This is better calculated in calculateProductionAndConsumption
     for(const instanceId in gameState.defenses){
         const defenseInstance = gameState.defenses[instanceId];
         const buildingDef = buildingsData[defenseInstance.id];
         if(defenseInstance.currentHealth > 0 && buildingDef && buildingDef.levels[defenseInstance.level -1]) {
-             // const energyConsumption = buildingDef.levels[defenseInstance.level -1].energyConsumption || 0;
-             // gameState.resources.energyConsumedByDefenses += energyConsumption;
-             // Defense power contributes if base has enough *overall* energy (deficit handled in calculateProductionAndConsumption)
-             if (gameState.capacity.energy >= (gameState.resources.totalEnergyConsumed || 0) ) { // Check against total consumption
+             // Check against total consumption
+             if (gameState.capacity.energy >= (gameState.resources.totalEnergyConsumed || 0) ) { 
                 defensePower += defenseInstance.attack || 0;
              } else { // Deficit - scale defense power
                 const deficitFactor = gameState.capacity.energy > 0 ? gameState.capacity.energy / (gameState.resources.totalEnergyConsumed || 1) : 0; // Avoid div by zero
@@ -207,7 +204,7 @@ function calculateProductionAndConsumption() {
     gameState.productionRates.biomass = 0;
     gameState.productionRates.nanites = 0;
     let totalEnergyConsumption = 0;
-    // gameState.resources.energyConsumedByDefenses = 0; // Recalculate this
+    gameState.resources.energyConsumedByDefenses = 0; // Recalculate this
 
     // Calculate production and energy consumption from buildings (non-defense)
     for (const buildingId in gameState.buildings) {
@@ -467,16 +464,16 @@ function repairAllDefenses() {
 }
 
 function toggleNanobotDefendBase() {
-    console.log("gameplayLogic: toggleNanobotDefendBase CALLED"); // LOG ADDED
+    // console.log("gameplayLogic: toggleNanobotDefendBase CALLED");
     if (!gameState || !gameState.nanobotStats || typeof ZONE_DATA === 'undefined' || typeof BASE_COORDINATES === 'undefined') {
         console.error("toggleNanobotDefendBase: Dépendances manquantes (gameState, nanobotStats, ZONE_DATA, ou BASE_COORDINATES).");
         if(typeof addLogEntry === 'function') addLogEntry("Erreur système : Impossible de basculer le mode défense.", "error", eventLogEl, gameState?.eventLog);
         return;
     }
-    console.log("Current isDefendingBase state:", gameState.nanobotStats.isDefendingBase);
+    // console.log("Current isDefendingBase state:", gameState.nanobotStats.isDefendingBase);
 
     gameState.nanobotStats.isDefendingBase = !gameState.nanobotStats.isDefendingBase;
-    console.log("New isDefendingBase state:", gameState.nanobotStats.isDefendingBase);
+    // console.log("New isDefendingBase state:", gameState.nanobotStats.isDefendingBase);
 
     const playerBaseZoneKey = Object.keys(ZONE_DATA).find(key => ZONE_DATA[key].basePlayerCoordinates);
     const playerBaseZone = playerBaseZoneKey ? ZONE_DATA[playerBaseZoneKey] : (ZONE_DATA['verdant_archipelago'] || null); 
@@ -501,10 +498,10 @@ function toggleNanobotDefendBase() {
         addLogEntry("Nexus-7 n'est plus en mode défense active du Noyau.", "info", eventLogEl, gameState.eventLog);
     }
 
-    console.log("Appel de calculateBaseStats depuis toggleNanobotDefendBase..."); // LOG ADDED
+    // console.log("Appel de calculateBaseStats depuis toggleNanobotDefendBase...");
     if(typeof calculateBaseStats === 'function') calculateBaseStats();
     
-    console.log("Appel de updateBaseStatusDisplay depuis toggleNanobotDefendBase..."); // LOG ADDED
+    // console.log("Appel de updateBaseStatusDisplay depuis toggleNanobotDefendBase...");
     if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateBaseStatusDisplay === 'function') {
         uiUpdates.updateBaseStatusDisplay();
     } else if(typeof updateBaseStatusDisplay === 'function') {
@@ -568,7 +565,7 @@ function forceCycleChange(isNaturalChange = false) {
 }
 
 function initializeBaseGrid() {
-    console.log("gameplayLogic: initializeBaseGrid CALLED");
+    // console.log("gameplayLogic: initializeBaseGrid CALLED");
     if (!gameState || typeof BASE_GRID_SIZE === 'undefined') { console.error("initializeBaseGrid: gameState ou BASE_GRID_SIZE non défini."); return; }
     gameState.baseGrid = [];
     for (let r = 0; r < BASE_GRID_SIZE.rows; r++) {
@@ -580,7 +577,7 @@ function initializeBaseGrid() {
 }
 
 function enterPlacementMode(defenseTypeId) {
-    console.log(`gameplayLogic: enterPlacementMode pour ${defenseTypeId}`); 
+    // console.log(`gameplayLogic: enterPlacementMode pour ${defenseTypeId}`); 
     if (typeof buildingsData === 'undefined' || !gameState || !gameState.placementMode) {
         console.error("enterPlacementMode: Dépendances manquantes.");
         if(typeof addLogEntry === 'function') addLogEntry("Erreur: Mode placement non initialisé.", "error", eventLogEl, gameState?.eventLog);
@@ -596,7 +593,7 @@ function enterPlacementMode(defenseTypeId) {
         addLogEntry(`Vous devez d'abord débloquer la technologie ${buildingsData[defenseTypeId].name} (Niv. 1).`, "warning", eventLogEl, gameState.eventLog);
         return;
     }
-    console.log(`Activation du mode placement pour ${defenseTypeId}, techLevel ${techLevel}`); 
+    // console.log(`Activation du mode placement pour ${defenseTypeId}, techLevel ${techLevel}`); 
     gameState.placementMode.isActive = true;
     gameState.placementMode.selectedDefenseType = defenseTypeId;
     gameState.placementMode.selectedDefenseLevel = techLevel; 
@@ -610,7 +607,7 @@ function enterPlacementMode(defenseTypeId) {
 }
 
 function cancelPlacementMode() {
-    console.log("gameplayLogic: cancelPlacementMode CALLED");
+    // console.log("gameplayLogic: cancelPlacementMode CALLED");
     if (!gameState || !gameState.placementMode) { console.error("cancelPlacementMode: gameState.placementMode non défini."); return;}
     gameState.placementMode.isActive = false;
     gameState.placementMode.selectedDefenseType = null;
@@ -623,7 +620,7 @@ function cancelPlacementMode() {
 }
 
 function handleGridCellClick(row, col) { 
-    console.log(`gameplayLogic: handleGridCellClick (base) pour (${row},${col}). Mode placement actif: ${gameState?.placementMode?.isActive}`); 
+    // console.log(`gameplayLogic: handleGridCellClick (base) pour (${row},${col}). Mode placement actif: ${gameState?.placementMode?.isActive}`); 
     if (typeof BASE_GRID_SIZE === 'undefined' || typeof buildingsData === 'undefined' || typeof itemsData === 'undefined' || typeof DAMAGE_TYPES === 'undefined' || !gameState) {
         console.error("handleGridCellClick: Dépendances manquantes."); return;
     }
@@ -632,7 +629,7 @@ function handleGridCellClick(row, col) {
     const coreCol = Math.floor(BASE_GRID_SIZE.cols / 2);
 
     if (gameState.placementMode.isActive) {
-        console.log(`Tentative de placement de ${gameState.placementMode.selectedDefenseType} en (${row},${col})`); 
+        // console.log(`Tentative de placement de ${gameState.placementMode.selectedDefenseType} en (${row},${col})`); 
         if (row === coreRow && col === coreCol) {
             addLogEntry("Impossible de placer une défense sur le Noyau Central.", "warning", eventLogEl, gameState.eventLog);
             return;
@@ -651,7 +648,7 @@ function handleGridCellClick(row, col) {
             cancelPlacementMode(); return;
         }
         const placementCost = buildingDef.placementCost;
-        console.log("Coût de placement:", placementCost); 
+        // console.log("Coût de placement:", placementCost); 
 
         for (const resource in placementCost) {
             if ((gameState.resources[resource]||0) < placementCost[resource]) {
@@ -661,7 +658,7 @@ function handleGridCellClick(row, col) {
         }
         
         for (const resource in placementCost) { gameState.resources[resource] -= placementCost[resource]; }
-        console.log("Coûts déduits. Ressources restantes:", JSON.parse(JSON.stringify(gameState.resources))); 
+        // console.log("Coûts déduits. Ressources restantes:", JSON.parse(JSON.stringify(gameState.resources))); 
         
         const levelDataToPlace = buildingDef.levels.find(l => l.level === defenseTechLevel);
         if (!levelDataToPlace || !levelDataToPlace.stats) {
@@ -669,7 +666,7 @@ function handleGridCellClick(row, col) {
              for (const resource in placementCost) { gameState.resources[resource] += placementCost[resource]; } 
              return;
         }
-        console.log("Données du niveau à placer:", levelDataToPlace); 
+        // console.log("Données du niveau à placer:", levelDataToPlace); 
 
         const instanceId = `${defenseTypeId}_${row}_${col}_${Date.now()}`;
         gameState.baseGrid[row][col] = { id: defenseTypeId, level: defenseTechLevel, instanceId: instanceId }; 
@@ -685,8 +682,8 @@ function handleGridCellClick(row, col) {
             gridPos: { r: row, c: col },
             resistances: levelDataToPlace.stats.resistances || {}
         };
-        console.log(`Défense ${instanceId} ajoutée à gameState.defenses:`, JSON.parse(JSON.stringify(gameState.defenses[instanceId]))); 
-        console.log(`Grille de base mise à jour pour (${row},${col}):`, JSON.parse(JSON.stringify(gameState.baseGrid[row][col]))); 
+        // console.log(`Défense ${instanceId} ajoutée à gameState.defenses:`, JSON.parse(JSON.stringify(gameState.defenses[instanceId]))); 
+        // console.log(`Grille de base mise à jour pour (${row},${col}):`, JSON.parse(JSON.stringify(gameState.baseGrid[row][col]))); 
 
         addLogEntry(`${buildingDef.name} (Niv.${defenseTechLevel}) placé(e) en (${row},${col}).`, "success", eventLogEl, gameState.eventLog);
         if(typeof calculateBaseStats === 'function') calculateBaseStats();
@@ -818,8 +815,6 @@ function sellPlacedDefense(instanceId, row, col) {
     else if (typeof updateDisplays === 'function') updateDisplays(); 
 }
 
-console.log("gameplayLogic.js - Fin du fichier, fonctions de logique générale définies.");
-
 function startNightAssault() {
     // console.log("gameplayLogic: startNightAssault CALLED");
     if (!gameState || !gameState.baseStats || typeof nightAssaultEnemies === 'undefined' || typeof bossDefinitions === 'undefined' || typeof nightEvents === 'undefined' || typeof SPECIAL_EVENT_CHANCE === 'undefined' || typeof BOSS_WAVE_INTERVAL === 'undefined' || typeof basePreviewContainerEl === 'undefined' || typeof TICK_SPEED === 'undefined') {
@@ -836,24 +831,22 @@ function startNightAssault() {
     gameState.nightAssault.isActive = true;
     gameState.nightAssault.wave++;
     gameState.nightAssault.enemies = [];
-    gameState.nightAssault.lastAttackTime = gameState.gameTime; // Initialize lastAttackTime
-    gameState.nightAssault.log = []; // Clear previous log
+    gameState.nightAssault.lastAttackTime = gameState.gameTime; 
+    gameState.nightAssault.log = []; 
 
-    // Clear visual log display
     if(nightAssaultLogEl) {
         const h3 = nightAssaultLogEl.querySelector('h3');
         nightAssaultLogEl.innerHTML = h3 ? h3.outerHTML : '<h3 class="font-orbitron text-lg mb-2 text-red-300 border-b border-gray-600 pb-1">Journal d\'Assaut Nocturne</h3>';
-        nightAssaultLogEl.insertAdjacentHTML('beforeend', '<p class="text-gray-500 italic">En attente d\'événements...</p>'); // Add placeholder
+        nightAssaultLogEl.insertAdjacentHTML('beforeend', '<p class="text-gray-500 italic">En attente d\'événements...</p>'); 
     }
     addLogEntry(`Début de l'assaut nocturne - Vague ${gameState.nightAssault.wave}`, "base-info-event", nightAssaultLogEl, gameState.nightAssault.log);
 
-    // Reset event and modifiers for the new night
     gameState.nightAssault.currentEvent = null;
     gameState.nightAssault.globalModifiers = {};
 
     const wave = gameState.nightAssault.wave;
     const previewContainer = basePreviewContainerEl;
-    const containerWidth = previewContainer ? previewContainer.offsetWidth : 300; // Default if not rendered
+    const containerWidth = previewContainer ? previewContainer.offsetWidth : 300; 
     const containerHeight = previewContainer ? previewContainer.offsetHeight : 200;
 
     let isBossWave = (wave % BOSS_WAVE_INTERVAL === 0 && wave > 0);
@@ -868,7 +861,7 @@ function startNightAssault() {
                 let bossX, bossY; const edge = Math.floor(Math.random() * 4);
                 const bossWidth = bossData.visualSize ? bossData.visualSize.width : 12;
                 const bossHeight = bossData.visualSize ? bossData.visualSize.height : 12;
-                const offset = 15 + Math.max(bossWidth, bossHeight) / 2; // Ensure boss spawns off-screen
+                const offset = 15 + Math.max(bossWidth, bossHeight) / 2; 
 
                 if (edge === 0) { bossX = Math.random() * (containerWidth - bossWidth) + (bossWidth/2) ; bossY = -offset; }
                 else if (edge === 1) { bossX = containerWidth + offset; bossY = Math.random() * (containerHeight - bossHeight) + (bossHeight/2); }
@@ -877,7 +870,7 @@ function startNightAssault() {
 
                 gameState.nightAssault.enemies.push({
                     id: `${bossData.id}_${gameState.gameTime}`, typeInfo: { ...bossData },
-                    currentHealth: Math.floor(bossData.baseHealth * (1 + (wave / BOSS_WAVE_INTERVAL -1) * 0.3)), // Scale boss health
+                    currentHealth: Math.floor(bossData.baseHealth * (1 + (wave / BOSS_WAVE_INTERVAL -1) * 0.3)),
                     maxHealth: Math.floor(bossData.baseHealth * (1 + (wave / BOSS_WAVE_INTERVAL -1) * 0.3)),
                     x: bossX, y: bossY, targetDefenseInstanceId: null, isAttacking: false, attackCooldown: 0, isBoss: true
                 });
@@ -892,7 +885,7 @@ function startNightAssault() {
         let enemyHealthMultiplier = 1 + (wave * 0.1);
         let enemyAttackMultiplier = 1 + (wave * 0.05);
 
-        let enemyCounts = { // Define base counts which will be scaled
+        let enemyCounts = { 
             'swarm_drone': Math.floor((wave * 2 + Math.floor(Math.random() * wave * 1.5)) * enemyCountMultiplier),
             'assault_bot': Math.floor((Math.floor(wave / 2.5) + Math.floor(Math.random() * (wave/2 +1))) * enemyCountMultiplier),
             'heavy_crawler': wave > 1 ? Math.floor((Math.floor(wave / 3.5) + Math.floor(Math.random() * (wave/3+1)))* enemyCountMultiplier) : 0
@@ -903,20 +896,20 @@ function startNightAssault() {
             if (!typeInfoBase || count <= 0) continue;
 
             for (let i = 0; i < count; i++) {
-                const typeInfo = JSON.parse(JSON.stringify(typeInfoBase)); // Deep copy base stats
+                const typeInfo = JSON.parse(JSON.stringify(typeInfoBase)); 
                 typeInfo.baseHealth = Math.floor(typeInfo.baseHealth * enemyHealthMultiplier);
                 typeInfo.baseAttack = Math.floor(typeInfo.baseAttack * enemyAttackMultiplier);
 
                 let x, y; const edge = Math.floor(Math.random() * 4); const offset = 10;
-                if (edge === 0) { x = Math.random() * containerWidth; y = -offset; } // Top
-                else if (edge === 1) { x = containerWidth + offset; y = Math.random() * containerHeight; } // Right
-                else if (edge === 2) { x = Math.random() * containerWidth; y = containerHeight + offset; } // Bottom
-                else { x = -offset; y = Math.random() * containerHeight; } // Left
+                if (edge === 0) { x = Math.random() * containerWidth; y = -offset; } 
+                else if (edge === 1) { x = containerWidth + offset; y = Math.random() * containerHeight; } 
+                else if (edge === 2) { x = Math.random() * containerWidth; y = containerHeight + offset; } 
+                else { x = -offset; y = Math.random() * containerHeight; } 
 
                 gameState.nightAssault.enemies.push({
                     id: `${enemyTypeId}_${gameState.gameTime}_${i}`,
-                    typeInfo: typeInfo, // Contains scaled health/attack
-                    currentHealth: typeInfo.baseHealth, // Start with scaled health
+                    typeInfo: typeInfo, 
+                    currentHealth: typeInfo.baseHealth, 
                     maxHealth: typeInfo.baseHealth,
                     x: x, y: y,
                     targetDefenseInstanceId: null,
@@ -929,7 +922,7 @@ function startNightAssault() {
 
         if (Math.random() < SPECIAL_EVENT_CHANCE && nightEvents.length > 0) {
             const randomEvent = nightEvents[Math.floor(Math.random() * nightEvents.length)];
-            gameState.nightAssault.currentEvent = { id: randomEvent.id, startTime: gameState.gameTime, durationTicks: randomEvent.duration / TICK_SPEED }; // Store duration in ticks
+            gameState.nightAssault.currentEvent = { id: randomEvent.id, startTime: gameState.gameTime, durationTicks: randomEvent.duration / TICK_SPEED }; 
             addLogEntry(`ÉVÉNEMENT SPÉCIAL: ${randomEvent.name} - ${randomEvent.description}`, "warning", nightAssaultLogEl, gameState.nightAssault.log);
             if (typeof randomEvent.effect === 'function') { randomEvent.effect(gameState.nightAssault, gameState.baseGrid, gameState.defenses); }
         }
@@ -940,7 +933,7 @@ function startNightAssault() {
     if(!isBossWave && enemySummary !== "Vague de reconnaissance très faible") addLogEntry(`Vague ${gameState.nightAssault.wave} en approche: ${enemySummary}.`, "base-assault-event", nightAssaultLogEl, gameState.nightAssault.log);
 
     if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateBaseStatusDisplay === 'function') uiUpdates.updateBaseStatusDisplay();
-    else if(typeof updateBaseStatusDisplay === 'function') updateBaseStatusDisplay(); // Fallback
+    else if(typeof updateBaseStatusDisplay === 'function') updateBaseStatusDisplay(); 
 }
 
 function endNightAssault() {
@@ -951,7 +944,7 @@ function endNightAssault() {
     if (gameState.nightAssault.currentEvent) {
         const eventData = nightEvents.find(e => e.id === gameState.nightAssault.currentEvent.id);
         if (eventData && typeof eventData.revertEffect === 'function') {
-            eventData.revertEffect(gameState.nightAssault); // Revert effect if defined
+            eventData.revertEffect(gameState.nightAssault); 
         }
     }
     gameState.nightAssault.currentEvent = null;
@@ -960,17 +953,17 @@ function endNightAssault() {
     if (gameState.nightAssault.enemies.length > 0 && gameState.baseStats.currentHealth > 0) {
         let remainingEnemies = gameState.nightAssault.enemies.map(g => `${g.typeInfo.name}(s)`).join(', ');
         addLogEntry(`L'aube arrive. Les ennemis restants (${remainingEnemies}) se retirent.`, "base-defense-event", nightAssaultLogEl, gameState.nightAssault.log);
-    } else if (gameState.baseStats.currentHealth > 0 && gameState.nightAssault.wave > 0) { // Survived and no enemies left
+    } else if (gameState.baseStats.currentHealth > 0 && gameState.nightAssault.wave > 0) { 
         addLogEntry(`Nuit ${gameState.nightAssault.wave} survivée ! Les défenses ont tenu.`, "success", nightAssaultLogEl, gameState.nightAssault.log);
-    } else if (gameState.baseStats.currentHealth <=0) { // Base destroyed
+    } else if (gameState.baseStats.currentHealth <=0) { 
         addLogEntry(`Le Noyau a été détruit pendant la vague ${gameState.nightAssault.wave}.`, "error", nightAssaultLogEl, gameState.nightAssault.log);
     }
 
-    gameState.nightAssault.enemies = []; // Clear remaining enemies
+    gameState.nightAssault.enemies = []; 
     if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateBaseStatusDisplay === 'function') uiUpdates.updateBaseStatusDisplay();
-    else if(typeof updateBaseStatusDisplay === 'function') updateBaseStatusDisplay(); // Fallback
+    else if(typeof updateBaseStatusDisplay === 'function') updateBaseStatusDisplay(); 
 
-    if(typeof calculateProductionAndConsumption === 'function') calculateProductionAndConsumption(); // Recalculate for day
+    if(typeof calculateProductionAndConsumption === 'function') calculateProductionAndConsumption(); 
 }
 
 function processNightAssaultTick() {
@@ -981,7 +974,6 @@ function processNightAssaultTick() {
     }
     if (!gameState.nightAssault.isActive || gameState.isDay || gameState.baseStats.currentHealth <= 0) return;
 
-    // Check for event expiration
     if (gameState.nightAssault.currentEvent && gameState.gameTime >= gameState.nightAssault.currentEvent.startTime + gameState.nightAssault.currentEvent.durationTicks) {
         const eventData = nightEvents.find(e => e.id === gameState.nightAssault.currentEvent.id);
         if (eventData) {
@@ -995,24 +987,26 @@ function processNightAssaultTick() {
 
     const previewContainer = basePreviewContainerEl;
     if (!previewContainer) { console.error("processNightAssaultTick: basePreviewContainerEl est null !"); return; }
-    const cellWidth = previewContainer.offsetWidth / BASE_GRID_SIZE.cols;
-    const cellHeight = previewContainer.offsetHeight / BASE_GRID_SIZE.rows;
+    
+    const firstCell = previewContainer.querySelector('.base-preview-cell');
+    const cellWidth = firstCell ? firstCell.offsetWidth : (previewContainer.offsetWidth / BASE_GRID_SIZE.cols);
+    const cellHeight = firstCell ? firstCell.offsetHeight : (previewContainer.offsetHeight / BASE_GRID_SIZE.rows);
 
     const coreVisualCell = document.getElementById('base-core-visual-cell');
     let coreCenterX = previewContainer.offsetWidth / 2;
     let coreCenterY = previewContainer.offsetHeight / 2;
-    if (coreVisualCell) {
-        const coreRect = coreVisualCell.getBoundingClientRect();
-        const containerRect = previewContainer.getBoundingClientRect();
-        if (containerRect.width > 0 && containerRect.height > 0) { // Ensure container is rendered
-            coreCenterX = (coreRect.left - containerRect.left) + coreRect.width / 2;
-            coreCenterY = (coreRect.top - containerRect.top) + coreRect.height / 2;
-        }
+    if (coreVisualCell && coreVisualCell.offsetParent !== null) {
+        coreCenterX = coreVisualCell.offsetLeft + coreVisualCell.offsetWidth / 2;
+        coreCenterY = coreVisualCell.offsetTop + coreVisualCell.offsetHeight / 2;
+    } else {
+        const coreGridRow = Math.floor(BASE_GRID_SIZE.rows / 2);
+        const coreGridCol = Math.floor(BASE_GRID_SIZE.cols / 2);
+        coreCenterX = coreGridCol * cellWidth + cellWidth / 2;
+        coreCenterY = coreGridRow * cellHeight + cellHeight / 2;
     }
 
-    let enemiesTargetedByDefenses = new Set(); // To prevent multiple log entries per defense round for same enemy
+    let enemiesTargetedByDefenses = new Set(); 
 
-    // Defenses attack enemies
     for (const defenseInstanceId in gameState.defenses) {
         const defense = gameState.defenses[defenseInstanceId];
         if (defense.currentHealth <= 0 || !defense.gridPos) continue;
@@ -1022,7 +1016,7 @@ function processNightAssaultTick() {
 
         const defenseStats = buildingDef.levels[defense.level - 1].stats;
         const defenseDamageType = defense.damageType || defenseStats.damageType || DAMAGE_TYPES.KINETIC;
-        let defenseRange = defense.range || defenseStats.range || 75; // Default range
+        let defenseRange = defense.range || defenseStats.range || 75;
         if (gameState.nightAssault.globalModifiers && gameState.nightAssault.globalModifiers.turretRangeFactor) {
             defenseRange *= gameState.nightAssault.globalModifiers.turretRangeFactor;
         }
@@ -1030,7 +1024,7 @@ function processNightAssaultTick() {
         const defensePixelX = defense.gridPos.c * cellWidth + (cellWidth / 2);
         const defensePixelY = defense.gridPos.r * cellHeight + (cellHeight / 2);
         let bestTarget = null;
-        let minDistanceSq = defenseRange * defenseRange; // Turrets only shoot within range
+        let minDistanceSq = defenseRange * defenseRange; 
 
         gameState.nightAssault.enemies.forEach(enemy => {
             if (enemy.currentHealth > 0) {
@@ -1062,29 +1056,25 @@ function processNightAssaultTick() {
     }
     gameState.nightAssault.enemies = gameState.nightAssault.enemies.filter(e => e.currentHealth > 0);
 
-    // Enemies move and attack
-    if (gameState.gameTime < gameState.nightAssault.lastAttackTime + NIGHT_ASSAULT_TICK_INTERVAL) { // Corrected interval check
-        // Enemies only move if not attack cooldown
+    if (gameState.gameTime < gameState.nightAssault.lastAttackTime + NIGHT_ASSAULT_TICK_INTERVAL) { 
         gameState.nightAssault.enemies.forEach(enemy => {
-            if (enemy.currentHealth <= 0 || !enemy.typeInfo || enemy.isAttacking) return; // Don't move if attacking or dead
-            let targetX = coreCenterX; let targetY = coreCenterY; // Default target is core
-            // Simple pathing: move towards target
+            if (enemy.currentHealth <= 0 || !enemy.typeInfo || enemy.isAttacking) return; 
+            let targetX = coreCenterX; let targetY = coreCenterY; 
             const moveSpeed = enemy.typeInfo.speed || (enemy.isBoss ? 1.5 : 3);
             const dxMove = targetX - enemy.x; const dyMove = targetY - enemy.y;
             const distMove = Math.sqrt(dxMove*dxMove + dyMove*dyMove);
             if (distMove > moveSpeed) {
                 enemy.x += (dxMove / distMove) * moveSpeed;
                 enemy.y += (dyMove / distMove) * moveSpeed;
-            } else { // Close enough to target or overshot
+            } else { 
                 enemy.x = targetX; enemy.y = targetY;
             }
         });
-        // Update visual preview for movement
         if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateBasePreview === 'function' && typeof overviewContentElTab !== 'undefined' && overviewContentElTab && !overviewContentElTab.classList.contains('hidden')) uiUpdates.updateBasePreview();
-        else if (typeof updateBasePreview === 'function' && typeof overviewContentElTab !== 'undefined' && overviewContentElTab && !overviewContentElTab.classList.contains('hidden')) updateBasePreview(); // Fallback
-        return; // Not time for enemies to act yet, only move
+        else if (typeof updateBasePreview === 'function' && typeof overviewContentElTab !== 'undefined' && overviewContentElTab && !overviewContentElTab.classList.contains('hidden')) updateBasePreview(); 
+        return; 
     }
-    gameState.nightAssault.lastAttackTime = gameState.gameTime; // Reset attack timer
+    gameState.nightAssault.lastAttackTime = gameState.gameTime;
 
     if (gameState.nightAssault.enemies.length === 0 && gameState.nightAssault.isActive) {
         if(!gameState.isDay) addLogEntry("Secteur calme...", "base-info-event", nightAssaultLogEl, gameState.nightAssault.log);
@@ -1092,20 +1082,19 @@ function processNightAssaultTick() {
 
     gameState.nightAssault.enemies.forEach(enemy => {
         if (enemy.currentHealth <= 0 || !enemy.typeInfo) return;
-        enemy.isAttacking = false; // Reset attacking state for this tick
+        enemy.isAttacking = false; 
 
         let targetX = coreCenterX;
         let targetY = coreCenterY;
         let closestDefenseInstanceId = null;
         let minDistanceToTargetSq = Math.pow(targetX - enemy.x, 2) + Math.pow(targetY - enemy.y, 2);
-        let canTargetWalls = !enemy.isFlying; // Flying enemies ignore walls for targeting
+        let canTargetWalls = !enemy.isFlying; 
 
-        // Find closest valid target (defense or core)
         for (const defenseInstanceId_loop in gameState.defenses) {
             const defense = gameState.defenses[defenseInstanceId_loop];
             const defenseType = buildingsData[defense.id];
             if (defense.currentHealth > 0 && defense.gridPos) {
-                if (!canTargetWalls && defenseType && defenseType.name.toLowerCase().includes("mur")) { continue; } // Flying units ignore walls
+                if (!canTargetWalls && defenseType && defenseType.name.toLowerCase().includes("mur")) { continue; } 
 
                 const defPixelX = defense.gridPos.c * cellWidth + (cellWidth / 2);
                 const defPixelY = defense.gridPos.r * cellHeight + (cellHeight / 2);
@@ -1120,12 +1109,12 @@ function processNightAssaultTick() {
             }
         }
 
-        const enemyAttackRange = enemy.typeInfo.attackRange || 20; // Default attack range
+        const enemyAttackRange = enemy.typeInfo.attackRange || 20; 
         const enemyAttackRangeSq = enemyAttackRange * enemyAttackRange;
 
-        if (minDistanceToTargetSq < enemyAttackRangeSq) { // Enemy is in range to attack
+        if (minDistanceToTargetSq < enemyAttackRangeSq) { 
             enemy.isAttacking = true;
-            if (closestDefenseInstanceId && gameState.defenses[closestDefenseInstanceId]) { // Target is a defense
+            if (closestDefenseInstanceId && gameState.defenses[closestDefenseInstanceId]) { 
                 const defenseInstance = gameState.defenses[closestDefenseInstanceId];
                 const damageToDefense = calculateModifiedDamage(enemy.typeInfo.baseAttack, enemy.typeInfo.damageType, defenseInstance.resistances || {});
                 defenseInstance.currentHealth -= damageToDefense;
@@ -1135,21 +1124,20 @@ function processNightAssaultTick() {
                     addLogEntry(`${defenseInstance.name} détruit par ${enemy.typeInfo.name}!`, "error", nightAssaultLogEl, gameState.nightAssault.log);
                     const {r, c} = defenseInstance.gridPos;
                     if(gameState.baseGrid[r] && gameState.baseGrid[r][c] && gameState.baseGrid[r][c].instanceId === closestDefenseInstanceId) {
-                        gameState.baseGrid[r][c] = null; // Remove from grid
+                        gameState.baseGrid[r][c] = null; 
                     }
-                    delete gameState.defenses[closestDefenseInstanceId]; // Remove from active defenses
+                    delete gameState.defenses[closestDefenseInstanceId]; 
                     if(typeof calculateBaseStats === 'function') calculateBaseStats();
                     if(typeof calculateProductionAndConsumption === 'function') calculateProductionAndConsumption();
                 }
-            } else { // Target is the Core
+            } else { 
                  const damageToCoreRaw = enemy.typeInfo.baseAttack;
-                 const damageToCore = calculateModifiedDamage(damageToCoreRaw, enemy.typeInfo.damageType, {}); // Core has no specific resistances here
+                 const damageToCore = calculateModifiedDamage(damageToCoreRaw, enemy.typeInfo.damageType, {}); 
                  let actualDamageToCore = damageToCore;
 
                 const playerBaseZoneKey = Object.keys(ZONE_DATA).find(key => ZONE_DATA[key].basePlayerCoordinates);
                 const playerBaseZone = playerBaseZoneKey ? ZONE_DATA[playerBaseZoneKey] : (ZONE_DATA['verdant_archipelago'] || null);
                 const playerBaseCoords = playerBaseZone?.basePlayerCoordinates || BASE_COORDINATES;
-
 
                 if (gameState.nanobotStats.isDefendingBase &&
                     playerBaseZone && gameState.currentZoneId === playerBaseZone.id &&
@@ -1157,16 +1145,16 @@ function processNightAssaultTick() {
                     gameState.map.nanobotPos.y === playerBaseCoords.y &&
                     gameState.nanobotStats.currentHealth > 0) {
 
-                    const damageToNanobot = Math.min(Math.floor(actualDamageToCore * 0.5), gameState.nanobotStats.currentHealth); // Nanobot takes half, up to its health
+                    const damageToNanobot = Math.min(Math.floor(actualDamageToCore * 0.5), gameState.nanobotStats.currentHealth); 
                     actualDamageToCore -= damageToNanobot;
                     if (damageToNanobot > 0) {
                         gameState.nanobotStats.currentHealth -= damageToNanobot;
                         addLogEntry(`Nexus-7 intercepte ${damageToNanobot} dégâts pour le Noyau!`, "base-defense-event", nightAssaultLogEl, gameState.nightAssault.log);
                         if (typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateNanobotDisplay === 'function') uiUpdates.updateNanobotDisplay();
-                        else if (typeof updateNanobotDisplay === 'function') updateNanobotDisplay(); // Fallback
+                        else if (typeof updateNanobotDisplay === 'function') updateNanobotDisplay(); 
                         if (gameState.nanobotStats.currentHealth <= 0) {
                             addLogEntry("Nexus-7 est hors de combat!", "error", nightAssaultLogEl, gameState.nightAssault.log);
-                           if(typeof calculateBaseStats === 'function') calculateBaseStats(); // Recalculate base defense power without nanobot
+                           if(typeof calculateBaseStats === 'function') calculateBaseStats(); 
                         }
                     }
                 }
@@ -1177,26 +1165,23 @@ function processNightAssaultTick() {
             }
         }
 
-        // Move if not attacking
         if (!enemy.isAttacking) {
-            const moveSpeed = enemy.typeInfo.speed || (enemy.isBoss ? 1.5 : 3); // Default move speed
+            const moveSpeed = enemy.typeInfo.speed || (enemy.isBoss ? 1.5 : 3); 
             const dxMove = targetX - enemy.x;
             const dyMove = targetY - enemy.y;
             const distMove = Math.sqrt(dxMove*dxMove + dyMove*dyMove);
             if (distMove > moveSpeed) {
                 enemy.x += (dxMove / distMove) * moveSpeed;
                 enemy.y += (dyMove / distMove) * moveSpeed;
-            } else { // Reached target or close enough
+            } else { 
                 enemy.x = targetX;
                 enemy.y = targetY;
             }
         }
 
-        // Boss abilities
         if (enemy.isBoss && enemy.typeInfo.abilities) {
             enemy.typeInfo.abilities.forEach(ability => {
                 if (Math.random() < (ability.chance || 0.1)) {
-                    // Simplified ability logic for now
                     if (ability.type === 'aoe_stomp' && ability.damage && ability.radius) {
                         addLogEntry(`${enemy.typeInfo.name} déchaîne un ${ability.name || 'Piétinement Destructeur'} !`, "error", nightAssaultLogEl, gameState.nightAssault.log);
                         let affectedDefensesCount = 0;
@@ -1231,7 +1216,6 @@ function processNightAssaultTick() {
         }
     });
 
-    // Check for base destruction
     if (gameState.baseStats.currentHealth <= 0) {
         gameState.baseStats.currentHealth = 0;
         addLogEntry("ALERTE CRITIQUE! L'INTÉGRITÉ DU NOYAU EST COMPROMISE!", "error", nightAssaultLogEl, gameState.nightAssault.log);
@@ -1242,16 +1226,13 @@ function processNightAssaultTick() {
         addLogEntry(`Perte de ressources: -${biomassLoss} Biomasse, -${naniteLoss} Nanites.`, "error", nightAssaultLogEl, gameState.nightAssault.log);
         addLogEntry("Le Noyau est détruit. L'assaut prend fin.", "error", eventLogEl, gameState.eventLog);
         if(typeof endNightAssault === 'function') endNightAssault(); else console.error("endNightAssault non défini.");
-        // Potentially trigger a game over state here
     }
 
-    // Update UI
     if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateBaseStatusDisplay === 'function') uiUpdates.updateBaseStatusDisplay();
-    else if (typeof updateBaseStatusDisplay === 'function') updateBaseStatusDisplay(); // Fallback
+    else if (typeof updateBaseStatusDisplay === 'function') updateBaseStatusDisplay(); 
 
     if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateBasePreview === 'function' && typeof overviewContentElTab !== 'undefined' && overviewContentElTab && !overviewContentElTab.classList.contains('hidden')) uiUpdates.updateBasePreview();
-    else if (typeof updateBasePreview === 'function' && typeof overviewContentElTab !== 'undefined' && overviewContentElTab && !overviewContentElTab.classList.contains('hidden')) updateBasePreview(); // Fallback
+    else if (typeof updateBasePreview === 'function' && typeof overviewContentElTab !== 'undefined' && overviewContentElTab && !overviewContentElTab.classList.contains('hidden')) updateBasePreview(); 
 }
-
 
 console.log("gameplayLogic.js - Fin du fichier, fonctions de logique générale définies.");
