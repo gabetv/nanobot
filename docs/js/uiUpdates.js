@@ -21,13 +21,14 @@ var uiUpdates = {
 
         if(energyEl && typeof gameState.resources.totalEnergyConsumed !== 'undefined') {
              energyEl.textContent = `${Math.floor(gameState.resources.totalEnergyConsumed)} / ${gameState.capacity.energy}`;
-        } else if (energyEl) {
+        } else if (energyEl) { // Fallback if totalEnergyConsumed is not yet calculated
              energyEl.textContent = `? / ${gameState.capacity.energy}`;
         }
 
 
         if(biomassRateEl) biomassRateEl.textContent = gameState.productionRates.biomass.toFixed(1);
         if(nanitesRateEl) nanitesRateEl.textContent = gameState.productionRates.nanites.toFixed(1);
+        // energyCapacityEl is part of the energy display string now
         if(energyCostMoveEl && typeof EXPLORATION_COST_ENERGY !== 'undefined') energyCostMoveEl.textContent = EXPLORATION_COST_ENERGY;
     },
 
@@ -73,7 +74,7 @@ var uiUpdates = {
             div.innerHTML = content;
 
             if (nextLevelDefinition) { 
-                const costObject = level === 0 ? nextLevelDefinition.costToUnlockOrUpgrade : nextLevelDefinition.costToUpgrade;
+                const costObject = level === 0 ? nextLevelDefinition.costToUnlockOrUpgrade : nextLevelDefinition.costToUpgrade; // Corrected access
                 if (!costObject) {
                     console.warn(`UI: Coût manquant pour ${building.name} Niv. ${level + 1}`);
                 } else {
@@ -102,7 +103,7 @@ var uiUpdates = {
                 placeButton.className = 'btn btn-info btn-sm mt-2 ml-2';
                 placeButton.textContent = `Placer ${building.name}`;
                 placeButton.onclick = () => {
-                    console.log(`Bouton 'Placer ${building.name}' (ID: ${id}) cliqué. Appel de enterPlacementMode.`);
+                    console.log(`Bouton 'Placer ${building.name}' (ID: ${id}) cliqué. Appel de enterPlacementMode.`); // LOG ADDED
                     if(typeof enterPlacementMode === 'function') enterPlacementMode(id);
                 };
                 div.appendChild(placeButton);
@@ -698,7 +699,7 @@ var uiUpdates = {
         let totalInvestedBiomass = (defenseTypeData.placementCost ? defenseTypeData.placementCost.biomass : 0) || 0;
         let totalInvestedNanites = (defenseTypeData.placementCost ? defenseTypeData.placementCost.nanites : 0) || 0;
         for(let i = 0; i < defenseInstance.level -1 ; i++){ 
-            const levelDataForCost = defenseTypeData.levels[i]; // Cost to get TO level i+1
+            const levelDataForCost = defenseTypeData.levels[i]; 
             const levelUpgradeCost = levelDataForCost?.costToUpgrade || (i === 0 ? levelDataForCost?.costToUnlockOrUpgrade : null) ;
             if(levelUpgradeCost){
                 totalInvestedBiomass += levelUpgradeCost.biomass || 0;
