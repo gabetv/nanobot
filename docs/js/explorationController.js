@@ -30,6 +30,8 @@ var explorationController = {
         const isCurrentPos = dxPos === 0 && dyPos === 0;
 
         if (isCurrentPos) {
+            // Si on clique sur la case actuelle, on ne fait rien de spécial ici, 
+            // le panneau d'interaction sera mis à jour pour montrer les actions possibles sur la case.
             if(typeof addLogEntry === 'function') addLogEntry(`Examen de la case actuelle (${x},${y}). Utilisez le panneau latéral pour interagir.`, "map-event", explorationLogEl, gameState.explorationLog);
         } else if (isAdjacent) {
             if (targetTile.actualType === TILE_TYPES.IMPASSABLE_DEEP_WATER || targetTile.actualType === TILE_TYPES.IMPASSABLE_HIGH_PEAK) {
@@ -42,17 +44,16 @@ var explorationController = {
                 gameState.map.nanobotPos = { x, y };
                 if(typeof addLogEntry === 'function') addLogEntry(`Déplacement de (${oldPos.x},${oldPos.y}) vers (${x}, ${y}). Coût: ${EXPLORATION_COST_ENERGY} énergie.`, "map-event", explorationLogEl, gameState.explorationLog);
 
-                this.revealTileAndSurroundings(x, y, currentZone); // Reveal first
-                this.processTileContentOnArrival(x, y);          // Then process content
+                this.revealTileAndSurroundings(x, y, currentZone); 
+                this.processTileContentOnArrival(x, y);          
             }
         } else {
             if(typeof addLogEntry === 'function') addLogEntry("Cette case est trop éloignée pour un déplacement direct.", "warning", explorationLogEl, gameState.explorationLog);
         }
 
-        // Always update UI after a click action that might change state
         if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function') {
             explorationUI.updateFullExplorationView();
-        } else if (typeof updateExplorationDisplay === 'function') { // Fallback
+        } else if (typeof updateExplorationDisplay === 'function') { 
             updateExplorationDisplay();
         }
     },
@@ -66,14 +67,12 @@ var explorationController = {
         const tile = mapManager.getTile(x,y);
         let newTilesExploredCount = 0;
 
-        // Reveal the tile landed on
         if (tile && !tile.isExplored) {
             tile.isExplored = true;
             newTilesExploredCount++;
              console.log(`explorationController: Tuile (${x},${y}) explorée.`);
         }
 
-        // Reveal immediate 3x3 area around the new nanobot position (x,y)
         for (let dy = -1; dy <= 1; dy++) {
             for (let dx = -1; dx <= 1; dx++) {
                 const nx = x + dx;
@@ -100,7 +99,7 @@ var explorationController = {
             console.warn(`processTileContentOnArrival: Tuile non trouvée en (${x},${y})`);
             return;
         }
-        console.log(`Contenu de la tuile (${x},${y}):`, JSON.parse(JSON.stringify(tile)));
+        // console.log(`Contenu de la tuile (${x},${y}):`, JSON.parse(JSON.stringify(tile)));
 
 
         if (typeof questController !== 'undefined' && typeof questController.checkQuestProgress === 'function') {
@@ -108,7 +107,7 @@ var explorationController = {
         }
 
         if (!tile.content) {
-            console.log(`processTileContentOnArrival: Pas de contenu spécial sur la tuile (${x},${y}). Type actuel: ${tile.actualType}`);
+            // console.log(`processTileContentOnArrival: Pas de contenu spécial sur la tuile (${x},${y}). Type actuel: ${tile.actualType}`);
             const terrainName = (typeof explorationUI !== 'undefined' && typeof explorationUI.getTileContentName === 'function') ? explorationUI.getTileContentName(tile.actualType, null) : "terrain inconnu";
             if (tile.actualType === TILE_TYPES.PLAYER_BASE) {
                  if(typeof addLogEntry === 'function') addLogEntry("Retour au Noyau Central. Systèmes légèrement régénérés.", "map-event", explorationLogEl, gameState.explorationLog);
@@ -117,7 +116,11 @@ var explorationController = {
             } else if (tile.actualType !== TILE_TYPES.EMPTY_WATER && tile.actualType !== TILE_TYPES.IMPASSABLE_DEEP_WATER) {
                  if(typeof addLogEntry === 'function') addLogEntry(`Arrivée sur ${terrainName} en (${x},${y}).`, "map-event", explorationLogEl, gameState.explorationLog);
             }
-            return; // Exit if no special content
+            // Mettre à jour le panneau d'interaction même s'il n'y a pas de contenu pour refléter la nouvelle position
+            if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateTileInteractionPanel === 'function') {
+                explorationUI.updateTileInteractionPanel(x, y);
+            }
+            return; 
         }
 
         const content = tile.content;
@@ -155,7 +158,7 @@ var explorationController = {
             gameState.map.currentEnemyEncounter = { x, y, details: content.details, idInMap: content.id };
             if (typeof simulateCombat === 'function') {
                 console.log("Appel de simulateCombat pour patrouille...");
-                simulateCombat(content.details);
+                simulateCombat(content.details); // simulateCombat est async, mais on ne l'attend pas ici car cela bloquerait la gameLoop
             } else {
                 console.error("simulateCombat non défini.");
             }
@@ -173,7 +176,9 @@ var explorationController = {
                         }
                     });
                 }
-                content.isOpened = true;
+                content.isOpened = true; // Marquer comme ouvert
+                // La tuile peut changer d'apparence (ex: devenir des ruines vides)
+                // tile.actualType = TILE_TYPES.RUINS; // Ou un autre type si la cache laisse des débris spécifiques
             } else {
                  if(typeof addLogEntry === 'function') addLogEntry(`Cache déjà ouverte en (${x},${y}).`, "info", explorationLogEl, gameState.explorationLog);
             }
@@ -182,7 +187,7 @@ var explorationController = {
             if (!content.isInteracted) {
                 const poiName = (typeof MAP_FEATURE_DATA !== 'undefined' && MAP_FEATURE_DATA[content.poiType]?.name) || "Point d'intérêt";
                 if(typeof addLogEntry === 'function') addLogEntry(`Découverte : ${poiName} en (${x},${y}). ${MAP_FEATURE_DATA[content.poiType]?.description || ""}`, "map-event", explorationLogEl, gameState.explorationLog);
-                content.isInteracted = true;
+                content.isInteracted = true; // Marquer comme interagi
                 if (typeof questController !== 'undefined' && typeof questController.checkQuestProgress === 'function') {
                     questController.checkQuestProgress({ type: "interact_poi_type", poiType: content.poiType, count: 1, x:x, y:y });
                 }
@@ -192,15 +197,18 @@ var explorationController = {
         } else if (content.type === 'enemy_base') {
             console.log("Type de contenu 'enemy_base' détecté.");
             if (content.currentHealth > 0) {
-                if(typeof addLogEntry === 'function') addLogEntry(`${content.details.name} repéré en (${x},${y}). PV: ${content.currentHealth}/${content.details.health}. Interagissez via le panneau latéral si adjacent.`, "warning", explorationLogEl, gameState.explorationLog);
-                // L'attaque se fait via le panneau d'interaction si adjacent, pas automatiquement en arrivant sur la case
+                if(typeof addLogEntry === 'function') addLogEntry(`${content.details.name} repéré en (${x},${y}). PV: ${content.currentHealth}/${content.details.health}. Interagissez via le panneau latéral.`, "warning", explorationLogEl, gameState.explorationLog);
             } else {
                 if(typeof addLogEntry === 'function') addLogEntry(`${content.details.name} en (${x},${y}) est en ruines.`, "info", explorationLogEl, gameState.explorationLog);
             }
         } else {
             console.warn(`Type de contenu inconnu ou non géré: "${content.type}" sur la tuile (${x},${y})`);
         }
-         // Update UI elements that depend on collected resources or tile state changes
+        
+        // Mettre à jour le panneau d'interaction APRÈS avoir traité le contenu
+        if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateTileInteractionPanel === 'function') {
+            explorationUI.updateTileInteractionPanel(x, y);
+        }
         if (typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateResourceDisplay === 'function') {
             uiUpdates.updateResourceDisplay();
         }
@@ -235,22 +243,21 @@ var explorationController = {
         const { x: botX, y: botY } = gameState.map.nanobotPos;
         const scanRevealUntilTick = gameState.gameTime + scanRevealTimeInTicks;
         let scannedSomethingNew = false;
-        const scanRadius = 3; // Scan 3 tiles in each direction
+        const scanRadius = 3; 
 
-        // Scan 7x7 area around nanobot (3 tiles out), excluding current tile
         for (let dy = -scanRadius; dy <= scanRadius; dy++) {
             for (let dx = -scanRadius; dx <= scanRadius; dx++) {
-                if (dx === 0 && dy === 0) continue; // Don't scan current tile
+                if (dx === 0 && dy === 0) continue; 
                 const cx = botX + dx;
                 const cy = botY + dy;
 
                 const currentZone = ZONE_DATA[gameState.currentZoneId];
                 if (currentZone && cx >= 0 && cx < currentZone.mapSize.width && cy >= 0 && cy < currentZone.mapSize.height) {
                     const tile = mapManager.getTile(cx, cy);
-                    if (tile && !tile.isExplored) { // Only reveal info for unexplored tiles
+                    if (tile && !tile.isExplored) { 
                         tile.isScanned = true;
                         tile.scannedRevealTime = scanRevealUntilTick;
-                        tile.scannedActualType = tile.actualType; // Store what's really there
+                        tile.scannedActualType = tile.actualType; 
                         scannedSomethingNew = true;
                     }
                 }
@@ -258,7 +265,7 @@ var explorationController = {
         }
 
         if (typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateResourceDisplay === 'function') uiUpdates.updateResourceDisplay();
-        else if (typeof updateResourceDisplay === 'function') updateResourceDisplay(); // Fallback
+        else if (typeof updateResourceDisplay === 'function') updateResourceDisplay(); 
 
         if (scannedSomethingNew && typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function' && typeof explorationContentEl !== 'undefined' && explorationContentEl && !explorationContentEl.classList.contains('hidden')) {
              explorationUI.updateFullExplorationView();
@@ -279,7 +286,7 @@ var explorationController = {
                 const tile = gameState.map.tiles[y][x];
                 if (tile && tile.isScanned && gameState.gameTime > tile.scannedRevealTime) {
                     tile.isScanned = false;
-                    tile.scannedActualType = null; // Clear scanned info
+                    tile.scannedActualType = null; 
                     tilesChanged = true;
                 }
             }
@@ -313,7 +320,6 @@ var explorationController = {
                     return;
                 }
             }
-            // Deduct travel costs
             for (const resource in targetZone.travelCost) {
                 gameState.resources[resource] -= targetZone.travelCost[resource];
             }
@@ -321,19 +327,17 @@ var explorationController = {
              if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateResourceDisplay === 'function') uiUpdates.updateResourceDisplay();
         }
 
-        // Update current zone and regenerate map
         gameState.currentZoneId = newZoneId;
-        gameState.map.zoneId = newZoneId; // Ensure map object also knows its zone
-        mapManager.generateMap(newZoneId); // This will set nanobotPos to entry point
+        gameState.map.zoneId = newZoneId; 
+        mapManager.generateMap(newZoneId); 
 
         if(typeof addLogEntry === 'function') addLogEntry(`Voyage vers ${targetZone.name} réussi.`, "success", explorationLogEl, gameState.explorationLog);
 
-        // Update UI
         if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function') {
             explorationUI.updateFullExplorationView();
         }
         if (typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateDisplays === 'function') {
-            uiUpdates.updateDisplays(); // General update might be needed
+            uiUpdates.updateDisplays(); 
         }
     },
 
@@ -353,8 +357,8 @@ var explorationController = {
 
         const dxPos = Math.abs(x - gameState.map.nanobotPos.x);
         const dyPos = Math.abs(y - gameState.map.nanobotPos.y);
-        if (dxPos > 1 || dyPos > 1 || (dxPos === 0 && dyPos === 0)) {
-            if(typeof addLogEntry === 'function') addLogEntry("Le Nexus-7 doit être sur une case adjacente pour attaquer la base.", "warning", explorationLogEl, gameState.explorationLog);
+        if (dxPos > 1 || dyPos > 1) { 
+            if(typeof addLogEntry === 'function') addLogEntry("Le Nexus-7 doit être sur la base ennemie ou une case adjacente pour attaquer.", "warning", explorationLogEl, gameState.explorationLog);
             return;
         }
 
@@ -362,7 +366,6 @@ var explorationController = {
         const baseDetails = baseContent.details;
         if(typeof addLogEntry === 'function') addLogEntry(baseDetails.onAttackText || `Attaque de ${baseDetails.name}...`, "map-event", explorationLogEl, gameState.explorationLog);
 
-        // Resolve defenders first
         if (baseDetails.defenders && baseDetails.defenders.length > 0) {
             if(typeof addLogEntry === 'function') addLogEntry("Des défenseurs émergent !", "warning", explorationLogEl, gameState.explorationLog);
             if (typeof sleep === 'function') await sleep(1000);
@@ -374,30 +377,39 @@ var explorationController = {
 
                 for (let i = 0; i < defenderGroup.count; i++) {
                     if(typeof addLogEntry === 'function') addLogEntry(`Affrontement avec un défenseur: ${enemyData.name} (${i + 1}/${defenderGroup.count})`, "combat", explorationLogEl, gameState.explorationLog);
-                    const enemyInstance = JSON.parse(JSON.stringify(enemyData)); // Create a fresh instance for combat
-                    enemyInstance.currentHealth = enemyInstance.health; // Ensure currentHealth is set for combat
+                    const enemyInstance = JSON.parse(JSON.stringify(enemyData)); 
+                    enemyInstance.currentHealth = enemyInstance.health; 
 
-                    await simulateCombat(enemyInstance);
+                    const combatResult = await simulateCombat(enemyInstance); 
 
-                    if (gameState.nanobotStats.currentHealth <= 0) {
+                    if (combatResult.nanobotDefeated || gameState.nanobotStats.currentHealth <= 0) { 
                         if(typeof addLogEntry === 'function') addLogEntry("Nexus-7 vaincu. L'assaut de la base ennemie a échoué.", "error", explorationLogEl, gameState.explorationLog);
                         if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function') explorationUI.updateFullExplorationView();
                         allDefendersDefeated = false;
-                        return;
+                        return; 
                     }
-                    if (typeof sleep === 'function') await sleep(500);
+                    // Si l'ennemi n'est pas vaincu, simulateCombat devrait le gérer (ex: l'ennemi fuit, etc.)
+                    // Pour l'instant, on assume que si le nanobot n'est pas vaincu, le défenseur l'est.
+                    if (!combatResult.enemyDefeated) {
+                        // Potentiellement gérer le cas où un défenseur survit mais le nanobot aussi
+                        console.warn(`Défenseur ${enemyData.name} a survécu au combat.`);
+                        // Pour l'instant, on continue comme si le défenseur était vaincu pour simplifier la logique d'assaut de base.
+                        // Dans une version plus complexe, l'assaut pourrait être mis en pause ou échouer.
+                    }
+
+                    if (typeof sleep === 'function') await sleep(500); 
                 }
             }
             if(allDefendersDefeated){
                 if(typeof addLogEntry === 'function') addLogEntry("Tous les défenseurs de la base ont été neutralisés !", "success", explorationLogEl, gameState.explorationLog);
             } else {
-                return;
+                return; 
             }
         } else {
             if(typeof addLogEntry === 'function') addLogEntry("La base semble non défendue de l'intérieur...", "info", explorationLogEl, gameState.explorationLog);
         }
 
-        const damageToStructure = gameState.nanobotStats.attack * 2;
+        const damageToStructure = gameState.nanobotStats.attack * 2; 
         baseContent.currentHealth -= damageToStructure;
         if(typeof addLogEntry === 'function') addLogEntry(`Nexus-7 inflige ${damageToStructure} dégâts à la structure de ${baseDetails.name}. PV restants: ${Math.max(0, baseContent.currentHealth)}/${baseDetails.health}`, "map-event", explorationLogEl, gameState.explorationLog);
 
@@ -409,14 +421,14 @@ var explorationController = {
                 if(typeof addLogEntry === 'function') addLogEntry("Butin récupéré de la base:", "success", explorationLogEl, gameState.explorationLog);
                 baseDetails.loot.forEach(itemId => {
                      if (itemsData[itemId] && itemsData[itemId].onUse && (itemsData[itemId].rarity === "consumable_reward" || itemsData[itemId].consumable)) {
-                        itemsData[itemId].onUse(gameState);
+                        itemsData[itemId].onUse(gameState); 
                      } else {
                         addToInventory(itemId);
                      }
                 });
             }
-            tile.actualType = TILE_TYPES.RUINS;
-            tile.content = {type: 'poi', poiType: TILE_TYPES.RUINS, isInteracted: true, originalBaseId: baseContent.id };
+            tile.actualType = TILE_TYPES.RUINS; 
+            tile.content = {type: 'poi', poiType: TILE_TYPES.RUINS, isInteracted: true, originalBaseId: baseContent.id }; 
 
             gainXP(baseDetails.xpReward || Math.floor(baseDetails.health / 2 + (baseDetails.defenders ? baseDetails.defenders.reduce((sum, d) => sum + d.count * 10, 0) : 0)));
 

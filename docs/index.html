@@ -55,8 +55,8 @@
         #exploration-map-area {
             display: flex;
             flex-direction: column;
-            overflow: auto; /* Permet le défilement si la grille est trop grande */
-            max-height: 75vh; /* Limite la hauteur, ajustez au besoin */
+            overflow: auto; 
+            max-height: 75vh; 
             border: 1px solid #3a4558;
             border-radius: 0.25rem;
             padding: 0.5rem;
@@ -77,7 +77,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 1rem; /* Ajusté */
+            font-size: 1rem; 
             cursor: pointer;
             transition: background-color 0.3s;
             position: relative;
@@ -92,7 +92,7 @@
         #tile-interaction-details p { margin-bottom: 0.5rem; font-size: 0.9rem; }
         #tile-interaction-actions button { margin-top: 0.5rem; display: block; width: 100%; }
         #exploration-content-container { display: flex; flex-direction: column; align-items: center; }
-        #map-info { text-align: center; font-size: 0.9rem; margin-top: 1rem; } /* Ajouté margin-top */
+        #map-info { text-align: center; font-size: 0.9rem; margin-top: 1rem; } 
 
         .map-tile:hover { background-color: #4a5568; }
         .map-tile.explored { background-color: #3b475c; }
@@ -210,7 +210,7 @@
         .skill-activation { color: #faf089; font-weight: bold;}
         .skill-effect { color: #a0aec0; font-style: italic;}
 
-        #base-preview-section { /* Ajouté pour centrer */
+        #base-preview-section {
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -240,7 +240,7 @@
             background-color: #48bb78; border: 2px solid #38a169; border-radius: 4px;
             display: flex; justify-content: center; align-items: center;
             font-size: 0.7rem; color: #1a202c; font-weight: bold;
-            margin: auto; /* Pour centrer dans la cellule de la grille */
+            margin: auto;
         }
         .defense-visual {
             width: 18px; height: 18px; font-size: 0.5rem;
@@ -250,7 +250,7 @@
         }
         .defense-visual.laserTurret { background-color: #fbd38d; }
         .defense-visual.gatlingTurret { background-color: #cbd5e0; border-radius: 2px; }
-        .defense-visual.reinforcedWall { width: 8px; height: 18px; background-color: #718096; border-radius: 2px;} /* Ajusté pour être plus fin */
+        .defense-visual.reinforcedWall { width: 8px; height: 18px; background-color: #718096; border-radius: 2px;}
         .base-enemy-visual {
             width: 7px; height: 7px;
             background-color: #e53e3e; border-radius: 50%; position: absolute;
@@ -408,9 +408,10 @@
                             <div id="zone-list" class="space-y-2"></div>
                         </div>
                         <div id="exploration-content-container">
+                             <!-- Bouton Scan sera inséré ici par JS -->
                             <div id="map-grid"></div>
                             <div id="map-info" class="mt-3">
-                                <p>Position: <span id="nanobot-map-pos">N/A</span>.</p>
+                                <p>Position: <span id="nanobot-map-pos">N/A</span>. <span class="text-sm text-gray-400">(Énergie/Dépl.: <span id="exploration-move-gauge">?</span>)</span></p>
                                 <p id="tile-info-display" class="text-gray-400 italic">Survolez une case pour plus d'infos.</p>
                             </div>
                         </div>
@@ -421,9 +422,9 @@
                             <p class="text-gray-500 italic">Aucun événement d'exploration récent...</p>
                         </div>
                         <div id="tile-interaction-panel" class="mt-4">
-                            <h4>Détails de la Case</h4>
+                            <!-- Le titre sera ajouté par JS -->
                             <div id="tile-interaction-details">
-                                <p class="text-gray-500 italic">Cliquez sur une case adjacente pour interagir.</p>
+                                <p class="text-gray-500 italic">Cliquez sur une case pour interagir.</p>
                             </div>
                             <div id="tile-interaction-actions"></div>
                         </div>
@@ -458,7 +459,7 @@
     <div id="combat-modal" class="modal hidden"><div id="combat-modal-content" class="modal-content"><h2 class="font-orbitron text-2xl mb-4 text-center text-red-400">Affrontement !</h2><div class="combat-arena"><div id="combat-nanobot" class="combatant"><div class="combatant-name">Nexus-7</div><div class="combatant-sprite" id="combat-nanobot-sprite"></div><div class="health-bar-container"><div id="combat-nanobot-healthbar" class="health-bar"></div></div></div><div id="combat-enemy" class="combatant"><div class="combatant-name" id="combat-enemy-name">Ennemi</div><div class="combatant-sprite" id="combat-enemy-sprite"></div><div class="health-bar-container"><div id="combat-enemy-healthbar" class="health-bar"></div></div></div></div><div id="combat-log-visual"></div><div class="text-center mt-4"><button id="close-combat-modal-btn" class="btn btn-secondary">Fermer</button><button id="toggle-speed-btn" class="btn btn-secondary ml-2">Vitesse x3</button></div></div></div>
     <div id="combat-end-modal" class="modal hidden"><div class="modal-content text-center"><h3 id="combat-end-title" class="font-orbitron text-lg mb-4 text-green-300">Victoire !</h3><p id="combat-end-rewards" class="mb-2 text-sm"></p><h4 class="text-blue-300 mt-4 mb-1 font-orbitron">XP & Niveau</h4><p id="xp-gain" class="text-sm mb-2"></p><div class="w-full bg-gray-700 rounded-full h-2.5 mb-2"><div id="xp-bar" class="bg-blue-500 h-2.5 rounded-full" style="width: 0%"></div></div><h4 class="text-yellow-300 mt-4 mb-1 font-orbitron">Butin Obtenu</h4><ul id="loot-list" class="text-sm text-gray-300 list-disc list-inside mb-4"></ul><button id="close-end-modal" class="btn btn-primary mt-4">Fermer</button></div></div>
 
-<script src="js/config.js"></script> <!-- Fichier config consolidé -->
+<script src="js/config.js"></script>
 <script src="js/gameState.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/mapManager.js"></script>
