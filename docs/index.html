@@ -10,9 +10,9 @@
         body { font-family: 'Roboto', sans-serif; background-color: #1a202c; color: #e2e8f0; overflow-x: hidden; }
         .font-orbitron { font-family: 'Orbitron', sans-serif; }
         .resource-bar, .main-content-wrapper, .footer { /* .main-content renommé en .main-content-wrapper */
-            border: 1px solid #4a5568; border-radius: 0.5rem; 
-            background-color: #2d3748; 
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); 
+            border: 1px solid #4a5568; border-radius: 0.5rem;
+            background-color: #2d3748;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
         }
         .btn { transition: all 0.3s ease; border-radius: 0.375rem; padding: 0.5rem 1rem; font-weight: 600; }
         .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
@@ -62,7 +62,7 @@
         #toggle-menu-btn-container { /* Pour positionner le bouton de bascule */
             position: fixed; /* Ou absolute si relatif à un parent positionné */
             top: 110px; /* Ajustez selon la hauteur de votre header */
-            left: 10px; 
+            left: 10px;
             z-index: 50; /* Au-dessus du contenu mais sous les modales */
         }
         #toggle-menu-btn {
@@ -77,7 +77,7 @@
         #exploration-layout {
             display: flex; /* Changé de grid à flex pour mieux contrôler les colonnes */
             flex-direction: column; /* Défaut pour mobile */
-            gap: 1rem; 
+            gap: 1rem;
         }
         @media (min-width: 768px) { /* md breakpoint de Tailwind */
             #exploration-layout {
@@ -101,7 +101,7 @@
         #exploration-map-area {
             display: flex; /* Permet à exploration-content-container de se centrer ou de s'étirer */
             flex-direction: column;
-            overflow: auto; 
+            overflow: auto;
             max-height: 65vh; /* Ajusté pour laisser de la place au log/details */
             border: 1px solid #3a4558;
             border-radius: 0.25rem;
@@ -125,10 +125,10 @@
         .map-tile {
             width: 25px;
             height: 25px;
-            font-size: 1rem; 
+            font-size: 1rem;
             /* ... autres styles .map-tile */
         }
-        #map-info { text-align: center; font-size: 0.9rem; margin-top: 0.5rem; } 
+        #map-info { text-align: center; font-size: 0.9rem; margin-top: 0.5rem; }
 
         #exploration-sidebar {
             display: flex;
@@ -143,21 +143,21 @@
                 overflow-y: auto;
             }
         }
-        #exploration-log { 
-            background-color: #1a202c; border: 1px solid #4a5568; 
-            border-radius: 0.375rem; padding: 0.75rem; 
+        #exploration-log {
+            background-color: #1a202c; border: 1px solid #4a5568;
+            border-radius: 0.375rem; padding: 0.75rem;
             height: 200px; /* Hauteur fixe pour le log */
-            overflow-y: auto; 
-            font-size: 0.8rem; color: #cbd5e0; 
-            font-family: 'Roboto Mono', monospace; line-height: 1.4; 
+            overflow-y: auto;
+            font-size: 0.8rem; color: #cbd5e0;
+            font-family: 'Roboto Mono', monospace; line-height: 1.4;
             margin-bottom: 1rem; /* Espace avant le panneau de détails */
         }
-        #tile-interaction-panel { 
-            background-color: #1a202c; border: 1px solid #4a5568; 
-            border-radius: 0.375rem; padding: 1rem; 
-            flex-grow: 1; display: flex; flex-direction: column; 
+        #tile-interaction-panel {
+            background-color: #1a202c; border: 1px solid #4a5568;
+            border-radius: 0.375rem; padding: 1rem;
+            flex-grow: 1; display: flex; flex-direction: column;
         }
-        
+
         /* ... (Le reste de vos styles : .nanobot-display, .combat-*, .base-preview-*, etc. restent inchangés) ... */
         .nanobot-display { width: 150px; height: 200px; margin: 10px auto; position: relative; border: 2px solid #4a5568; background-color: #1a202c; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .nanobot-core { width: 50px; height: 50px; background-color: #63b3ed; border: 2px solid #2c5282; box-shadow: 0 0 5px #63b3ed; position: relative; }
@@ -357,6 +357,17 @@
         .base-enemy-visual.crawler { background-color: #d69e2e; }
         .laser-beam { position: absolute; background-color: #fbd38d; height: 2px; opacity: 0.8; transform-origin: 0 50%; z-index: 10; pointer-events: none; box-shadow: 0 0 5px #fbd38d, 0 0 10px #e9ab54; }
 
+        /* NOUVEAUX STYLES POUR LA VIDÉO */
+        #night-assault-video-container {
+            background-color: rgba(0,0,0,0.9); /* Fond plus sombre pour focus sur la vidéo */
+            z-index: 1005; /* Au-dessus des autres modales si nécessaire */
+        }
+        #night-assault-video {
+            max-width: 90vw;
+            max-height: 90vh;
+            border: 3px solid #e53e3e; /* Bordure rouge thématique */
+            box-shadow: 0 0 25px #c53030;
+        }
     </style>
 </head>
 <body class="p-4">
@@ -495,32 +506,32 @@
 
                 <div id="exploration-content" class="hidden">
                     <h2 id="exploration-title" class="font-orbitron text-xl mb-3 text-blue-300">Carte d'Exploration</h2>
-                    
-                    <div id="exploration-layout" class="flex flex-col md:flex-row gap-4"> 
-                        
-                        <div id="exploration-main-column" class="flex-grow md:w-3/4 order-2 md:order-1"> 
+
+                    <div id="exploration-layout" class="flex flex-col md:flex-row gap-4">
+
+                        <div id="exploration-main-column" class="flex-grow md:w-3/4 order-2 md:order-1">
                             <div id="zone-selection-container" class="mb-4 p-3 bg-gray-700 rounded">
                                 <h3 class="font-orbitron text-lg text-blue-300 mb-2">Sélection de Zone</h3>
                                 <div id="zone-list" class="space-y-2"></div>
                             </div>
-                            <div id="exploration-map-area"> 
+                            <div id="exploration-map-area">
                                 <div id="exploration-content-container">
                                     <!-- Bouton Scan sera inséré ici par JS -->
                                     <div id="map-grid"></div>
                                 </div>
                             </div>
-                            <div id="map-info" class="mt-3 text-center"> 
+                            <div id="map-info" class="mt-3 text-center">
                                 <p>Position: <span id="nanobot-map-pos">N/A</span>. <span class="text-sm text-gray-400">(Énergie/Dépl.: <span id="exploration-move-gauge">?</span>)</span></p>
                                 <p id="tile-info-display" class="text-gray-400 italic">Survolez une case pour plus d'infos.</p>
                             </div>
                         </div>
-                
-                        <div id="exploration-sidebar" class="flex flex-col md:w-1/4 order-1 md:order-2"> 
+
+                        <div id="exploration-sidebar" class="flex flex-col md:w-1/4 order-1 md:order-2">
                             <h3 class="font-orbitron text-lg text-yellow-300 mb-2 border-b border-gray-600 pb-1">Journal d'Exploration</h3>
-                            <div id="exploration-log" class="mb-4"> 
+                            <div id="exploration-log" class="mb-4">
                                 <p class="text-gray-500 italic">Aucun événement d'exploration récent...</p>
                             </div>
-                            
+
                             <div id="tile-interaction-panel">
                                 <!-- Le titre sera ajouté par JS dans updateTileInteractionPanel -->
                                 <div id="tile-interaction-details">
@@ -559,6 +570,18 @@
     <div id="modal" class="modal hidden"><div class="modal-content"><h3 id="modal-title" class="font-orbitron text-lg mb-4">Titre Modale</h3><p id="modal-message" class="mb-6">Message Modale.</p><div class="flex justify-end space-x-3"><button id="modal-cancel" class="btn btn-secondary">Annuler</button><button id="modal-confirm" class="btn btn-primary">Confirmer</button></div></div></div>
     <div id="combat-modal" class="modal hidden"><div id="combat-modal-content" class="modal-content"><h2 class="font-orbitron text-2xl mb-4 text-center text-red-400">Affrontement !</h2><div class="combat-arena"><div id="combat-nanobot" class="combatant"><div class="combatant-name">Nexus-7</div><div class="combatant-sprite" id="combat-nanobot-sprite"></div><div class="health-bar-container"><div id="combat-nanobot-healthbar" class="health-bar"></div></div></div><div id="combat-enemy" class="combatant"><div class="combatant-name" id="combat-enemy-name">Ennemi</div><div class="combatant-sprite" id="combat-enemy-sprite"></div><div class="health-bar-container"><div id="combat-enemy-healthbar" class="health-bar"></div></div></div></div><div id="combat-log-visual"></div><div class="text-center mt-4"><button id="close-combat-modal-btn" class="btn btn-secondary">Fermer</button><button id="toggle-speed-btn" class="btn btn-secondary ml-2">Vitesse x3</button></div></div></div>
     <div id="combat-end-modal" class="modal hidden"><div class="modal-content text-center"><h3 id="combat-end-title" class="font-orbitron text-lg mb-4 text-green-300">Victoire !</h3><p id="combat-end-rewards" class="mb-2 text-sm"></p><h4 class="text-blue-300 mt-4 mb-1 font-orbitron">XP & Niveau</h4><p id="xp-gain" class="text-sm mb-2"></p><div class="w-full bg-gray-700 rounded-full h-2.5 mb-2"><div id="xp-bar" class="bg-blue-500 h-2.5 rounded-full" style="width: 0%"></div></div><h4 class="text-yellow-300 mt-4 mb-1 font-orbitron">Butin Obtenu</h4><ul id="loot-list" class="text-sm text-gray-300 list-disc list-inside mb-4"></ul><button id="close-end-modal" class="btn btn-primary mt-4">Fermer</button></div></div>
+
+    <!-- NOUVELLE MODALE VIDÉO -->
+    <div id="night-assault-video-container" class="modal hidden">
+        <div class="relative">
+            <video id="night-assault-video" width="80%" height="auto" preload="auto">
+                <!-- Remplacez par le chemin réel de VOTRE vidéo -->
+                <source src="videos/night_assault_alert.mp4" type="video/mp4">
+                Votre navigateur ne supporte pas l'élément vidéo.
+            </video>
+            <button id="close-night-assault-video-btn" class="btn btn-danger btn-sm" style="position: absolute; top: 10px; right: 10px; z-index: 10;">Fermer [X]</button>
+        </div>
+    </div>
 
 <script src="js/config.js"></script>
 <script src="js/gameState.js"></script>

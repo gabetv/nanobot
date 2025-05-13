@@ -28,6 +28,9 @@ let explorationLogEl, tileInteractionPanelEl, tileInteractionDetailsEl, tileInte
 let activeQuestsListEl, completedQuestsListEl;
 let toggleMenuBtn; // Ajout pour le bouton de menu
 
+// NOUVELLES RÉFÉRENCES DOM POUR LA VIDÉO
+let nightAssaultVideoContainerEl, nightAssaultVideoEl, closeNightAssaultVideoBtnEl;
+
 // La variable combatSpeedMultiplier est définie dans combat.js avec 'var' pour la portée globale
 
 function initDOMReferences() {
@@ -42,12 +45,12 @@ function initDOMReferences() {
         energyCostMoveEl=document.getElementById('energyCostMove');
         crystalShardsDisplayContainer=document.getElementById('crystal-shards-display-container');
         crystalShardsEl=document.getElementById('crystal_shards');
-        
+
         buildingsSection=document.getElementById('buildings-section'); // Menu de gauche
         eventLogEl=document.getElementById('event-log');
         gameTimeEl=document.getElementById('gameTime');
         cycleStatusEl=document.getElementById('cycleStatus');
-        
+
         tabOverview=document.getElementById('tab-overview');
         tabResearch=document.getElementById('tab-research');
         tabNanobot=document.getElementById('tab-nanobot');
@@ -55,7 +58,7 @@ function initDOMReferences() {
         tabQuests = document.getElementById('tab-quests');
         tabInventory=document.getElementById('tab-inventory');
         tabShop=document.getElementById('tab-shop');
-        
+
         overviewContentElTab=document.getElementById('overview-content');
         researchContentEl=document.getElementById('research-content');
         nanobotContentEl=document.getElementById('nanobot-content');
@@ -63,13 +66,13 @@ function initDOMReferences() {
         questsContentEl = document.getElementById('quests-content');
         inventoryContentEl=document.getElementById('inventory-content');
         shopContentEl=document.getElementById('shop-content');
-        
+
         modal = document.getElementById('modal');
         modalTitle = document.getElementById('modal-title');
         modalMessage = document.getElementById('modal-message');
         modalConfirm = document.getElementById('modal-confirm');
         modalCancel = document.getElementById('modal-cancel');
-        
+
         nanobotHealthEl=document.getElementById('nanobot-health');
         nanobotAttackEl=document.getElementById('nanobot-attack');
         nanobotDefenseEl=document.getElementById('nanobot-defense');
@@ -78,10 +81,10 @@ function initDOMReferences() {
         equippedModulesDisplayEl=document.getElementById('equipped-modules-display');
         equippedItemsDisplayBriefEl = document.getElementById('equipped-items-display-brief');
         nanobotEquipmentSlotsEl = document.getElementById('nanobot-equipment-slots');
-        
+
         simulateCombatBtn=document.getElementById('simulate-combat-btn');
         combatLogSummaryEl=document.getElementById('combat-log-summary');
-        
+
         combatModalEl=document.getElementById('combat-modal');
         combatNanobotSprite=document.getElementById('combat-nanobot-sprite');
         combatEnemySprite=document.getElementById('combat-enemy-sprite');
@@ -90,7 +93,7 @@ function initDOMReferences() {
         combatEnemyNameEl=document.getElementById('combat-enemy-name');
         combatLogVisualEl=document.getElementById('combat-log-visual');
         closeCombatModalBtn=document.getElementById('close-combat-modal-btn');
-        
+
         mapGridEl = document.getElementById('map-grid');
         nanobotMapPosEl = document.getElementById('nanobot-map-pos');
         tileInfoDisplayEl = document.getElementById('tile-info-display');
@@ -100,10 +103,10 @@ function initDOMReferences() {
         tileInteractionPanelEl = document.getElementById('tile-interaction-panel');
         tileInteractionDetailsEl = document.getElementById('tile-interaction-details');
         tileInteractionActionsEl = document.getElementById('tile-interaction-actions');
-        
+
         activeQuestsListEl = document.getElementById('active-quests-list');
         completedQuestsListEl = document.getElementById('completed-quests-list');
-        
+
         combatEndModalEl = document.getElementById('combat-end-modal');
         combatEndTitleEl = document.getElementById('combat-end-title');
         combatEndRewardsEl = document.getElementById('combat-end-rewards');
@@ -112,10 +115,10 @@ function initDOMReferences() {
         lootListEl = document.getElementById('loot-list');
         closeEndModalBtn = document.getElementById('close-end-modal');
         toggleSpeedBtn = document.getElementById('toggle-speed-btn');
-        
+
         inventoryListEl = document.getElementById("inventory-list");
         shopItemsListEl = document.getElementById("shop-items-list");
-        
+
         baseHealthDisplayEl = document.getElementById('base-health-display');
         baseHealthValueEl = document.getElementById('base-health-value');
         baseMaxHealthValueEl = document.getElementById('base-max-health-value');
@@ -128,7 +131,7 @@ function initDOMReferences() {
         cancelPlacementBtnEl = document.getElementById('cancel-placement-btn');
         baseDefensePowerEl = document.getElementById('base-defense-power');
         activeDefensesDisplayEl = document.getElementById('active-defenses-display');
-        
+
         repairBaseBtn = document.getElementById('repair-base-btn');
         repairDefensesBtn = document.getElementById('repair-defenses-btn');
         toggleNanobotDefendBaseBtn = document.getElementById('toggle-nanobot-defend-base-btn');
@@ -137,6 +140,12 @@ function initDOMReferences() {
         forceCycleChangeBtn = document.getElementById('force-cycle-change-btn');
 
         toggleMenuBtn = document.getElementById('toggle-menu-btn'); // Référence pour le bouton de menu
+
+        // RÉFÉRENCES POUR LA VIDÉO
+        nightAssaultVideoContainerEl = document.getElementById('night-assault-video-container');
+        nightAssaultVideoEl = document.getElementById('night-assault-video');
+        closeNightAssaultVideoBtnEl = document.getElementById('close-night-assault-video-btn');
+
 
         console.log("main.js: initDOMReferences - Références DOM initialisées.");
     } catch (e) {
@@ -156,7 +165,7 @@ function setupEventListeners() {
         else if (typeof simulateCombat !== 'function') console.warn("main.js: setupEventListeners - simulateCombat n'est pas une fonction.");
 
         if(closeCombatModalBtn) closeCombatModalBtn.addEventListener('click', () => { if(combatModalEl) combatModalEl.classList.add('hidden'); if(typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function' && typeof explorationContentEl !== 'undefined' && explorationContentEl && !explorationContentEl.classList.contains('hidden')) explorationUI.updateFullExplorationView(); });
-        
+
         if(toggleSpeedBtn) {
             toggleSpeedBtn.addEventListener('click', () => {
                 if (typeof combatSpeedMultiplier === 'undefined') window.combatSpeedMultiplier = 1; // Assurez-vous qu'il est global
@@ -177,6 +186,15 @@ function setupEventListeners() {
         if(toggleNanobotDefendBaseBtn && typeof toggleNanobotDefendBase === 'function') toggleNanobotDefendBaseBtn.addEventListener('click', toggleNanobotDefendBase);
         if(forceCycleChangeBtn && typeof forceCycleChange === 'function') forceCycleChangeBtn.addEventListener('click', () => forceCycleChange(false));
         if(cancelPlacementBtnEl && typeof cancelPlacementMode === 'function') cancelPlacementBtnEl.addEventListener('click', cancelPlacementMode);
+
+        // ÉCOUTEUR POUR FERMER LA VIDÉO D'ASSAUT
+        if (closeNightAssaultVideoBtnEl && typeof hideNightAssaultVideo === 'function') {
+            closeNightAssaultVideoBtnEl.addEventListener('click', hideNightAssaultVideo);
+        } else {
+            if(!closeNightAssaultVideoBtnEl) console.warn("Bouton #close-night-assault-video-btn non trouvé.");
+            if(typeof hideNightAssaultVideo !== 'function') console.warn("Fonction hideNightAssaultVideo non trouvée.");
+        }
+
 
         // Gestion du menu rétractable
         if (toggleMenuBtn && buildingsSection) {
@@ -331,11 +349,11 @@ function gameLoop() {
         if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateResourceDisplay === 'function') uiUpdates.updateResourceDisplay();
         if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateXpBar === 'function') uiUpdates.updateXpBar();
 
-        if (gameLoopCounter % 5 === 0) { 
+        if (gameLoopCounter % 5 === 0) {
              if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateDisplays === 'function') {
                 uiUpdates.updateDisplays();
              }
-        } else { 
+        } else {
             if (typeof uiUpdates !== 'undefined') {
                 if (overviewContentElTab && !overviewContentElTab.classList.contains('hidden') && typeof uiUpdates.updateBaseStatusDisplay === 'function') uiUpdates.updateBaseStatusDisplay();
                 if (researchContentEl && !researchContentEl.classList.contains('hidden') && gameState.activeResearch && typeof uiUpdates.updateResearchDisplay === 'function') uiUpdates.updateResearchDisplay();
@@ -445,7 +463,7 @@ function init() {
 
         if (typeof initializeBaseGrid === 'function') {
             console.log("main.js: init() - Initialisation de la grille de base.");
-            initializeBaseGrid(); 
+            initializeBaseGrid();
         } else { console.error("initializeBaseGrid n'est pas défini dans init");}
 
         console.log("main.js: init() - Calculs initiaux...");
@@ -482,12 +500,12 @@ function init() {
            if(nightAssaultLogEl) nightAssaultLogEl.scrollTop = nightAssaultLogEl.scrollHeight;
         }
         if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateExplorationLogDisplay === 'function') explorationUI.updateExplorationLogDisplay(); else console.warn("explorationUI.updateExplorationLogDisplay non défini.");
-        
+
         // Met à jour le panneau d'interaction pour la position initiale du nanobot
         if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateTileInteractionPanel === 'function' && gameState.map.nanobotPos) {
             explorationUI.updateTileInteractionPanel(gameState.map.nanobotPos.x, gameState.map.nanobotPos.y);
         } else console.warn("explorationUI.updateTileInteractionPanel ou gameState.map.nanobotPos non défini.");
-        
+
         if (typeof questUI !== 'undefined' && typeof questUI.updateQuestDisplay === 'function') questUI.updateQuestDisplay(); else console.warn("questUI.updateQuestDisplay non défini.");
 
 
@@ -515,7 +533,7 @@ function saveGame() {
         if (typeof gameState === 'undefined') { console.warn("saveGame: gameState non défini."); return; }
         localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
         // console.log("Partie sauvegardée.");
-    } catch (e) { 
+    } catch (e) {
         console.error("Erreur lors de la sauvegarde de la partie:", e);
         if(typeof addLogEntry === 'function' && eventLogEl && gameState?.eventLog) addLogEntry("Erreur lors de la sauvegarde de la partie.", "error", eventLogEl, gameState.eventLog);
     }
@@ -534,7 +552,7 @@ function loadGame() {
                     // Pour les objets simples (pas des tableaux, pas null), faire une fusion profonde limitée
                     if (typeof gameState[key] === 'object' && gameState[key] !== null && !Array.isArray(gameState[key]) &&
                         typeof loadedState[key] === 'object' && loadedState[key] !== null && !Array.isArray(loadedState[key])) {
-                        
+
                         // Cas spécifiques de fusion pour éviter les problèmes
                         if (key === 'map' && loadedState.map && typeof TILE_TYPES !== 'undefined' && typeof ZONE_DATA !== 'undefined' && typeof BASE_COORDINATES !== 'undefined' && typeof DEFAULT_MAP_SIZE !== 'undefined') {
                              gameState.map.tiles = loadedState.map.tiles || []; // Conserver les tuiles chargées
@@ -560,9 +578,9 @@ function loadGame() {
                                      }
                                  }
                                  gameState.map.tiles = newTiles;
-                             } else { 
+                             } else {
                                  console.warn("loadGame: gameState.map.tiles n'est pas un tableau après chargement, réinitialisation.");
-                                 gameState.map.tiles = []; 
+                                 gameState.map.tiles = [];
                             }
                         } else if (key === 'nanobotStats' && loadedState.nanobotStats) {
                             gameState.nanobotStats = { ...gameState.nanobotStats, ...loadedState.nanobotStats };
@@ -608,13 +626,13 @@ function loadGame() {
 
             if(typeof addLogEntry === 'function' && eventLogEl && gameState.eventLog) addLogEntry(`Partie chargée (${SAVE_KEY}).`, "info", eventLogEl, gameState.eventLog);
             console.log("loadGame: Partie chargée avec succès.");
-        } catch(e) { 
+        } catch(e) {
             console.error("Erreur lors du chargement ou de l'analyse de la sauvegarde:", e);
             localStorage.removeItem(SAVE_KEY); // Supprimer la sauvegarde corrompue
             if(typeof addLogEntry === 'function' && eventLogEl && gameState?.eventLog) addLogEntry("Erreur chargement sauvegarde. Réinitialisation.", "error", eventLogEl, gameState.eventLog);
         }
-    } else { 
-        console.log("loadGame: Aucune sauvegarde trouvée (" + SAVE_KEY + ")."); 
+    } else {
+        console.log("loadGame: Aucune sauvegarde trouvée (" + SAVE_KEY + ").");
     }
     // S'assurer que les logs sont des tableaux même si la sauvegarde était partielle/corrompue
     if (!Array.isArray(gameState.eventLog)) gameState.eventLog = ["Journal des événements initialisé."];

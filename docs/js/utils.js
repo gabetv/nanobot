@@ -153,4 +153,49 @@ function calculateModifiedDamage(baseDamage, damageType, targetResistances) {
     const resistanceValue = targetResistances[damageType] || 0;
     return Math.max(0, Math.floor(baseDamage * (1 - resistanceValue)));
 }
+
+// NOUVELLES FONCTIONS POUR LA VIDÉO
+function showNightAssaultVideo(videoSrc = "videos/night_assault_alert.mp4") {
+    const videoContainer = document.getElementById('night-assault-video-container');
+    const videoElement = document.getElementById('night-assault-video');
+
+    if (!videoContainer || !videoElement) {
+        console.warn("Éléments de la vidéo d'assaut nocturne non trouvés.");
+        return;
+    }
+
+    // S'assure que la source est correcte, surtout si elle a été modifiée
+    // new URL(...) est utilisé pour obtenir l'URL absolue, car currentSrc est toujours absolue.
+    const absoluteVideoSrc = new URL(videoSrc, window.location.href).href;
+    if (videoElement.currentSrc !== absoluteVideoSrc) {
+         videoElement.src = videoSrc; // Mettre le chemin relatif ici
+         videoElement.load();
+    }
+
+    videoContainer.classList.remove('hidden');
+    videoElement.currentTime = 0;
+    videoElement.muted = false;
+    videoElement.play().catch(error => {
+        console.warn("Lecture automatique de la vidéo bloquée :", error);
+        // On pourrait vouloir ajouter un message à l'utilisateur pour activer le son manuellement si 'muted' est à false
+    });
+
+    videoElement.onended = function() {
+        hideNightAssaultVideo();
+        videoElement.onended = null; // Nettoie l'écouteur pour éviter des appels multiples
+    };
+}
+
+function hideNightAssaultVideo() {
+    const videoContainer = document.getElementById('night-assault-video-container');
+    const videoElement = document.getElementById('night-assault-video');
+    if (!videoContainer || !videoElement) {
+        console.warn("Éléments de la vidéo d'assaut nocturne non trouvés pour masquer.");
+        return;
+    }
+    videoContainer.classList.add('hidden');
+    videoElement.pause();
+}
+
+
 console.log("utils.js - Fin du fichier, fonctions définies.");
