@@ -74,15 +74,16 @@
         .map-tile.unexplored-distress-signal::before { content: "📡"; opacity: 0.6; font-size: 1.1rem; display:flex; justify-content:center; align-items:center; color: #faf089; width:100%; height:100%; animation: pulse-signal 2s infinite; }
         @keyframes pulse-signal { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
 
-        .map-tile.explored-impassable { background-color: #718096; }
+        .map-tile.explored-impassable { background-color: #718096; } /* Base for explored impassable */
         .map-tile.explored-impassable-crystal { background-color: #5eead4; filter: brightness(0.9); }
-        .map-tile.impassable-water { background-color: #2b6cb0; cursor:not-allowed; }
-        .map-tile.impassable-mountain { background-color: #718096; cursor:not-allowed; }
+        .map-tile.impassable-water.explored-impassable::before { content: "🌊"; opacity: 0.8; font-size: 1.1rem; display: flex; justify-content: center; align-items: center; width:100%; height:100%; color: #1e3a8a; }
+        .map-tile.impassable-mountain.explored-impassable::before { content: "⛰️"; opacity: 0.8; font-size: 1.1rem; display: flex; justify-content: center; align-items: center; width:100%; height:100%; color: #4a5568;}
+
         .map-tile.grassland { background-color: #38a169; } .map-tile.grassland::before {content:"🌾"; color: #a7f3d0;}
         .map-tile.desert { background-color: #f6e05e; filter:brightness(0.8); } .map-tile.desert::before {content:"🏜️"; color: #d69e2e;}
         .map-tile.water { background-color: #63b3ed; } .map-tile.water::before {content:"💧"; color: #1c3d52;}
         .map-tile.forest { background-color: #2f855a; } .map-tile.forest::before {content:"🌳"; color: #9ae6b4;}
-        .map-tile.mountain { background-color: #a0aec0; } .map-tile.mountain::before {content:"⛰️"; color: #4a5568;}
+        .map-tile.mountain { background-color: #a0aec0; } .map-tile.mountain::before {content:"⛰️"; color: #4a5568;} /* Standard mountain, passable */
         .map-tile.ruins { background-color: #718096; } .map-tile.ruins::before {content:"🏛️"; color:#4a5568;}
         .map-tile.poi-structure::before { content:"🌟"; color:#faf089;}
         .map-tile.poi-wreckage::before { content:"⚓"; color:#a0aec0;}
@@ -98,6 +99,10 @@
         .map-tile.scanned.scanned-actual-upgrade::after { content: "💡"; color: #faf089; }
         .map-tile.scanned.scanned-actual-enemy-base::after { content: "🏰"; color: #e53e3e; font-size: 1.1em; }
         .map-tile.scanned.scanned-actual-empty::after { content: "·"; color: #718096; font-size:1.2em; font-weight:bold; }
+        .map-tile.scanned.scanned-actual-impassable-water::after { content: "🌊"; color: #63b3ed; opacity: 0.6; }
+        .map-tile.scanned.scanned-actual-impassable-mountain::after { content: "⛰️"; color: #a0aec0; opacity: 0.6; }
+
+
         .map-tile.enemy-base::before { content: "🏰"; color: #e53e3e; font-size: 1.3rem; }
 
 
@@ -125,7 +130,7 @@
         .map-tile.resource-crystal::before { content: "💎"; color: #a7f3d0; }
         .map-tile.enemy::before { content: "💀"; color: #f56565; }
         .map-tile.upgrade::before { content: "💡"; color: #faf089; }
-        .map-tile.impassable { background-color: #718096; cursor: not-allowed; }
+        /* .map-tile.impassable { background-color: #718096; cursor: not-allowed; } */ /* Removed generic .impassable, using specific explored ones */
         .map-tile.impassable-crystal { background-color: #5eead4; filter: brightness(0.8); cursor: not-allowed; }
         #map-info { text-align: center; font-size: 0.9rem; }
 
@@ -133,7 +138,7 @@
         #quests-content .quest-item { background-color: #384252; padding: 0.75rem; border-radius: 0.25rem; margin-bottom: 0.75rem; }
         #quests-content .quest-item h4 { color: #a0aec0; }
         #quests-content .quest-item p { color: #718096; font-size: 0.85em; }
-        #quests-content .quest-item .objectives-list { list-style-type: disc; /* Changed for better visibility */ margin-left: 1.5rem; /* Adjusted margin */ color: #90cdf4;}
+        #quests-content .quest-item .objectives-list { list-style-type: disc; margin-left: 1.5rem; color: #90cdf4;}
         #quests-content .quest-item .objectives-list li.completed { text-decoration: line-through; color: #48bb78; }
         #quests-content .quest-item .rewards { margin-top: 0.5rem; font-size: 0.8em; color: #ecc94b; }
         #quests-content .quest-status-AVAILABLE { border-left: 4px solid #ecc94b; }
@@ -188,6 +193,45 @@
         .defense-visual.reinforcedWall { width: 10px; height: 50px; background-color: #718096; border-radius: 2px; }
         .base-enemy-visual { width: 8px; height: 8px; background-color: #e53e3e; border-radius: 50%; position: absolute; transition: transform 0.5s ease-out, left 0.5s linear, top 0.5s linear; box-shadow: 0 0 3px #c53030; z-index: 5; background-size: contain; background-repeat: no-repeat; background-position: center;}
         .laser-beam { position: absolute; background-color: #fbd38d; height: 2px; opacity: 0.8; transform-origin: 0 50%; z-index: 10; pointer-events: none; box-shadow: 0 0 5px #fbd38d, 0 0 10px #e9ab54; }
+
+        /* NOUVEAUX STYLES POUR LES ICÔNES DE CASES INFRANCHISSABLES ET SURBRILLANCE RESSOURCES */
+        .map-tile.impassable-water.explored-impassable::before,
+        .map-tile.impassable-mountain.explored-impassable::before {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            font-size: 1.1rem; /* Ajustez au besoin */
+            opacity: 0.8;
+            position: absolute; /* Pour s'assurer qu'il est au-dessus du fond mais sous d'autres icônes comme le nanobot */
+            z-index: 1;
+        }
+        .map-tile.impassable-water.explored-impassable::before {
+            content: "🌊";
+            color: #1e3a8a; /* Couleur pour l'icône d'eau si différente du fond */
+        }
+        .map-tile.impassable-mountain.explored-impassable::before {
+            content: "⛰️"; /* Utiliser ⛰️ (montagne) pour une meilleure sémantique que 🚫 */
+            color: #4a5568; /* Couleur pour l'icône de montagne */
+        }
+        .map-tile.has-active-resource {
+            box-shadow: 0 0 10px 2px gold; /* Ou une autre couleur de surbrillance */
+            animation: pulse-resource-highlight 1.5s infinite alternate;
+            z-index: 2; /* Pour que l'ombre soit bien visible */
+        }
+        @keyframes pulse-resource-highlight {
+            from { box-shadow: 0 0 7px 1px gold; }
+            to { box-shadow: 0 0 12px 3px orange; }
+        }
+        /* Assurez-vous que les icônes de ressources normales sont toujours visibles par-dessus la surbrillance si nécessaire */
+        .map-tile.resource-biomass::before,
+        .map-tile.resource-nanites::before,
+        .map-tile.resource-crystal::before {
+            z-index: 3; /* Plus haut que la surbrillance */
+            position: relative; /* Pour que z-index fonctionne sur ::before */
+        }
+
     </style>
 </head>
 <body class="p-4">
@@ -384,19 +428,19 @@
 <script src="js/config_general.js"></script> <!-- Définit BASE_GRID_SIZE -->
 <script src="js/config_player.js"></script>
 <script src="js/config_gameplay.js"></script>
-<script src="js/config_world.js"></script>
+<script src="js/config_world.js"></script> <!-- TILE_TYPES_TO_RESOURCE_KEY défini ici -->
 <script src="js/config_events.js"></script>
 
 <script src="js/gameState.js"></script>
 <script src="js/utils.js"></script>
-<script src="js/mapManager.js"></script>
-<script src="js/explorationController.js"></script>
+<script src="js/mapManager.js"></script> <!-- Utilise TILE_TYPES_TO_RESOURCE_KEY -->
+<script src="js/explorationController.js"></script> <!-- Utilise TILE_TYPES_TO_RESOURCE_KEY -->
 <script src="js/explorationUI.js"></script>
 <script src="js/questController.js"></script>
 <script src="js/questUI.js"></script>
 <script src="js/inventoryShop.js"></script>
 <script src="js/combat.js"></script>
-<script src="js/gameplayLogic.js"></script> <!-- Doit venir APRÈS config_general.js -->
+<script src="js/gameplayLogic.js"></script> 
 <script src="js/uiUpdates.js"></script>
 <script src="js/main.js" defer></script>
 
