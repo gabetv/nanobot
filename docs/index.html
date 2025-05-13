@@ -9,7 +9,11 @@
     <style>
         body { font-family: 'Roboto', sans-serif; background-color: #1a202c; color: #e2e8f0; overflow-x: hidden; }
         .font-orbitron { font-family: 'Orbitron', sans-serif; }
-        .resource-bar, .main-content, .footer { border: 1px solid #4a5568; border-radius: 0.5rem; background-color: #2d3748; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); }
+        .resource-bar, .main-content-wrapper, .footer { /* .main-content renommé en .main-content-wrapper */
+            border: 1px solid #4a5568; border-radius: 0.5rem; 
+            background-color: #2d3748; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); 
+        }
         .btn { transition: all 0.3s ease; border-radius: 0.375rem; padding: 0.5rem 1rem; font-weight: 600; }
         .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
         .btn-xs { padding: 0.125rem 0.3rem; font-size: 0.75rem; }
@@ -28,6 +32,133 @@
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background-color: #2d3748; padding: 2rem; border-radius: 0.5rem; border: 1px solid #4a5568; min-width: 300px; max-width: 90%; }
 
+        /* Styles pour la disposition principale avec menu rétractable */
+        .main-content-wrapper {
+            display: flex;
+            gap: 1rem; /* Espace entre le menu et le contenu principal */
+        }
+        #buildings-section {
+            flex: 0 0 320px; /* Largeur fixe pour le menu de gauche, ne grandit pas, ne rétrécit pas */
+            transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            max-height: calc(100vh - 180px); /* Hauteur maximale pour le scroll interne */
+            overflow-y: auto;
+        }
+        #buildings-section.hidden-menu {
+            margin-left: -320px; /* Cache le menu en le déplaçant hors de l'écran */
+            opacity: 0;
+            width: 0; /* Réduit la largeur à 0 pour que l'espace ne soit pas réservé */
+            padding:0; margin-right:0; border:0;
+        }
+        #main-view-section-container { /* Nouveau conteneur pour la vue principale */
+            flex-grow: 1; /* Prend l'espace restant */
+            display: flex;
+            flex-direction: column;
+        }
+        #main-view-section {
+            flex-grow: 1; /* Permet à cette section de remplir le conteneur */
+            max-height: calc(100vh - 180px); /* Hauteur maximale pour le scroll interne */
+            overflow-y: auto;
+        }
+        #toggle-menu-btn-container { /* Pour positionner le bouton de bascule */
+            position: fixed; /* Ou absolute si relatif à un parent positionné */
+            top: 110px; /* Ajustez selon la hauteur de votre header */
+            left: 10px; 
+            z-index: 50; /* Au-dessus du contenu mais sous les modales */
+        }
+        #toggle-menu-btn {
+             background-color: #4a5568;
+             color: #e2e8f0;
+        }
+
+
+        /* ... (vos autres styles comme .nanobot-display, .map-tile, etc.) ... */
+
+        /* Styles pour Exploration Tab */
+        #exploration-layout {
+            display: flex; /* Changé de grid à flex pour mieux contrôler les colonnes */
+            flex-direction: column; /* Défaut pour mobile */
+            gap: 1rem; 
+        }
+        @media (min-width: 768px) { /* md breakpoint de Tailwind */
+            #exploration-layout {
+                flex-direction: row; /* Lignes pour desktop */
+            }
+        }
+
+        #exploration-main-column {
+            flex-grow: 1; /* Prend plus de place */
+            display: flex;
+            flex-direction: column; /* Pour empiler zone-selection, map-area, map-info */
+             min-width: 0; /* Important pour flexbox pour éviter le débordement */
+        }
+        @media (min-width: 768px) {
+            #exploration-main-column {
+                /* Sur desktop, elle prendra 3/4 par défaut si la sidebar prend 1/4 */
+            }
+        }
+
+
+        #exploration-map-area {
+            display: flex; /* Permet à exploration-content-container de se centrer ou de s'étirer */
+            flex-direction: column;
+            overflow: auto; 
+            max-height: 65vh; /* Ajusté pour laisser de la place au log/details */
+            border: 1px solid #3a4558;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            background-color: #222938;
+            flex-grow: 1; /* Pour qu'elle prenne l'espace disponible dans sa colonne */
+        }
+        #exploration-content-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Centre la grille et le bouton scan horizontalement */
+            width: 100%; /* S'assure qu'il prend la largeur de map-area */
+        }
+        #map-grid {
+            display: grid;
+            gap: 1px;
+            background-color: #1a202c;
+            border: 1px solid #3a4558;
+            margin-bottom: 1rem; /* Espace entre la grille et le bouton scan */
+        }
+        .map-tile {
+            width: 25px;
+            height: 25px;
+            font-size: 1rem; 
+            /* ... autres styles .map-tile */
+        }
+        #map-info { text-align: center; font-size: 0.9rem; margin-top: 0.5rem; } 
+
+        #exploration-sidebar {
+            display: flex;
+            flex-direction: column;
+            min-width: 0; /* Important pour flexbox */
+        }
+        @media (min-width: 768px) {
+            #exploration-sidebar {
+                width: 300px; /* Largeur fixe pour la sidebar sur desktop */
+                flex-shrink: 0; /* Empêche la sidebar de rétrécir */
+                max-height: calc(100vh - 200px); /* Pour permettre le scroll interne si nécessaire */
+                overflow-y: auto;
+            }
+        }
+        #exploration-log { 
+            background-color: #1a202c; border: 1px solid #4a5568; 
+            border-radius: 0.375rem; padding: 0.75rem; 
+            height: 200px; /* Hauteur fixe pour le log */
+            overflow-y: auto; 
+            font-size: 0.8rem; color: #cbd5e0; 
+            font-family: 'Roboto Mono', monospace; line-height: 1.4; 
+            margin-bottom: 1rem; /* Espace avant le panneau de détails */
+        }
+        #tile-interaction-panel { 
+            background-color: #1a202c; border: 1px solid #4a5568; 
+            border-radius: 0.375rem; padding: 1rem; 
+            flex-grow: 1; display: flex; flex-direction: column; 
+        }
+        
+        /* ... (Le reste de vos styles : .nanobot-display, .combat-*, .base-preview-*, etc. restent inchangés) ... */
         .nanobot-display { width: 150px; height: 200px; margin: 10px auto; position: relative; border: 2px solid #4a5568; background-color: #1a202c; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .nanobot-core { width: 50px; height: 50px; background-color: #63b3ed; border: 2px solid #2c5282; box-shadow: 0 0 5px #63b3ed; position: relative; }
         .nanobot-module, .nanobot-item-visual { position: absolute; background-color: #a0aec0; border: 1px solid #718096; }
@@ -50,49 +181,6 @@
         .health-bar.low { background-color: #f56565; } .health-bar.medium { background-color: #faf089; }
         .damage-float { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 1.25rem; font-weight: bold; color: #e53e3e; animation: floatUp 1s ease-out forwards; opacity: 0; white-space: nowrap; }
         @keyframes floatUp { 0% { opacity: 1; top: -20px; } 100% { opacity: 0; top: -60px; } }
-
-        #exploration-layout { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); gap: 1rem; }
-        #exploration-map-area {
-            display: flex;
-            flex-direction: column;
-            overflow: auto; 
-            max-height: 75vh; 
-            border: 1px solid #3a4558;
-            border-radius: 0.25rem;
-            padding: 0.5rem;
-            background-color: #222938;
-        }
-        #map-grid {
-            display: grid;
-            gap: 1px;
-            background-color: #1a202c;
-            border: 1px solid #3a4558;
-            margin: 0 auto;
-        }
-        .map-tile {
-            width: 25px;
-            height: 25px;
-            background-color: #2d3748;
-            border: 1px solid #4a5568;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 1rem; 
-            cursor: pointer;
-            transition: background-color 0.3s;
-            position: relative;
-        }
-
-        #exploration-sidebar { display: flex; flex-direction: column; }
-        #exploration-log { background-color: #1a202c; border: 1px solid #4a5568; border-radius: 0.375rem; padding: 0.75rem; height: 200px; overflow-y: auto; font-size: 0.8rem; color: #cbd5e0; font-family: 'Roboto Mono', monospace; line-height: 1.4; margin-bottom: 1rem; }
-        #exploration-log p { margin-bottom: 0.3rem; word-break: break-word; }
-        #tile-interaction-panel { background-color: #1a202c; border: 1px solid #4a5568; border-radius: 0.375rem; padding: 1rem; min-height: 150px; flex-grow: 1; display: flex; flex-direction: column; }
-        #tile-interaction-panel h4 { font-family: 'Orbitron', sans-serif; font-size: 1.125rem; color: #63b3ed; margin-bottom: 0.75rem; }
-        #tile-interaction-details { flex-grow: 1; }
-        #tile-interaction-details p { margin-bottom: 0.5rem; font-size: 0.9rem; }
-        #tile-interaction-actions button { margin-top: 0.5rem; display: block; width: 100%; }
-        #exploration-content-container { display: flex; flex-direction: column; align-items: center; }
-        #map-info { text-align: center; font-size: 0.9rem; margin-top: 1rem; } 
 
         .map-tile:hover { background-color: #4a5568; }
         .map-tile.explored { background-color: #3b475c; }
@@ -273,6 +361,10 @@
 </head>
 <body class="p-4">
 
+    <div id="toggle-menu-btn-container">
+        <button id="toggle-menu-btn" class="btn btn-sm">☰ Menu</button>
+    </div>
+
     <header class="resource-bar p-4 mb-4 flex flex-wrap justify-between items-center">
         <h1 id="page-title-h1" class="font-orbitron text-3xl text-blue-400">Nexus-7: Genesis</h1>
         <div class="flex space-x-4 md:space-x-6 items-center mt-2 md:mt-0">
@@ -287,170 +379,179 @@
         </div>
     </header>
 
-    <main class="main-content grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
-        <section id="buildings-section" class="panel col-span-1 lg:h-[calc(100vh-220px)] overflow-y-auto">
+    <main class="main-content-wrapper p-4">
+        <section id="buildings-section" class="panel">
              <h2 class="font-orbitron text-xl mb-3 text-blue-300 border-b border-gray-600 pb-2">Modules Structurels & Défensifs</h2>
+             <!-- Le contenu des bâtiments sera injecté ici par JS -->
         </section>
 
-        <section id="main-view-section" class="panel col-span-1 lg:col-span-2 lg:h-[calc(100vh-220px)] overflow-y-auto">
-            <div class="flex border-b border-gray-600 mb-3 flex-wrap">
-                <button id="tab-overview" class="font-orbitron py-2 px-4 text-lg focus:outline-none border-b-2 border-blue-400 text-blue-300">Noyau</button>
-                <button id="tab-research" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">R&D</button>
-                <button id="tab-nanobot" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">Nexus-7</button>
-                <button id="tab-exploration" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">Exploration</button>
-                <button id="tab-quests" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">Quêtes</button>
-                <button id="tab-inventory" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">Inventaire</button>
-                <button id="tab-shop" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">Boutique</button>
-            </div>
+        <div id="main-view-section-container">
+            <section id="main-view-section" class="panel">
+                <div class="flex border-b border-gray-600 mb-3 flex-wrap">
+                    <button id="tab-overview" class="font-orbitron py-2 px-4 text-lg focus:outline-none border-b-2 border-blue-400 text-blue-300">Noyau</button>
+                    <button id="tab-research" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">R&D</button>
+                    <button id="tab-nanobot" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">Nexus-7</button>
+                    <button id="tab-exploration" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">Exploration</button>
+                    <button id="tab-quests" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">Quêtes</button>
+                    <button id="tab-inventory" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">Inventaire</button>
+                    <button id="tab-shop" class="font-orbitron py-2 px-4 text-lg focus:outline-none text-gray-500 hover:text-blue-300">Boutique</button>
+                </div>
 
-            <div id="overview-content">
-                <h2 class="font-orbitron text-xl mb-3 text-blue-300">Statut du Noyau</h2>
-                <p class="mb-2">Le Noyau Central est le cœur de vos opérations et doit être protégé à tout prix.</p>
-                <div id="base-status-section">
-                    <h3 class="font-orbitron text-lg text-yellow-300">Intégrité Structurelle du Noyau</h3>
-                    <div class="flex justify-between items-center text-sm mb-1">
-                        <span>PV Noyau: <span id="overview-base-health">N/A</span></span>
-                        <span id="base-defense-power">Puissance Défensive: 0</span>
-                    </div>
-                    <div id="base-health-bar-container">
-                        <div id="base-health-bar" class="health-bar"></div>
-                    </div>
-                    <h4 class="font-orbitron text-sm text-red-400 mt-3 mb-1">Menaces Actives:</h4>
-                    <div id="night-assault-enemies-display">
-                        <p class="text-gray-500 italic text-xs">Aucune menace détectée pour le moment.</p>
-                    </div>
-                    <div class="mt-3 flex space-x-2">
-                        <button id="repair-base-btn" class="btn btn-success btn-sm">Réparer Noyau</button>
-                        <button id="repair-defenses-btn" class="btn btn-info btn-sm">Réparer Défenses</button>
-                    </div>
-                     <div class="mt-3">
-                        <button id="force-cycle-change-btn" class="btn btn-info btn-sm w-full">Forcer Changement de Cycle</button>
-                    </div>
-                     <div id="active-defenses-display" class="mt-2 text-xs text-gray-400">
-                        <strong>Aucune défense active.</strong>
-                    </div>
-                </div>
-                <div id="base-preview-section" class="my-4">
-                    <h3 class="font-orbitron text-lg text-blue-300 mb-2 text-center">Schéma Défensif du Noyau</h3>
-                    <div id="base-preview-container"></div>
-                    <div id="placement-info" class="text-center text-sm text-yellow-400 mt-2 hidden">
-                        Mode Placement Actif. Sélectionnez une case pour construire <span id="selected-defense-for-placement" class="font-bold"></span>.
-                        <button id="cancel-placement-btn" class="btn btn-danger btn-xs ml-2">Annuler</button>
-                    </div>
-                </div>
-                <img id="core-image" src="https://placehold.co/600x200/1a202c/e2e8f0?text=Noyau+Central+Nexus-7&fontsize=24"
-                     alt="Vue du Noyau Central" class="mx-auto rounded-lg shadow-md my-4 max-w-full h-auto" style="max-height: 200px; object-fit: cover;">
-                <div id="night-assault-log-container">
-                    <h3 class="font-orbitron text-lg mb-2 text-red-300 border-b border-gray-600 pb-1">Journal d'Assaut Nocturne</h3>
-                    <div id="night-assault-log">
-                        <p class="text-gray-500 italic">En attente d'événements...</p>
-                    </div>
-                </div>
-                <div id="event-log" class="mt-4 p-3 bg-gray-700 rounded h-40 overflow-y-auto text-sm">
-                    <h3 class="font-semibold mb-2 text-gray-300">Journal Principal des Événements :</h3>
-                </div>
-            </div>
-
-            <div id="research-content" class="hidden">
-                 <h2 class="font-orbitron text-xl mb-3 text-blue-300 border-b border-gray-600 pb-2">Arbre Technologique</h2>
-            </div>
-
-            <div id="nanobot-content" class="hidden">
-                <h2 class="font-orbitron text-xl mb-3 text-blue-300">Configuration Nexus-7</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <h3 class="font-orbitron text-lg mb-2 text-blue-200">Visualisation</h3>
-                        <div id="nanobot-visual-container" class="nanobot-display">
-                            <div id="nanobot-body" class="nanobot-core"></div>
+                <div id="overview-content">
+                    <h2 class="font-orbitron text-xl mb-3 text-blue-300">Statut du Noyau</h2>
+                    <p class="mb-2">Le Noyau Central est le cœur de vos opérations et doit être protégé à tout prix.</p>
+                    <div id="base-status-section">
+                        <h3 class="font-orbitron text-lg text-yellow-300">Intégrité Structurelle du Noyau</h3>
+                        <div class="flex justify-between items-center text-sm mb-1">
+                            <span>PV Noyau: <span id="overview-base-health">N/A</span></span>
+                            <span id="base-defense-power">Puissance Défensive: 0</span>
                         </div>
-                        <div id="equipped-items-display-brief" class="mt-1 text-sm text-center text-gray-400"></div>
-                        <div id="equipped-modules-display" class="mt-4"></div>
-                    </div>
-                    <div>
-                        <h3 class="font-orbitron text-lg mb-2 text-blue-200">Statistiques</h3>
-                        <ul class="space-y-1 text-sm">
-                            <li>Santé: <span id="nanobot-health" class="font-semibold">0</span></li>
-                            <li>Attaque: <span id="nanobot-attack" class="font-semibold">0</span></li>
-                            <li>Défense: <span id="nanobot-defense" class="font-semibold">0</span></li>
-                            <li>Vitesse: <span id="nanobot-speed" class="font-semibold">0</span></li>
-                        </ul>
-                        <h3 class="font-orbitron text-lg mt-4 mb-2 text-blue-200">Actions Spéciales</h3>
-                        <button id="toggle-nanobot-defend-base-btn" class="btn btn-secondary w-full mb-2">Activer Défense du Noyau</button>
-                        <button id="simulate-combat-btn" class="btn btn-danger w-full">Simuler Combat (Test)</button>
-                        <div id="combat-log-summary" class="mt-2 p-2 bg-gray-700 rounded h-24 overflow-y-auto text-xs">
-                            <h4 class="font-semibold mb-1 text-gray-300">Résumé Combat :</h4>
+                        <div id="base-health-bar-container">
+                            <div id="base-health-bar" class="health-bar"></div>
+                        </div>
+                        <h4 class="font-orbitron text-sm text-red-400 mt-3 mb-1">Menaces Actives:</h4>
+                        <div id="night-assault-enemies-display">
+                            <p class="text-gray-500 italic text-xs">Aucune menace détectée pour le moment.</p>
+                        </div>
+                        <div class="mt-3 flex space-x-2">
+                            <button id="repair-base-btn" class="btn btn-success btn-sm">Réparer Noyau</button>
+                            <button id="repair-defenses-btn" class="btn btn-info btn-sm">Réparer Défenses</button>
+                        </div>
+                        <div class="mt-3">
+                            <button id="force-cycle-change-btn" class="btn btn-info btn-sm w-full">Forcer Changement de Cycle</button>
+                        </div>
+                        <div id="active-defenses-display" class="mt-2 text-xs text-gray-400">
+                            <strong>Aucune défense active.</strong>
                         </div>
                     </div>
-                </div>
-                <div class="mt-6">
-                    <h3 class="font-orbitron text-lg mb-2 text-blue-200">Équipement Actuel</h3>
-                    <div id="nanobot-equipment-slots" class="space-y-2"></div>
-                </div>
-            </div>
-
-            <div id="inventory-content" class="hidden">
-                <h2 class="font-orbitron text-xl mb-3 text-blue-300">Inventaire des Objets</h2>
-                <ul id="inventory-list" class="space-y-1 text-sm text-gray-300"></ul>
-            </div>
-
-            <div id="shop-content" class="hidden">
-                <h2 class="font-orbitron text-xl mb-3 text-blue-300">Marché de Ravitaillement X-9</h2>
-                <p class="text-sm text-gray-400 mb-4">Les drones marchands proposent occasionnellement des améliorations et composants rares. Les stocks sont limités.</p>
-                <div id="shop-items-list" class="space-y-2"></div>
-            </div>
-
-            <div id="exploration-content" class="hidden">
-                <h2 id="exploration-title" class="font-orbitron text-xl mb-3 text-blue-300">Carte d'Exploration</h2>
-                <div id="exploration-layout">
-                    <div id="exploration-map-area">
-                        <div id="zone-selection-container" class="mb-4 p-3 bg-gray-700 rounded">
-                            <h3 class="font-orbitron text-lg text-blue-300 mb-2">Sélection de Zone</h3>
-                            <div id="zone-list" class="space-y-2"></div>
+                    <div id="base-preview-section" class="my-4">
+                        <h3 class="font-orbitron text-lg text-blue-300 mb-2 text-center">Schéma Défensif du Noyau</h3>
+                        <div id="base-preview-container"></div>
+                        <div id="placement-info" class="text-center text-sm text-yellow-400 mt-2 hidden">
+                            Mode Placement Actif. Sélectionnez une case pour construire <span id="selected-defense-for-placement" class="font-bold"></span>.
+                            <button id="cancel-placement-btn" class="btn btn-danger btn-xs ml-2">Annuler</button>
                         </div>
-                        <div id="exploration-content-container">
-                             <!-- Bouton Scan sera inséré ici par JS -->
-                            <div id="map-grid"></div>
-                            <div id="map-info" class="mt-3">
+                    </div>
+                    <img id="core-image" src="https://placehold.co/600x200/1a202c/e2e8f0?text=Noyau+Central+Nexus-7&fontsize=24"
+                        alt="Vue du Noyau Central" class="mx-auto rounded-lg shadow-md my-4 max-w-full h-auto" style="max-height: 200px; object-fit: cover;">
+                    <div id="night-assault-log-container">
+                        <h3 class="font-orbitron text-lg mb-2 text-red-300 border-b border-gray-600 pb-1">Journal d'Assaut Nocturne</h3>
+                        <div id="night-assault-log">
+                            <p class="text-gray-500 italic">En attente d'événements...</p>
+                        </div>
+                    </div>
+                    <div id="event-log" class="mt-4 p-3 bg-gray-700 rounded h-40 overflow-y-auto text-sm">
+                        <h3 class="font-semibold mb-2 text-gray-300">Journal Principal des Événements :</h3>
+                    </div>
+                </div>
+
+                <div id="research-content" class="hidden">
+                    <h2 class="font-orbitron text-xl mb-3 text-blue-300 border-b border-gray-600 pb-2">Arbre Technologique</h2>
+                </div>
+
+                <div id="nanobot-content" class="hidden">
+                    <h2 class="font-orbitron text-xl mb-3 text-blue-300">Configuration Nexus-7</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <h3 class="font-orbitron text-lg mb-2 text-blue-200">Visualisation</h3>
+                            <div id="nanobot-visual-container" class="nanobot-display">
+                                <div id="nanobot-body" class="nanobot-core"></div>
+                            </div>
+                            <div id="equipped-items-display-brief" class="mt-1 text-sm text-center text-gray-400"></div>
+                            <div id="equipped-modules-display" class="mt-4"></div>
+                        </div>
+                        <div>
+                            <h3 class="font-orbitron text-lg mb-2 text-blue-200">Statistiques</h3>
+                            <ul class="space-y-1 text-sm">
+                                <li>Santé: <span id="nanobot-health" class="font-semibold">0</span></li>
+                                <li>Attaque: <span id="nanobot-attack" class="font-semibold">0</span></li>
+                                <li>Défense: <span id="nanobot-defense" class="font-semibold">0</span></li>
+                                <li>Vitesse: <span id="nanobot-speed" class="font-semibold">0</span></li>
+                            </ul>
+                            <h3 class="font-orbitron text-lg mt-4 mb-2 text-blue-200">Actions Spéciales</h3>
+                            <button id="toggle-nanobot-defend-base-btn" class="btn btn-secondary w-full mb-2">Activer Défense du Noyau</button>
+                            <button id="simulate-combat-btn" class="btn btn-danger w-full">Simuler Combat (Test)</button>
+                            <div id="combat-log-summary" class="mt-2 p-2 bg-gray-700 rounded h-24 overflow-y-auto text-xs">
+                                <h4 class="font-semibold mb-1 text-gray-300">Résumé Combat :</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <h3 class="font-orbitron text-lg mb-2 text-blue-200">Équipement Actuel</h3>
+                        <div id="nanobot-equipment-slots" class="space-y-2"></div>
+                    </div>
+                </div>
+
+                <div id="inventory-content" class="hidden">
+                    <h2 class="font-orbitron text-xl mb-3 text-blue-300">Inventaire des Objets</h2>
+                    <ul id="inventory-list" class="space-y-1 text-sm text-gray-300"></ul>
+                </div>
+
+                <div id="shop-content" class="hidden">
+                    <h2 class="font-orbitron text-xl mb-3 text-blue-300">Marché de Ravitaillement X-9</h2>
+                    <p class="text-sm text-gray-400 mb-4">Les drones marchands proposent occasionnellement des améliorations et composants rares. Les stocks sont limités.</p>
+                    <div id="shop-items-list" class="space-y-2"></div>
+                </div>
+
+                <div id="exploration-content" class="hidden">
+                    <h2 id="exploration-title" class="font-orbitron text-xl mb-3 text-blue-300">Carte d'Exploration</h2>
+                    
+                    <div id="exploration-layout" class="flex flex-col md:flex-row gap-4"> 
+                        
+                        <div id="exploration-main-column" class="flex-grow md:w-3/4 order-2 md:order-1"> 
+                            <div id="zone-selection-container" class="mb-4 p-3 bg-gray-700 rounded">
+                                <h3 class="font-orbitron text-lg text-blue-300 mb-2">Sélection de Zone</h3>
+                                <div id="zone-list" class="space-y-2"></div>
+                            </div>
+                            <div id="exploration-map-area"> 
+                                <div id="exploration-content-container">
+                                    <!-- Bouton Scan sera inséré ici par JS -->
+                                    <div id="map-grid"></div>
+                                </div>
+                            </div>
+                            <div id="map-info" class="mt-3 text-center"> 
                                 <p>Position: <span id="nanobot-map-pos">N/A</span>. <span class="text-sm text-gray-400">(Énergie/Dépl.: <span id="exploration-move-gauge">?</span>)</span></p>
                                 <p id="tile-info-display" class="text-gray-400 italic">Survolez une case pour plus d'infos.</p>
                             </div>
                         </div>
-                    </div>
-                    <div id="exploration-sidebar">
-                        <h3 class="font-orbitron text-lg text-yellow-300 mb-2 border-b border-gray-600 pb-1">Journal d'Exploration</h3>
-                        <div id="exploration-log">
-                            <p class="text-gray-500 italic">Aucun événement d'exploration récent...</p>
-                        </div>
-                        <div id="tile-interaction-panel" class="mt-4">
-                            <!-- Le titre sera ajouté par JS -->
-                            <div id="tile-interaction-details">
-                                <p class="text-gray-500 italic">Cliquez sur une case pour interagir.</p>
+                
+                        <div id="exploration-sidebar" class="flex flex-col md:w-1/4 order-1 md:order-2"> 
+                            <h3 class="font-orbitron text-lg text-yellow-300 mb-2 border-b border-gray-600 pb-1">Journal d'Exploration</h3>
+                            <div id="exploration-log" class="mb-4"> 
+                                <p class="text-gray-500 italic">Aucun événement d'exploration récent...</p>
                             </div>
-                            <div id="tile-interaction-actions"></div>
+                            
+                            <div id="tile-interaction-panel">
+                                <!-- Le titre sera ajouté par JS dans updateTileInteractionPanel -->
+                                <div id="tile-interaction-details">
+                                    <p class="text-gray-500 italic">Cliquez sur une case pour interagir.</p>
+                                </div>
+                                <div id="tile-interaction-actions"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div id="quests-content" class="hidden">
-                <h2 class="font-orbitron text-xl mb-3 text-blue-300 border-b border-gray-600 pb-2">Journal des Quêtes</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <h3 class="font-orbitron text-lg text-yellow-300 mb-2">Quêtes Actives & Disponibles</h3>
-                        <div id="active-quests-list" class="space-y-3">
-                            <p class="text-gray-500 italic">Aucune quête active ou disponible.</p>
+                <div id="quests-content" class="hidden">
+                    <h2 class="font-orbitron text-xl mb-3 text-blue-300 border-b border-gray-600 pb-2">Journal des Quêtes</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <h3 class="font-orbitron text-lg text-yellow-300 mb-2">Quêtes Actives & Disponibles</h3>
+                            <div id="active-quests-list" class="space-y-3">
+                                <p class="text-gray-500 italic">Aucune quête active ou disponible.</p>
+                            </div>
                         </div>
-                    </div>
-                    <div>
-                        <h3 class="font-orbitron text-lg text-gray-500 mb-2">Quêtes Terminées</h3>
-                        <div id="completed-quests-list" class="space-y-3">
-                            <p class="text-gray-500 italic">Aucune quête terminée.</p>
+                        <div>
+                            <h3 class="font-orbitron text-lg text-gray-500 mb-2">Quêtes Terminées</h3>
+                            <div id="completed-quests-list" class="space-y-3">
+                                <p class="text-gray-500 italic">Aucune quête terminée.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-        </section>
+            </section>
+        </div>
     </main>
 
     <footer class="footer p-3 mt-4 text-center text-sm"> <p>&copy; 2025 Nexus-7: Genesis.</p> </footer>
