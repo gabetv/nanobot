@@ -31,7 +31,7 @@ var uiUpdates = {
 
         if(biomassRateEl) biomassRateEl.textContent = gameState.productionRates.biomass.toFixed(1);
         if(nanitesRateEl) nanitesRateEl.textContent = gameState.productionRates.nanites.toFixed(1);
-        
+
         if(energyCostMoveEl && typeof EXPLORATION_COST_ENERGY !== 'undefined') energyCostMoveEl.textContent = EXPLORATION_COST_ENERGY;
     },
 
@@ -75,7 +75,7 @@ var uiUpdates = {
             }
             div.innerHTML = content;
 
-            if (nextLevelDefinition) { 
+            if (nextLevelDefinition) {
                 const costObject = level === 0 ? nextLevelDefinition.costToUnlockOrUpgrade : nextLevelDefinition.costToUpgrade;
                 if (!costObject) {
                     console.warn(`UI: Coût manquant pour ${building.name} Niv. ${level + 1}`);
@@ -83,9 +83,9 @@ var uiUpdates = {
                     let costString = Object.entries(costObject).map(([res, val]) => `${val} ${ (typeof itemsData !== 'undefined' && itemsData[res]) ? itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1)}`).join(', ');
                     let canAfford = true;
                     for (const resource in costObject) {
-                        if (itemsData && itemsData[resource]) { 
+                        if (itemsData && itemsData[resource]) {
                             if ((gameState.inventory.filter(invId => invId === resource).length || 0) < costObject[resource]) { canAfford = false; break; }
-                        } else { 
+                        } else {
                             if ((gameState.resources[resource]||0) < costObject[resource]) { canAfford = false; break; }
                         }
                     }
@@ -93,7 +93,7 @@ var uiUpdates = {
                     button.className = `btn ${canAfford ? 'btn-primary' : 'btn-disabled'} btn-sm mt-2`;
                     button.textContent = level === 0 ? `Débloquer Technologie (${costString})` : `Améliorer Technologie Niv. ${level + 1} (${costString})`;
                     if (!canAfford) button.disabled = true;
-                    button.onclick = () => { if(typeof build === 'function') build(id); }; 
+                    button.onclick = () => { if(typeof build === 'function') build(id); };
                     div.appendChild(button);
                 }
             } else if (level > 0 && building.type !== 'defense' && building.levels && level >= building.levels.length) {
@@ -123,15 +123,15 @@ var uiUpdates = {
             researchContentEl.innerHTML = '<h2 class="font-orbitron text-xl mb-3 text-blue-300 border-b border-gray-600 pb-2">Arbre Technologique</h2><p class="text-gray-500 italic">Données de recherche non chargées.</p>';
             return;
         }
-        if (!gameState || !gameState.research || !gameState.buildings) { 
+        if (!gameState || !gameState.research || !gameState.buildings) {
             console.warn("UI: updateResearchDisplay - gameState, research ou buildings non défini.");
             researchContentEl.innerHTML = '<h2 class="font-orbitron text-xl mb-3 text-blue-300 border-b border-gray-600 pb-2">Arbre Technologique</h2><p class="text-gray-500 italic">État de la recherche ou des bâtiments non initialisé.</p>';
             return;
         }
 
-        const titleElement = researchContentEl.querySelector('h2.font-orbitron'); 
+        const titleElement = researchContentEl.querySelector('h2.font-orbitron');
         let titleHTML = titleElement ? titleElement.outerHTML : '<h2 class="font-orbitron text-xl mb-3 text-blue-300 border-b border-gray-600 pb-2">Arbre Technologique</h2>';
-        researchContentEl.innerHTML = titleHTML; 
+        researchContentEl.innerHTML = titleHTML;
 
         let researchAvailableCount = 0;
 
@@ -139,11 +139,11 @@ var uiUpdates = {
             const research = researchData[gameState.activeResearch.id];
             const labLevel = gameState.buildings['researchLab'] || 0;
             const researchLabData = buildingsData['researchLab'];
-            let researchSpeedFactor = 0.5; 
+            let researchSpeedFactor = 0.5;
             if (labLevel > 0 && researchLabData && researchLabData.levels[labLevel-1] && researchLabData.levels[labLevel-1].researchSpeedFactor) {
                 researchSpeedFactor = researchLabData.levels[labLevel - 1].researchSpeedFactor;
             }
-            
+
             const effectiveTotalTimeSeconds = research.time / researchSpeedFactor;
             const elapsedTicks = gameState.gameTime - gameState.activeResearch.startTime;
             const elapsedSeconds = elapsedTicks * (TICK_SPEED / 1000);
@@ -164,7 +164,7 @@ var uiUpdates = {
 
         for (const id in researchData) {
             const research = researchData[id];
-            if (gameState.research[id]) { 
+            if (gameState.research[id]) {
                 const div = document.createElement('div');
                 div.className = 'mb-4 p-3 bg-gray-700 rounded shadow opacity-60';
                 div.innerHTML = `
@@ -174,7 +174,7 @@ var uiUpdates = {
                 researchAvailableCount++;
                 continue;
             }
-            if (gameState.activeResearch && gameState.activeResearch.id === id) continue; 
+            if (gameState.activeResearch && gameState.activeResearch.id === id) continue;
 
             let canResearch = true;
             let requirementText = "";
@@ -229,7 +229,7 @@ var uiUpdates = {
             button.textContent = "Lancer Recherche";
             if (!canResearch || !canAfford) button.disabled = true;
 
-            button.onclick = () => { if(typeof startResearch === 'function') startResearch(id); }; 
+            button.onclick = () => { if(typeof startResearch === 'function') startResearch(id); };
             div.appendChild(button);
             researchContentEl.appendChild(div);
             researchAvailableCount++;
@@ -266,7 +266,7 @@ var uiUpdates = {
                 } else if (moduleData.unlockMethod.building && typeof buildingsData !== 'undefined' && buildingsData[moduleData.unlockMethod.building] && (gameState.buildings[moduleData.unlockMethod.building] || 0) >= moduleData.unlockMethod.buildingLevel) {
                     isUnlocked = true;
                 }
-            } else { 
+            } else {
                 isUnlocked = true;
             }
 
@@ -278,12 +278,12 @@ var uiUpdates = {
                 }
             }
 
-            if(isReplacedByActiveHigherTier && currentLevel === 0) continue; 
+            if(isReplacedByActiveHigherTier && currentLevel === 0) continue;
 
             if (isUnlocked || currentLevel > 0) {
                 hasModules = true;
                 const moduleDiv = document.createElement('div');
-                moduleDiv.className = 'panel p-3 mb-3 bg-gray-700'; 
+                moduleDiv.className = 'panel p-3 mb-3 bg-gray-700';
                 let content = `<h4 class="font-semibold text-blue-300">${moduleData.name} (Niv. ${currentLevel})</h4>`;
                 content += `<p class="text-xs text-gray-400 mb-1">${moduleData.description}</p>`;
 
@@ -308,10 +308,10 @@ var uiUpdates = {
                     let costString = Object.entries(costDataForNextLevel).map(([res, val]) => `${val} ${ (typeof itemsData !== 'undefined' && itemsData[res]) ? itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1)}`).join(', ');
                     let canAfford = true;
                     for(const res in costDataForNextLevel) {
-                        if (typeof itemsData !== 'undefined' && itemsData[res]) { 
+                        if (typeof itemsData !== 'undefined' && itemsData[res]) {
                             const countInInventory = (gameState.inventory || []).filter(itemId => itemId === res).length;
                             if (countInInventory < costDataForNextLevel[res]) canAfford = false;
-                        } else { 
+                        } else {
                             if ((gameState.resources[res] || 0) < costDataForNextLevel[res]) canAfford = false;
                         }
                         if (!canAfford) break;
@@ -347,7 +347,7 @@ var uiUpdates = {
         if(nanobotDefenseEl) nanobotDefenseEl.textContent = gameState.nanobotStats.defense;
         if(nanobotSpeedEl) nanobotSpeedEl.textContent = gameState.nanobotStats.speed;
 
-        if(nanobotVisualBody) nanobotVisualBody.innerHTML = ''; 
+        if(nanobotVisualBody) nanobotVisualBody.innerHTML = '';
 
         if (gameState.nanobotModuleLevels && typeof nanobotModulesData !== 'undefined') {
             for (const moduleId in gameState.nanobotModuleLevels) {
@@ -370,7 +370,7 @@ var uiUpdates = {
                 }
             }
         }
-        
+
         let equippedItemsNames = [];
         if (gameState.nanobotEquipment && typeof itemsData !== 'undefined') {
             for (const slot in gameState.nanobotEquipment) {
@@ -395,7 +395,7 @@ var uiUpdates = {
     updateEquippedItemsDisplay: function() {
         // console.log("UI: updateEquippedItemsDisplay CALLED");
         if(!nanobotEquipmentSlotsEl) { return;}
-        nanobotEquipmentSlotsEl.innerHTML = ''; 
+        nanobotEquipmentSlotsEl.innerHTML = '';
         if (typeof EQUIPMENT_SLOTS === 'undefined' || typeof itemsData === 'undefined' || !gameState || !gameState.nanobotEquipment) {
             console.warn("UI: updateEquippedItemsDisplay - Dépendances manquantes (EQUIPMENT_SLOTS, itemsData, gameState.nanobotEquipment).");
             return;
@@ -407,7 +407,7 @@ var uiUpdates = {
             const item = itemId ? itemsData[itemId] : null;
 
             const slotDiv = document.createElement('div');
-            slotDiv.className = 'equipment-slot'; 
+            slotDiv.className = 'equipment-slot';
 
             let contentHtml = `<div class="item-details"><span class="slot-name">${slotName}:</span> `;
             if (item) {
@@ -430,11 +430,11 @@ var uiUpdates = {
 
             if (item) {
                 const unequipButton = document.createElement('button');
-                unequipButton.className = "btn btn-secondary btn-sm"; 
+                unequipButton.className = "btn btn-secondary btn-sm";
                 unequipButton.textContent = "Retirer";
                 unequipButton.onclick = () => {
                     if (typeof unequipItem === 'function') {
-                        unequipItem(slotId); 
+                        unequipItem(slotId);
                     } else {
                         console.error("La fonction unequipItem() n'est pas définie.");
                     }
@@ -447,7 +447,7 @@ var uiUpdates = {
 
     updateXpBar: function() {
         // console.log("UI: updateXpBar CALLED");
-        if(!xpBarEl) { return; } 
+        if(!xpBarEl) { return; }
         if (!gameState || !gameState.nanobotStats || gameState.nanobotStats.level === undefined) { return; }
 
         const stats = gameState.nanobotStats;
@@ -470,7 +470,7 @@ var uiUpdates = {
 
         const healthPercent = (base.maxHealth > 0 ? (base.currentHealth / base.maxHealth) : 0) * 100;
         baseHealthBarEl.style.width = `${healthPercent}%`;
-        baseHealthBarEl.classList.remove('low', 'medium'); 
+        baseHealthBarEl.classList.remove('low', 'medium');
         if (healthPercent < 30) baseHealthBarEl.classList.add('low');
         else if (healthPercent < 60) baseHealthBarEl.classList.add('medium');
 
@@ -516,27 +516,31 @@ var uiUpdates = {
     },
 
     updateBasePreview: function() {
-        // console.log("UI: updateBasePreview CALLED - Début");
         const previewContainer = basePreviewContainerEl;
         if (!previewContainer) { console.error("UI: updateBasePreview - basePreviewContainerEl est null !"); return; }
 
-        if (typeof BASE_GRID_SIZE === 'undefined' || !gameState || !Array.isArray(gameState.baseGrid) || typeof gameState.defenses !== 'object') {
-            console.warn("UI: updateBasePreview - Dépendances manquantes.", "BASE_GRID_SIZE:", typeof BASE_GRID_SIZE, "gameState.baseGrid:", Array.isArray(gameState?.baseGrid), "gameState.defenses:", typeof gameState?.defenses);
+        if (typeof BASE_GRID_SIZE === 'undefined' || !gameState || !Array.isArray(gameState.baseGrid) || typeof gameState.defenses !== 'object' || typeof buildingsData === 'undefined') {
+            console.warn("UI: updateBasePreview - Dépendances manquantes.", "BASE_GRID_SIZE:", typeof BASE_GRID_SIZE, "gameState.baseGrid:", Array.isArray(gameState?.baseGrid), "gameState.defenses:", typeof gameState?.defenses, "buildingsData:", typeof buildingsData);
             previewContainer.innerHTML = "<p class='text-red-500'>Erreur: Impossible d'afficher le schéma de base.</p>";
             return;
         }
 
+        previewContainer.style.position = 'relative'; 
+
         previewContainer.style.setProperty('--base-grid-cols', BASE_GRID_SIZE.cols);
         previewContainer.style.setProperty('--base-grid-rows', BASE_GRID_SIZE.rows);
-        
+
         previewContainer.innerHTML = ''; 
         previewContainer.style.gridTemplateRows = `repeat(${BASE_GRID_SIZE.rows}, 1fr)`;
         previewContainer.style.gridTemplateColumns = `repeat(${BASE_GRID_SIZE.cols}, 1fr)`;
 
+        // 1. DESSINER LES CELLULES DE LA GRILLE
         for (let r = 0; r < BASE_GRID_SIZE.rows; r++) {
             for (let c = 0; c < BASE_GRID_SIZE.cols; c++) {
                 const cell = document.createElement('div');
                 cell.className = 'map-tile base-preview-cell'; 
+                cell.style.gridRowStart = r + 1;    
+                cell.style.gridColumnStart = c + 1; 
                 cell.dataset.row = r;
                 cell.dataset.col = c;
 
@@ -544,18 +548,21 @@ var uiUpdates = {
                 const coreCol = Math.floor(BASE_GRID_SIZE.cols / 2);
 
                 if (r === coreRow && c === coreCol) {
-                    cell.classList.add('core'); 
-                    cell.innerHTML = `<div class="base-core-visual">N</div>`;
-                    cell.id = 'base-core-visual-cell'; 
+                    cell.classList.add('core');
+                    const coreVisual = document.createElement('div'); 
+                    coreVisual.className = 'base-core-visual';
+                    coreVisual.textContent = 'N';
+                    cell.appendChild(coreVisual); 
+                    cell.id = 'base-core-visual-cell';
                 } else {
                     const defenseOnCell = gameState.baseGrid[r] && gameState.baseGrid[r][c];
                     if (defenseOnCell && defenseOnCell.instanceId && gameState.defenses[defenseOnCell.instanceId]) {
-                         cell.classList.add('occupied'); 
+                         cell.classList.add('occupied');
                         if (gameState.placementMode.isActive) {
-                            cell.classList.add('placement-blocked'); 
+                            cell.classList.add('placement-blocked');
                         }
-                    } else if (gameState.placementMode.isActive && typeof buildingsData !== 'undefined' && buildingsData[gameState.placementMode.selectedDefenseType]) {
-                        cell.classList.add('placement-active'); 
+                    } else if (gameState.placementMode.isActive && buildingsData[gameState.placementMode.selectedDefenseType]) {
+                        cell.classList.add('placement-active');
                         cell.title = `Placer ${buildingsData[gameState.placementMode.selectedDefenseType]?.name || 'défense'}`;
                     }
                 }
@@ -565,108 +572,174 @@ var uiUpdates = {
                 previewContainer.appendChild(cell);
             }
         }
-        
-        const firstCell = previewContainer.querySelector('.base-preview-cell');
-        const cellWidth = firstCell ? firstCell.offsetWidth : (previewContainer.offsetWidth / BASE_GRID_SIZE.cols);
-        const cellHeight = firstCell ? firstCell.offsetHeight : (previewContainer.offsetHeight / BASE_GRID_SIZE.rows);
 
-        for (const instanceId in gameState.defenses) {
-            const defenseState = gameState.defenses[instanceId];
-            const buildingDef = typeof buildingsData !== 'undefined' ? buildingsData[defenseState.id] : null;
-            if (defenseState.currentHealth > 0 && buildingDef && defenseState.gridPos) {
-                const defenseVisual = document.createElement('div');
-                defenseVisual.classList.add('defense-visual'); 
-                if(buildingDef) defenseVisual.classList.add(defenseState.id); 
-                defenseVisual.textContent = `L${defenseState.level}`; 
-                const healthPercentage = (defenseState.maxHealth > 0 ? (defenseState.currentHealth / defenseState.maxHealth) : 0) * 100;
-                defenseVisual.style.opacity = 0.6 + (healthPercentage / 250); 
-
-                if (healthPercentage < 30) defenseVisual.style.backgroundColor = '#e53e3e'; 
-                else if (healthPercentage < 60) defenseVisual.style.backgroundColor = '#ecc94b'; 
-
-                defenseVisual.style.position = 'absolute';
-                const visualWidth = parseInt(getComputedStyle(defenseVisual).width) || 18; 
-                const visualHeight = parseInt(getComputedStyle(defenseVisual).height) || 18;
-                
-                defenseVisual.style.left = `${defenseState.gridPos.c * cellWidth + (cellWidth / 2) - (visualWidth / 2)}px`;
-                defenseVisual.style.top = `${defenseState.gridPos.r * cellHeight + (cellHeight / 2) - (visualHeight / 2)}px`;
-                previewContainer.appendChild(defenseVisual);
+        requestAnimationFrame(() => {
+            const cells = previewContainer.querySelectorAll('.base-preview-cell');
+            if (cells.length === 0) {
+                console.warn("UI: updateBasePreview - Aucune cellule de grille trouvée après le dessin.");
+                return;
             }
-        }
-        
-        if (nightAssaultEnemiesDisplayEl && previewContainer) { 
-            const existingEnemyVisuals = previewContainer.querySelectorAll('.base-enemy-visual, .boss-visual-dynamic');
-            existingEnemyVisuals.forEach(ev => ev.remove()); 
+            
+            const firstCellStyles = getComputedStyle(cells[0]);
+            const cellClientWidth = cells[0].clientWidth; 
+            const cellClientHeight = cells[0].clientHeight;
 
-            if (gameState.nightAssault && gameState.nightAssault.isActive && gameState.nightAssault.enemies.length > 0) {
-                gameState.nightAssault.enemies.forEach(enemy => {
-                    if(!enemy || !enemy.typeInfo) return;
-                    const enemyVisual = document.createElement('div');
-                    const isBoss = enemy.isBoss;
+            const containerStyle = getComputedStyle(previewContainer);
+            const containerPaddingLeft = parseFloat(containerStyle.paddingLeft) || 0;
+            const containerPaddingTop = parseFloat(containerStyle.paddingTop) || 0;
+            const containerBorderLeft = parseFloat(containerStyle.borderLeftWidth) || 0;
+            const containerBorderTop = parseFloat(containerStyle.borderTopWidth) || 0;
 
-                    if (isBoss) {
-                        enemyVisual.classList.add('boss-visual-dynamic');
-                        if (enemy.typeInfo.visualSize) {
-                            enemyVisual.style.width = `${enemy.typeInfo.visualSize.width}px`;
-                            enemyVisual.style.height = `${enemy.typeInfo.visualSize.height}px`;
-                        }
+            const offsetX = containerPaddingLeft + containerBorderLeft;
+            const offsetY = containerPaddingTop + containerBorderTop;
+
+            // 2. DESSINER LES DÉFENSES PLACÉES
+            for (const instanceId in gameState.defenses) {
+                const defenseState = gameState.defenses[instanceId];
+                const buildingDef = buildingsData[defenseState.id];
+
+                if (defenseState.currentHealth > 0 && buildingDef && defenseState.gridPos) {
+                    const defenseVisual = document.createElement('div');
+                    defenseVisual.classList.add('defense-visual-on-grid');
+                    defenseVisual.classList.add(defenseState.id);
+                    defenseVisual.textContent = `L${defenseState.level}`;
+                    defenseVisual.title = `${defenseState.name} Niv.${defenseState.level} (PV: ${Math.floor(defenseState.currentHealth)}/${defenseState.maxHealth})`;
+
+                    defenseVisual.style.position = 'absolute';
+                    defenseVisual.style.width = `${cellClientWidth}px`; // Utiliser clientWidth de la cellule
+                    defenseVisual.style.height = `${cellClientHeight}px`;// Utiliser clientHeight de la cellule
+                    defenseVisual.style.display = 'flex';
+                    defenseVisual.style.alignItems = 'center';
+                    defenseVisual.style.justifyContent = 'center';
+                    defenseVisual.style.fontSize = '0.7rem';
+                    defenseVisual.style.boxSizing = 'border-box'; 
+                    defenseVisual.style.pointerEvents = 'none';
+
+                    // Obtenir la position de la cellule parente DANS le previewContainer
+                    const parentCellElement = previewContainer.querySelector(`.base-preview-cell[data-row="${defenseState.gridPos.r}"][data-col="${defenseState.gridPos.c}"]`);
+                    if (parentCellElement) {
+                        defenseVisual.style.left = `${parentCellElement.offsetLeft}px`;
+                        defenseVisual.style.top = `${parentCellElement.offsetTop}px`;
                     } else {
-                        enemyVisual.classList.add('base-enemy-visual');
-                        if (enemy.typeInfo.visualClass) { 
-                            enemyVisual.classList.add(enemy.typeInfo.visualClass);
-                        }
+                        // Fallback si la cellule n'est pas trouvée (ne devrait pas arriver)
+                        defenseVisual.style.left = `${(defenseState.gridPos.c * cellClientWidth) + offsetX}px`;
+                        defenseVisual.style.top = `${(defenseState.gridPos.r * cellClientHeight) + offsetY}px`;
                     }
+                    
+                    const healthPercentage = (defenseState.maxHealth > 0 ? (defenseState.currentHealth / defenseState.maxHealth) : 0) * 100;
+                    let bgColor = 'rgba(160, 174, 192, 0.4)'; 
+                    let borderColor = '#718096'; 
 
-                    if (enemy.typeInfo.spritePath && enemy.typeInfo.spritePath.startsWith('http')) {
-                        enemyVisual.style.backgroundImage = `url('${enemy.typeInfo.spritePath}')`;
-                         enemyVisual.style.backgroundSize = 'contain';
-                         enemyVisual.style.backgroundRepeat = 'no-repeat';
-                         enemyVisual.style.backgroundPosition = 'center';
-                         enemyVisual.style.backgroundColor = 'transparent'; 
+                    const tempStyleEl = document.createElement('div'); 
+                    tempStyleEl.className = `defense-visual-on-grid ${defenseState.id}`;
+                    document.body.appendChild(tempStyleEl); 
+                    const computedStyleForType = getComputedStyle(tempStyleEl);
+                    
+                    if(computedStyleForType.backgroundColor && computedStyleForType.backgroundColor !== "rgba(0, 0, 0, 0)" && computedStyleForType.backgroundColor !== "transparent"){
+                        bgColor = computedStyleForType.backgroundColor;
                     }
+                     if(computedStyleForType.borderColor && computedStyleForType.borderColor !== "rgba(0, 0, 0, 0)" && computedStyleForType.borderColor !== "transparent"){
+                         borderColor = computedStyleForType.borderColor;
+                     }
+                    document.body.removeChild(tempStyleEl);
 
-                    enemyVisual.style.position = 'absolute';
-                    // Les tailles sont maintenant issues du CSS ou des données du boss
-                    const visualWidth = parseInt(enemyVisual.style.width) || (isBoss ? (enemy.typeInfo.visualSize?.width || 28) : 7);
-                    const visualHeight = parseInt(enemyVisual.style.height) || (isBoss ? (enemy.typeInfo.visualSize?.height || 28) : 7);
+                    if (healthPercentage < 30) {
+                        bgColor = 'rgba(229, 62, 62, 0.7)';
+                        borderColor = '#c53030';
+                    } else if (healthPercentage < 60) {
+                        bgColor = 'rgba(236, 201, 75, 0.7)';
+                        borderColor = '#d69e2e';
+                    }
+                    
+                    defenseVisual.style.backgroundColor = bgColor;
+                    defenseVisual.style.border = `1px solid ${borderColor}`;
 
-                    // Assurer que les positions des ennemis restent dans les limites du conteneur pour le rendu
-                    let clampedX = Math.max(visualWidth / 2, Math.min(enemy.x, previewContainer.offsetWidth - visualWidth / 2));
-                    let clampedY = Math.max(visualHeight / 2, Math.min(enemy.y, previewContainer.offsetHeight - visualHeight / 2));
-
-                    enemyVisual.style.left = `${clampedX - (visualWidth / 2)}px`;
-                    enemyVisual.style.top = `${clampedY - (visualHeight / 2)}px`;
-                    enemyVisual.title = `${enemy.typeInfo.name} (PV: ${Math.ceil(enemy.currentHealth)})`;
-                    previewContainer.appendChild(enemyVisual);
-                });
-                nightAssaultEnemiesDisplayEl.innerHTML = ''; 
-            } else if (gameState.nightAssault && gameState.nightAssault.isActive && gameState.nightAssault.enemies.length === 0 && gameState.baseStats.currentHealth > 0){
-                nightAssaultEnemiesDisplayEl.innerHTML = `<p class="text-green-400 italic text-xs">Vague ennemie neutralisée. En attente...</p>`;
-            } else {
-                nightAssaultEnemiesDisplayEl.innerHTML = `<p class="text-gray-500 italic text-xs">Aucune menace détectée pour le moment.</p>`;
+                    previewContainer.appendChild(defenseVisual);
+                }
             }
-        }
+
+            // 3. DESSINER LES ENNEMIS
+            if (nightAssaultEnemiesDisplayEl) {
+                const existingEnemyVisuals = previewContainer.querySelectorAll('.base-enemy-visual, .boss-visual-dynamic');
+                existingEnemyVisuals.forEach(ev => ev.remove());
+
+                if (gameState.nightAssault && gameState.nightAssault.isActive && gameState.nightAssault.enemies.length > 0) {
+                    gameState.nightAssault.enemies.forEach(enemy => {
+                        if(!enemy || !enemy.typeInfo) return;
+                        const enemyVisual = document.createElement('div');
+                        const isBoss = enemy.isBoss;
+
+                        if (isBoss) {
+                            enemyVisual.classList.add('boss-visual-dynamic');
+                            if (enemy.typeInfo.visualSize) {
+                                enemyVisual.style.width = `${enemy.typeInfo.visualSize.width}px`;
+                                enemyVisual.style.height = `${enemy.typeInfo.visualSize.height}px`;
+                            }
+                        } else {
+                            enemyVisual.classList.add('base-enemy-visual');
+                            if (enemy.typeInfo.visualClass) {
+                                enemyVisual.classList.add(enemy.typeInfo.visualClass);
+                            }
+                        }
+
+                        if (enemy.typeInfo.spritePath && enemy.typeInfo.spritePath.startsWith('http')) {
+                            enemyVisual.style.backgroundImage = `url('${enemy.typeInfo.spritePath}')`;
+                             enemyVisual.style.backgroundSize = 'contain';
+                             enemyVisual.style.backgroundRepeat = 'no-repeat';
+                             enemyVisual.style.backgroundPosition = 'center';
+                             enemyVisual.style.backgroundColor = 'transparent';
+                        }
+
+                        enemyVisual.style.position = 'absolute';
+                        const visualWidth = parseInt(enemyVisual.style.width) || (isBoss ? (enemy.typeInfo.visualSize?.width || 28) : 7);
+                        const visualHeight = parseInt(enemyVisual.style.height) || (isBoss ? (enemy.typeInfo.visualSize?.height || 28) : 7);
+                        
+                        // Utiliser clientWidth/Height du conteneur pour le clamping des ennemis
+                        let clampedX = Math.max(visualWidth / 2, Math.min(enemy.x, previewContainer.clientWidth - visualWidth / 2));
+                        let clampedY = Math.max(visualHeight / 2, Math.min(enemy.y, previewContainer.clientHeight - visualHeight / 2));
+                        
+                        // enemy.x et enemy.y sont supposés être par rapport au contenu de previewContainer.
+                        // On ajoute offsetX et offsetY pour les positionner correctement par rapport au coin supérieur gauche de previewContainer.
+                        enemyVisual.style.left = `${(clampedX - (visualWidth / 2)) + offsetX}px`; 
+                        enemyVisual.style.top = `${(clampedY - (visualHeight / 2)) + offsetY}px`;  
+                        enemyVisual.title = `${enemy.typeInfo.name} (PV: ${Math.ceil(enemy.currentHealth)})`;
+                        previewContainer.appendChild(enemyVisual);
+                    });
+                    nightAssaultEnemiesDisplayEl.innerHTML = '';
+                } else if (gameState.nightAssault && gameState.nightAssault.isActive && gameState.nightAssault.enemies.length === 0 && gameState.baseStats.currentHealth > 0){
+                    nightAssaultEnemiesDisplayEl.innerHTML = `<p class="text-green-400 italic text-xs">Vague ennemie neutralisée. En attente...</p>`;
+                } else {
+                    nightAssaultEnemiesDisplayEl.innerHTML = `<p class="text-gray-500 italic text-xs">Aucune menace détectée pour le moment.</p>`;
+                }
+            }
+        }); // Fin de requestAnimationFrame
     },
 
     drawLaserShot: function(startX, startY, endX, endY) {
         const previewContainer = basePreviewContainerEl;
         if (!previewContainer) return;
+
+        const containerStyle = getComputedStyle(previewContainer);
+        const offsetX = (parseFloat(containerStyle.paddingLeft) || 0) + (parseFloat(containerStyle.borderLeftWidth) || 0);
+        const offsetY = (parseFloat(containerStyle.paddingTop) || 0) + (parseFloat(containerStyle.borderTopWidth) || 0);
+
+
         const beam = document.createElement('div');
-        beam.classList.add('laser-beam'); 
+        beam.classList.add('laser-beam');
         const dx = endX - startX;
         const dy = endY - startY;
         const length = Math.sqrt(dx*dx + dy*dy);
-        const angle = Math.atan2(dy, dx) * (180 / Math.PI); 
+        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
 
         beam.style.width = `${length}px`;
-        beam.style.left = `${startX}px`;
-        beam.style.top = `${startY}px`; 
+        beam.style.left = `${startX + offsetX}px`; 
+        beam.style.top = `${startY + offsetY}px`;  
         beam.style.transform = `rotate(${angle}deg)`;
         previewContainer.appendChild(beam);
 
-        setTimeout(() => { if (beam.parentElement) { beam.remove(); } }, 150); 
+        setTimeout(() => { if (beam.parentElement) { beam.remove(); } }, 150);
     },
-
+    
     managePlacedDefense: function(instanceId, row, col) {
         if (!gameState || !gameState.defenses || typeof buildingsData === 'undefined' || typeof itemsData === 'undefined' || typeof SELL_REFUND_FACTOR === 'undefined') {
             console.error("managePlacedDefense: Dépendances manquantes."); return;
@@ -689,13 +762,13 @@ var uiUpdates = {
         if (nextInstanceLevelData) {
             if (currentTechLevel < nextInstanceLevelData.level) {
                 message += `<p class="text-xs text-yellow-500 mt-1">Améliorez la technologie ${defenseTypeData.name} au Niv. ${nextInstanceLevelData.level} pour pouvoir améliorer cette instance.</p>`;
-            } else { 
-                const upgradeCost = nextInstanceLevelData.costToUpgrade; 
+            } else {
+                const upgradeCost = nextInstanceLevelData.costToUpgrade;
                 if(upgradeCost && typeof upgradeCost === 'object'){
                     let upgradeCostString = Object.entries(upgradeCost).map(([res, val]) => `${val} ${itemsData[res] ? itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1)}`).join(', ');
                     message += `<p class="text-xs mt-1">Prochain Niv Instance (${nextInstanceLevelData.level}): ${Object.entries(nextInstanceLevelData.stats || {}).map(([s,v]) => `${s.charAt(0).toUpperCase()+s.slice(1)}: ${v}`).join(', ')}</p>`;
                     message += `<p class="text-xs text-yellow-500">Coût Amélio. Instance: ${upgradeCostString}</p>`;
-                    canUpgradeThisInstance = true; 
+                    canUpgradeThisInstance = true;
                     for(const res in upgradeCost) {
                         if (itemsData[res]) { if ((gameState.inventory || []).filter(itemId => itemId === res).length < upgradeCost[res]) canUpgradeThisInstance = false; }
                         else { if ((gameState.resources[res] || 0) < upgradeCost[res]) canUpgradeThisInstance = false; }
@@ -706,11 +779,11 @@ var uiUpdates = {
         } else {
             message += `<p class="text-xs text-green-400 mt-1">Niveau Max pour cette instance.</p>`;
         }
-        
+
         let totalInvestedBiomass = (defenseTypeData.placementCost ? defenseTypeData.placementCost.biomass : 0) || 0;
         let totalInvestedNanites = (defenseTypeData.placementCost ? defenseTypeData.placementCost.nanites : 0) || 0;
-        for(let i = 0; i < defenseInstance.level -1 ; i++){ 
-            const levelDataForCost = defenseTypeData.levels[i]; 
+        for(let i = 0; i < defenseInstance.level -1 ; i++){
+            const levelDataForCost = defenseTypeData.levels[i];
             const levelUpgradeCost = levelDataForCost?.costToUpgrade || (i === 0 ? levelDataForCost?.costToUnlockOrUpgrade : null) ;
             if(levelUpgradeCost){
                 totalInvestedBiomass += levelUpgradeCost.biomass || 0;
@@ -728,8 +801,8 @@ var uiUpdates = {
         modalButtonsHtml += `<button id="modal-sell-defense" class="btn btn-danger btn-sm">Vendre</button>`;
         modalButtonsHtml += `<button id="modal-defense-cancel" class="btn btn-secondary btn-sm">Annuler</button>`;
         modalButtonsHtml += `</div>`;
-        
-        showModal("Gestion de Défense", message + modalButtonsHtml, null, false); 
+
+        showModal("Gestion de Défense", message + modalButtonsHtml, null, false);
 
         const modalUpgradeBtn = document.getElementById('modal-upgrade-defense');
         const modalSellBtn = document.getElementById('modal-sell-defense');
@@ -746,7 +819,7 @@ var uiUpdates = {
 
         if(typeof this.updateResourceDisplay === 'function') this.updateResourceDisplay();
         if(typeof this.updateBuildingDisplay === 'function') this.updateBuildingDisplay();
-        
+
         if(typeof researchContentEl !== 'undefined' && researchContentEl && !researchContentEl.classList.contains('hidden')) {
             if(typeof this.updateResearchDisplay === 'function') this.updateResearchDisplay();
         }
@@ -754,10 +827,10 @@ var uiUpdates = {
             if(typeof this.updateNanobotDisplay === 'function') this.updateNanobotDisplay();
         }
         if(typeof inventoryContentEl !== 'undefined' && inventoryContentEl && !inventoryContentEl.classList.contains('hidden')) {
-            if(typeof updateInventoryDisplay === 'function') updateInventoryDisplay(); 
+            if(typeof updateInventoryDisplay === 'function') updateInventoryDisplay();
         }
          if(typeof shopContentEl !== 'undefined' && shopContentEl && !shopContentEl.classList.contains('hidden')) {
-            if(typeof updateShopDisplay === 'function') updateShopDisplay(); 
+            if(typeof updateShopDisplay === 'function') updateShopDisplay();
         }
         if(typeof overviewContentElTab !== 'undefined' && overviewContentElTab && !overviewContentElTab.classList.contains('hidden')) {
             if(typeof this.updateBaseStatusDisplay === 'function') this.updateBaseStatusDisplay();
@@ -772,7 +845,7 @@ var uiUpdates = {
                 questUI.updateQuestDisplay();
             } else { console.warn("questUI.updateQuestDisplay non trouvée.")}
         }
-        if(typeof this.updateXpBar === 'function') this.updateXpBar(); 
+        if(typeof this.updateXpBar === 'function') this.updateXpBar();
     }
 };
 

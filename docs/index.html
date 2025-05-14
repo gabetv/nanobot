@@ -310,35 +310,60 @@
             aspect-ratio: calc(var(--base-grid-cols, 13) / var(--base-grid-rows, 9));
             background-color: #222938;
             border: 2px solid #4a5568;
-            position: relative;
+            position: relative; /* Changé pour permettre le positionnement absolu des enfants */
             overflow: hidden;
-            display: grid;
+            display: grid; /* Toujours une grille pour les cellules de fond */
         }
         .base-preview-cell {
-            background-color: #222938;
-            border: 1px dashed #4a5568;
+            /* background-color: #222938; */ /* Laisser transparent pour voir le fond du conteneur */
+            border: 1px dashed #4a5568; /* Bordure de la cellule */
+            display: flex; /* Pour centrer le visuel du noyau */
+            align-items: center;
+            justify-content: center;
         }
-        .base-preview-cell.core { background-color: #48bb78 !important; }
-        .base-preview-cell.occupied { background-color: #384252; }
-        .base-preview-cell.placement-blocked { cursor: not-allowed; }
-        .base-preview-cell.placement-active { cursor: copy; background-color: #3b475c; }
-        .base-preview-cell.placement-active:hover { background-color: #4f5b70; }
+        .base-preview-cell.core { background-color: transparent !important; } /* Noyau sur la cellule */
+        .base-preview-cell.occupied { /* Plus besoin de couleur de fond ici, la tourelle couvrira */ }
+        .base-preview-cell.placement-blocked { cursor: not-allowed; background-color: rgba(255,0,0,0.1); }
+        .base-preview-cell.placement-active { cursor: copy; background-color: rgba(60,179,113,0.2); }
+        .base-preview-cell.placement-active:hover { background-color: rgba(60,179,113,0.4); }
+
         .base-core-visual {
-            width: 80%; height: 80%; max-width: 40px; max-height: 40px;
-            background-color: #48bb78; border: 2px solid #38a169; border-radius: 4px;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 0.7rem; color: #1a202c; font-weight: bold;
-            margin: auto;
+            width: 70%; /* Plus petit pour ne pas dépasser de sa cellule */
+            height: 70%;
+            background-color: #48bb78;
+            border: 1px solid #38a169; /* Bordure plus fine */
+            border-radius: 3px; /* Moins arrondi */
+            color: #1a202c;
+            font-weight: bold;
+            font-size: 0.7rem; /* Adapté à la taille */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* margin: auto; est déjà géré par flex sur parent .base-preview-cell.core */
         }
-        .defense-visual {
-            width: 18px; height: 18px; font-size: 0.5rem;
-            background-color: #a0aec0; border: 1px solid #718096; position: absolute;
-            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+
+        .defense-visual-on-grid {
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
             z-index: 2;
+            /* La taille (width/height) et la position (left/top) sont gérées par JS pour s'adapter à la cellule */
+            /* La bordure sera définie par JS en fonction de la santé */
         }
-        .defense-visual.laserTurret { background-color: #fbd38d; }
-        .defense-visual.gatlingTurret { background-color: #cbd5e0; border-radius: 2px; }
-        .defense-visual.reinforcedWall { width: 8px; height: 18px; background-color: #718096; border-radius: 2px;}
+        .defense-visual-on-grid.laserTurret {
+             background-color: rgba(251, 211, 141, 0.4); /* Jaune-orange avec transparence de base */
+        }
+        .defense-visual-on-grid.gatlingTurret {
+            background-color: rgba(203, 213, 224, 0.4); /* Gris clair avec transparence de base */
+        }
+        .defense-visual-on-grid.reinforcedWall {
+            background-color: rgba(113, 128, 150, 0.5); /* Gris moyen avec transparence de base */
+            font-size: 0.5rem !important;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+        }
+
         .base-enemy-visual {
             width: 7px; height: 7px;
             background-color: #e53e3e; border-radius: 50%; position: absolute;
@@ -357,15 +382,15 @@
         .base-enemy-visual.crawler { background-color: #d69e2e; }
         .laser-beam { position: absolute; background-color: #fbd38d; height: 2px; opacity: 0.8; transform-origin: 0 50%; z-index: 10; pointer-events: none; box-shadow: 0 0 5px #fbd38d, 0 0 10px #e9ab54; }
 
-        /* NOUVEAUX STYLES POUR LA VIDÉO */
+        /* STYLES POUR LA VIDÉO */
         #night-assault-video-container {
-            background-color: rgba(0,0,0,0.9); /* Fond plus sombre pour focus sur la vidéo */
-            z-index: 1005; /* Au-dessus des autres modales si nécessaire */
+            background-color: rgba(0,0,0,0.9);
+            z-index: 1005;
         }
         #night-assault-video {
             max-width: 90vw;
             max-height: 90vh;
-            border: 3px solid #e53e3e; /* Bordure rouge thématique */
+            border: 3px solid #e53e3e;
             box-shadow: 0 0 25px #c53030;
         }
     </style>
