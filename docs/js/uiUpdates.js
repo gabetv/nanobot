@@ -606,8 +606,8 @@ var uiUpdates = {
                     defenseVisual.title = `${defenseState.name} Niv.${defenseState.level} (PV: ${Math.floor(defenseState.currentHealth)}/${defenseState.maxHealth})`;
 
                     defenseVisual.style.position = 'absolute';
-                    defenseVisual.style.width = `${cellClientWidth}px`; // Utiliser clientWidth de la cellule
-                    defenseVisual.style.height = `${cellClientHeight}px`;// Utiliser clientHeight de la cellule
+                    defenseVisual.style.width = `${cellClientWidth}px`;
+                    defenseVisual.style.height = `${cellClientHeight}px`;
                     defenseVisual.style.display = 'flex';
                     defenseVisual.style.alignItems = 'center';
                     defenseVisual.style.justifyContent = 'center';
@@ -615,13 +615,11 @@ var uiUpdates = {
                     defenseVisual.style.boxSizing = 'border-box'; 
                     defenseVisual.style.pointerEvents = 'none';
 
-                    // Obtenir la position de la cellule parente DANS le previewContainer
                     const parentCellElement = previewContainer.querySelector(`.base-preview-cell[data-row="${defenseState.gridPos.r}"][data-col="${defenseState.gridPos.c}"]`);
                     if (parentCellElement) {
                         defenseVisual.style.left = `${parentCellElement.offsetLeft}px`;
                         defenseVisual.style.top = `${parentCellElement.offsetTop}px`;
                     } else {
-                        // Fallback si la cellule n'est pas trouvée (ne devrait pas arriver)
                         defenseVisual.style.left = `${(defenseState.gridPos.c * cellClientWidth) + offsetX}px`;
                         defenseVisual.style.top = `${(defenseState.gridPos.r * cellClientHeight) + offsetY}px`;
                     }
@@ -658,17 +656,18 @@ var uiUpdates = {
                 }
             }
 
-            // 3. DESSINER LES ENNEMIS
+            // 3. DESSINER LES ENNEMIS ET LEURS BARRES DE VIE
             if (nightAssaultEnemiesDisplayEl) {
-                const existingEnemyVisuals = previewContainer.querySelectorAll('.base-enemy-visual, .boss-visual-dynamic');
-                existingEnemyVisuals.forEach(ev => ev.remove());
+                const existingEnemyVisualsAndHealthBars = previewContainer.querySelectorAll('.base-enemy-visual, .boss-visual-dynamic, .enemy-health-bar-on-grid-container');
+                existingEnemyVisualsAndHealthBars.forEach(ev => ev.remove());
 
                 if (gameState.nightAssault && gameState.nightAssault.isActive && gameState.nightAssault.enemies.length > 0) {
                     gameState.nightAssault.enemies.forEach(enemy => {
-                        if(!enemy || !enemy.typeInfo) return;
+                        if (!enemy || !enemy.typeInfo || enemy.currentHealth <= 0) return;
+
                         const enemyVisual = document.createElement('div');
                         const isBoss = enemy.isBoss;
-
+                        
                         if (isBoss) {
                             enemyVisual.classList.add('boss-visual-dynamic');
                             if (enemy.typeInfo.visualSize) {
@@ -694,16 +693,35 @@ var uiUpdates = {
                         const visualWidth = parseInt(enemyVisual.style.width) || (isBoss ? (enemy.typeInfo.visualSize?.width || 28) : 7);
                         const visualHeight = parseInt(enemyVisual.style.height) || (isBoss ? (enemy.typeInfo.visualSize?.height || 28) : 7);
                         
-                        // Utiliser clientWidth/Height du conteneur pour le clamping des ennemis
                         let clampedX = Math.max(visualWidth / 2, Math.min(enemy.x, previewContainer.clientWidth - visualWidth / 2));
                         let clampedY = Math.max(visualHeight / 2, Math.min(enemy.y, previewContainer.clientHeight - visualHeight / 2));
                         
-                        // enemy.x et enemy.y sont supposés être par rapport au contenu de previewContainer.
-                        // On ajoute offsetX et offsetY pour les positionner correctement par rapport au coin supérieur gauche de previewContainer.
-                        enemyVisual.style.left = `${(clampedX - (visualWidth / 2)) + offsetX}px`; 
-                        enemyVisual.style.top = `${(clampedY - (visualHeight / 2)) + offsetY}px`;  
+                        const enemyLeft = (clampedX - (visualWidth / 2)) + offsetX;
+                        const enemyTop = (clampedY - (visualHeight / 2)) + offsetY;
+
+                        enemyVisual.style.left = `${enemyLeft}px`;
+                        enemyVisual.style.top = `${enemyTop}px`;
                         enemyVisual.title = `${enemy.typeInfo.name} (PV: ${Math.ceil(enemy.currentHealth)})`;
                         previewContainer.appendChild(enemyVisual);
+
+                        // AJOUT DE LA BARRE DE VIE DE L'ENNEMI
+                        const healthBarContainer = document.createElement('div');
+                        healthBarContainer.className = 'enemy-health-bar-on-grid-container';
+                        healthBarContainer.style.position = 'absolute';
+                        const healthBarWidth = Math.max(15, visualWidth * 0.8);
+                        healthBarContainer.style.width = `${healthBarWidth}px`;
+                        healthBarContainer.style.height = '4px';
+                        healthBarContainer.style.left = `${enemyLeft + (visualWidth / 2) - (healthBarWidth / 2)}px`;
+                        healthBarContainer.style.top = `${enemyTop - 7}px`;
+                        healthBarContainer.style.zIndex = '7';
+
+                        const healthBarFill = document.createElement('div');
+                        healthBarFill.className = 'enemy-health-bar-on-grid-fill';
+                        const healthPercent = (enemy.maxHealth > 0 ? (enemy.currentHealth / enemy.maxHealth) : 0) * 100;
+                        healthBarFill.style.width = `${Math.max(0, healthPercent)}%`;
+
+                        healthBarContainer.appendChild(healthBarFill);
+                        previewContainer.appendChild(healthBarContainer);
                     });
                     nightAssaultEnemiesDisplayEl.innerHTML = '';
                 } else if (gameState.nightAssault && gameState.nightAssault.isActive && gameState.nightAssault.enemies.length === 0 && gameState.baseStats.currentHealth > 0){
