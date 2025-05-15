@@ -3,7 +3,7 @@ console.log("combat.js - VERIFICATION SYNTAXE");
 var combatSpeedMultiplier = 1;
 var COMBAT_ANIMATION_DELAY = 700; // Sera ajusté par combatSpeedMultiplier
 
-// Fonction Screen Shake (peut aussi être dans utils.js si vous préférez)
+// Fonction Screen Shake
 function screenShake(intensity = 4, duration = 150) {
     const arena = document.querySelector('.combat-arena');
     if (!arena) return;
@@ -27,7 +27,6 @@ function screenShake(intensity = 4, duration = 150) {
 
 
 function setupCombatVisuals(nanobot, enemy) {
-    // console.log("Combat: setupCombatVisuals - Nanobot:", JSON.parse(JSON.stringify(nanobot)), "Ennemi:", JSON.parse(JSON.stringify(enemy)));
     if(!combatModalEl || !combatLogVisualEl || !combatNanobotHealthbar || !combatNanobotSprite || !combatEnemyNameEl || !combatEnemyHealthbar || !combatEnemySprite) {
         console.warn("Combat: setupCombatVisuals - Éléments DOM de combat manquants.");
         return;
@@ -39,7 +38,6 @@ function setupCombatVisuals(nanobot, enemy) {
     combatModalEl.classList.remove('hidden');
     combatLogVisualEl.innerHTML = '<p class="text-gray-400">Préparation du combat...</p>';
 
-    // --- GESTION DE L'ARRIÈRE-PLAN DE L'ARÈNE ---
     const arenaElement = document.querySelector('.combat-arena');
     if (arenaElement) {
         arenaElement.classList.remove('combat-arena-verdant', 'combat-arena-caves', 'combat-arena-default');
@@ -48,15 +46,13 @@ function setupCombatVisuals(nanobot, enemy) {
         } else if (gameState && gameState.currentZoneId === 'verdant_archipelago') {
             arenaElement.classList.add('combat-arena-verdant');
         } else {
-            arenaElement.classList.add('combat-arena-default'); // Fallback
+            arenaElement.classList.add('combat-arena-default');
         }
     }
-    // --- FIN GESTION ARRIÈRE-PLAN ---
 
-    // Nanobot Visuals
     combatNanobotHealthbar.style.width = '100%';
     combatNanobotHealthbar.classList.remove('low', 'medium');
-    combatNanobotSprite.innerHTML = ''; // Clear previous sprites
+    combatNanobotSprite.innerHTML = ''; 
 
     if (gameState && gameState.nanobotModuleLevels && typeof nanobotModulesData !== 'undefined') {
         for (const moduleId in gameState.nanobotModuleLevels) {
@@ -83,7 +79,6 @@ function setupCombatVisuals(nanobot, enemy) {
         }
     }
 
-    // Enemy Visuals
     combatEnemyNameEl.textContent = enemy.name || "Ennemi";
     combatEnemyHealthbar.style.width = '100%';
     combatEnemyHealthbar.classList.remove('low', 'medium');
@@ -243,20 +238,20 @@ async function _simulateCombat(enemyDetailsInput) {
     console.log("Combat: _simulateCombat appelé avec:", JSON.parse(JSON.stringify(enemyDetailsInput)));
     if (isCombatInProgress) {
         console.warn("Combat: _simulateCombat - Un combat est déjà en cours. Nouvel appel ignoré.");
-        return { outcome: "already_in_progress" };
+        return { outcome: "already_in_progress", enemyDefeated: false, nanobotDefeated: true, enemyData: enemyDetailsInput }; // S'assurer de retourner un objet valide
     }
     isCombatInProgress = true;
 
     if (!gameState || !gameState.nanobotStats || gameState.nanobotStats.currentHealth <= 0) {
         if (typeof addLogEntry === 'function') addLogEntry("Nexus-7 hors combat ou état du jeu invalide.", "error", combatLogSummaryEl, gameState?.combatLogSummary);
         isCombatInProgress = false;
-        return { outcome: "nanobot_incapacitated" };
+        return { outcome: "nanobot_incapacitated", enemyDefeated: false, nanobotDefeated: true, enemyData: enemyDetailsInput };
     }
     if (typeof DAMAGE_TYPES === 'undefined' || typeof itemsData === 'undefined' || typeof nanobotSkills === 'undefined' || typeof ZONE_DATA === 'undefined' || typeof BASE_COORDINATES === 'undefined' || typeof TILE_TYPES === 'undefined' || typeof mapManager === 'undefined') {
         console.error("Combat: _simulateCombat - Dépendances de config ou mapManager manquantes.");
         if (typeof addLogEntry === 'function') addLogEntry("Erreur de configuration de combat.", "error", combatLogSummaryEl, gameState?.combatLogSummary);
         isCombatInProgress = false;
-        return { outcome: "config_error" };
+        return { outcome: "config_error", enemyDefeated: false, nanobotDefeated: false, enemyData: enemyDetailsInput };
     }
 
     const enemyData = enemyDetailsInput.details ? { ...enemyDetailsInput.details } : { ...enemyDetailsInput };
@@ -397,7 +392,7 @@ async function _simulateCombat(enemyDetailsInput) {
             nanobotCombatStats.rage = Math.min(100, (nanobotCombatStats.rage || 0) + 10);
         }
 
-        await showDamageFloat(document.getElementById('combat-nanobot'), actualDamageToNanobot, 'damage'); // isCritical = false par défaut
+        await showDamageFloat(document.getElementById('combat-nanobot'), actualDamageToNanobot, 'damage');
         updateCombatantHealthVisual('combat-nanobot', nanobotCombatStats.currentHealth, nanobotCombatStats.health);
         addLogEntry(`${enemy.name} inflige ${actualDamageToNanobot} dégâts ${enemyDamageType}. PV Nexus-7: ${Math.max(0, Math.floor(nanobotCombatStats.currentHealth))}`, "combat-visual", combatLogVisualEl, null);
         addLogEntry(`${enemy.name} inflige ${actualDamageToNanobot} à Nexus-7.`, "combat", combatLogSummaryEl, gameState.combatLogSummary);
@@ -451,19 +446,18 @@ async function _simulateCombat(enemyDetailsInput) {
 }
 
 var simulateCombat = async function(enemyDetailsInput) {
-    // console.log("Combat: simulateCombat (wrapper) appelé avec:", JSON.parse(JSON.stringify(enemyDetailsInput)));
     if (isCombatInProgress) {
         console.warn("Combat: simulateCombat (wrapper) - Un combat est déjà en cours. Appel ignoré.");
-        return;
+        return { outcome: "already_in_progress", enemyDefeated: false, nanobotDefeated: false, enemyData: enemyDetailsInput };
     }
 
     const combatResult = await _simulateCombat(enemyDetailsInput);
 
     if (combatResult.outcome === "already_in_progress" || combatResult.outcome === "nanobot_incapacitated" || combatResult.outcome === "config_error") {
         if (combatModalEl && !combatModalEl.classList.contains('hidden') && closeCombatModalBtn && !closeCombatModalBtn.disabled) {
-            // Gérer la fermeture de la modale si elle est bloquée
+            // Optionnel: gérer la fermeture de la modale si elle est bloquée
         }
-        return;
+        return combatResult; 
     }
     
     if (combatModalEl) combatModalEl.classList.add('hidden');
@@ -477,9 +471,11 @@ var simulateCombat = async function(enemyDetailsInput) {
         const xpAmount = rewardData.xp || Math.floor(combatResult.enemyData.maxHealth / 2 + combatResult.enemyData.attack * 2 + combatResult.enemyData.defense * 3);
 
         if(combatEndRewardsEl) combatEndRewardsEl.innerHTML = `+${biomassReward} Biomasse<br>+${naniteReward} Nanites`;
-        gameState.resources.biomass += biomassReward;
-        gameState.resources.nanites += naniteReward;
-        addLogEntry(`Récompenses: +${biomassReward} Biomasse, +${naniteReward} Nanites.`, "success", combatLogSummaryEl, gameState.combatLogSummary);
+        if (gameState && gameState.resources) {
+            gameState.resources.biomass += biomassReward;
+            gameState.resources.nanites += naniteReward;
+        }
+        addLogEntry(`Récompenses: +${biomassReward} Biomasse, +${naniteReward} Nanites.`, "success", combatLogSummaryEl, gameState?.combatLogSummary);
 
         if(typeof gainXP === 'function') gainXP(xpAmount);
         else console.error("La fonction gainXP n'est pas définie.");
@@ -513,11 +509,13 @@ var simulateCombat = async function(enemyDetailsInput) {
         if(combatEndModalEl) combatEndModalEl.classList.remove('hidden');
 
     } else if (combatResult.outcome === "timeout") {
-        if (typeof addLogEntry === 'function') addLogEntry("Le combat s'est terminé sans vainqueur clair.", "warning", eventLogEl, gameState.eventLog);
+        if (typeof addLogEntry === 'function') addLogEntry("Le combat s'est terminé sans vainqueur clair.", "warning", eventLogEl, gameState?.eventLog);
     }
+    
     if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function' && typeof explorationContentEl !== 'undefined' && explorationContentEl && !explorationContentEl.classList.contains('hidden')) {
         explorationUI.updateFullExplorationView();
     }
+    return combatResult; 
 };
 
 console.log("combat.js - Fin du fichier, fonctions définies.");

@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus-7: Genesis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #1a202c;
+            --bg-secondary: #2d3748;
+            --bg-tertiary: #1f2937;
+            --border-color: #4a5568;
+            --text-primary: #e2e8f0;
+            --text-secondary: #a0aec0;
+            --accent-blue: #4299e1;
+            --accent-green: #48bb78;
+            --accent-red: #e53e3e;
+            --accent-yellow: #ecc94b;
+            --map-tile-effective-size: 22px;
+        }
+        body { font-family: 'Roboto', sans-serif; background-color: var(--bg-primary); color: var(--text-primary); overflow-x: hidden; margin: 0; padding: 0; }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+
+        #game-container { display: flex; flex-direction: column; height: 100vh; }
+        
+        /* Header Styles */
+        #persistent-header {
+            position: sticky; top: 0; z-index: 50;
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.5rem 0.75rem;
+            display: flex;
+            flex-direction: column; 
+            align-items: center; 
+        }
+        #persistent-header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.25rem; /* text-xl */
+            margin-bottom: 0.5rem; /* mb-2 */
+            width: 100%;
+            text-align: center;
+        }
+        #header-info-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column; /* Empiler les groupes sur mobile */
+            gap: 0.25rem; /* Espace entre les groupes empilés */
+            font-size: 0.75rem; /* text-xs */
+        }
+        .resource-group {
+            display: flex;
+            justify-content: space-around; /* Espacer équitablement les items dans un groupe sur mobile */
+            align-items: center;
+            gap: 0.5rem; /* Espace entre les items d'un même groupe */
+        }
+        .resource-item {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+        .resource-item i {
+            font-size: 1rem; /* Taille des icônes principales */
+        }
+        .resource-item .rate-text, 
+        #mobility span:not(:first-child),
+        .btn .text-xs { /* Pour les coûts sur les boutons */
+            font-size: 0.65rem; /* Encore plus petit pour les détails */
+            color: var(--text-secondary);
+            margin-left: 0.1rem;
+        }
+        .btn .text-xs i { /* Pour les icônes de ressources dans les boutons */
+             font-size: 0.7rem !important; /* Ajuster la taille des petites icônes */
+             vertical-align: middle;
+        }
+
+        #mobility { display: contents; }
+        #mobility span:first-child { margin-right: 0.2rem; }
+
+        @media (min-width: 640px) { /* sm */
+            #persistent-header h1 {
+                font-size: 1.5rem; /* text-2xl */
+            }
+            #header-info-container {
+                font-size: 0.875rem; /* text-sm */
+            }
+            .resource-item i { font-size: 1.1rem; }
+            .resource-item .rate-text, #mobility span:not(:first-child), .btn .text-xs { font-size: 0.75rem; }
+            .btn .text-xs i { font-size: 0.8rem !important; }
+        }
+        @media (min-width: 768px) { /* md */
+            #persistent-header {
+                flex-direction: row;
+                justify-content: space-between;
+                padding: 0.5rem 1rem;
+            }
+            #persistent-header h1 {
+                width: auto;
+                text-align: left;
+                margin-bottom: 0;
+            }
+            #header-info-container {
+                flex-direction: row;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 1rem; /* Espace entre les groupes sur desktop */
+            }
+            .resource-group {
+                justify-content: flex-start; /* Aligner à gauche sur desktop */
+                gap: 0.75rem;
+            }
+        }
+        /* Fin Header Styles */
+
+        #main-layout-container { display: flex; flex-grow: 1; overflow: hidden; }
+        #main-navigation { /* Mobile: Bottom Nav */
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background-color: var(--bg-secondary); border-top: 1px solid var(--border-color);
+            display: flex; justify-content: space-around; padding: 0.3rem 0; z-index: 50;
+        }
+        .nav-button {
+            display: flex; flex-direction: column; align-items: center;
+            color: var(--text-secondary); font-size: 0.65rem;
+            padding: 0.2rem 0.4rem; border-radius: 0.25rem; 
+            transition: background-color 0.2s, color 0.2s;
+            flex-grow: 1; text-align:center; cursor:pointer;
+        }
+        .nav-button i { font-size: 1.1rem; margin-bottom: 0.05rem; }
+        .nav-button.active, .nav-button:hover { color: var(--accent-blue); background-color: rgba(66, 153, 225, 0.1); }
+
+        #main-content-area {
+            flex-grow: 1; overflow-y: auto; padding: 0.75rem;
+            padding-bottom: 60px; display: flex; flex-direction: column;
+        }
+
+        @media (min-width: 768px) { /* md: Desktop: Sidebar */
+            #main-navigation {
+                position: static; flex-direction: column; justify-content: flex-start;
+                width: 180px; min-width: 180px; height: 100%;
+                padding: 0.75rem 0.5rem; border-top: none; border-right: 1px solid var(--border-color);
+                overflow-y: auto;
+            }
+            .nav-button { flex-direction: row; justify-content: flex-start; gap: 0.5rem; width: 100%; font-size: 0.875rem; padding: 0.6rem; margin-bottom: 0.3rem; }
+            .nav-button i { font-size: 1.1rem; margin-bottom: 0; }
+            #main-content-area { padding-bottom: 0.75rem; }
+        }
+
+        .content-section { display: none; flex-grow: 1; flex-direction: column; }
+        .content-section.active { display: flex; }
+        .content-section > .panel { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        .panel { background-color: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 0.375rem; padding: 0.75rem; margin-bottom: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .sub-nav-bar { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 0.75rem; flex-shrink: 0; }
+        .sub-nav-button {
+            padding: 0.5rem 0.75rem; font-size: 0.8rem; color: var(--text-secondary);
+            border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer;
+        }
+        .sub-nav-button.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); font-weight: 600; }
+        .sub-nav-button:hover { color: var(--accent-blue); }
+        
+        .sub-content { display: none; flex-grow: 1; flex-direction: column; overflow: hidden; }
+        .sub-content.active { display: flex; }
+        
+        #exploration-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+        #exploration-layout { display: flex; flex-direction: column; gap: 0.75rem; flex-grow: 1; overflow: hidden; }
+        #exploration-map-container { flex-grow: 1; display: flex; flex-direction: column; background-color: var(--bg-tertiary); padding:0.5rem; border-radius: 0.25rem; overflow: hidden; position: relative; }
+        #exploration-actions-bar { padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        #exploration-actions-bar h3 { font-size: 0.875rem; }
+        #map-scroll-container { flex-grow: 1; overflow: auto; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 0.25rem; position:relative; }
+        #map-grid { display: grid; background-color: var(--bg-secondary); gap: 1px; position: relative; }
+        .map-tile { background-color: var(--bg-primary); display: flex; align-items: center; justify-content: center; font-size: calc(var(--map-tile-effective-size, 22px) * 0.7); line-height: 1; user-select: none; }
+        .map-tile:hover { background-color: #4a5568 !important; }
+        .map-tile.unexplored { background-color: var(--bg-tertiary); filter: brightness(0.6); }
+        .map-tile.explored { background-color: var(--bg-secondary); }
+        .map-tile.nanobot { background-color: var(--accent-blue) !important; box-shadow: 0 0 6px var(--accent-blue); z-index:10; }
+        .map-tile.base::before {content: "N"; color: var(--accent-green); font-weight:bold; }
+        .map-tile.resource-biomass::before { content: "🌿"; color: #9ae6b4; }
+        .map-tile.resource-nanites::before { content: "⚙️"; color: #90cdf4; }
+        .map-tile.resource-crystal::before { content: "💎"; color: #a7f3d0; }
+        .map-tile.enemy::before { content: "💀"; color: #f56565; }
+        .map-tile.upgrade::before { content: "💡"; color: var(--accent-yellow); }
+        .map-tile.grassland { background-color: #38a169; } .map-tile.grassland::before {content:"🌾"; color: #a7f3d0;}
+        .map-tile.desert { background-color: #c19731; } .map-tile.desert::before {content:"🏜️"; color: #f6e05e;}
+        .map-tile.water { background-color: #3b82f6; } .map-tile.water::before {content:"💧"; color: #bfdbfe;}
+        .map-tile.forest { background-color: #166534; } .map-tile.forest::before {content:"🌳"; color: #86efac;}
+        .map-tile.mountain { background-color: #6b7280; } .map-tile.mountain::before {content:"⛰️"; color: #d1d5db;}
+        .map-tile.ruins { background-color: #4b5563; } .map-tile.ruins::before {content:"🏛️"; color:#9ca3af;}
+        .map-tile.unexplored-impassable { background-color: var(--border-color); }
+        .map-tile.unexplored-flat { background-color: #222938; }
+        .map-tile.unexplored-water { background-color: #1c3d52; }
+        .map-tile.unexplored-rough { background-color: #373c48; }
+        .map-tile.unexplored-ruin-outline::before { content: "🏛️"; opacity: 0.5;}
+        .map-tile.unexplored-large-crystal::before { content: "💠"; opacity: 0.5;}
+        .map-tile.unexplored-enemy-base-outline::before { content: "💢"; opacity: 0.6; color: var(--accent-red); }
+        .map-tile.unexplored-distress-signal::before { content: "📡"; opacity: 0.6; color: var(--accent-yellow); animation: pulse-signal 2s infinite; }
+        .map-tile.impassable-water.explored-impassable::before { content: "🌊"; opacity: 0.8; font-size: 1rem; color: #1e3a8a; }
+        .map-tile.impassable-mountain.explored-impassable::before { content: "⛰️"; opacity: 0.8; font-size: 1rem; color: var(--border-color);}
+        .map-tile.poi-structure::before { content:"🌟"; color:var(--accent-yellow);}
+        .map-tile.poi-wreckage::before { content:"⚓"; color:var(--text-secondary);}
+        .map-tile.scanned { box-shadow: 0 0 3px yellow; animation: pulse-scan-border 1.5s infinite alternate; }
+        .map-tile.scanned::after { position: absolute; opacity: 0.7; font-size:0.8em; left:50%; top:50%; transform: translate(-50%, -50%); z-index:1; pointer-events: none; }
+        .map-tile.scanned.scanned-actual-biomass::after { content: "🌿"; }
+        .map-tile.scanned.scanned-actual-nanites::after { content: "⚙️"; }
+        .map-tile.scanned.scanned-actual-crystal::after { content: "💎"; }
+        .map-tile.scanned.scanned-actual-enemy::after { content: "💀"; }
+        .map-tile.scanned.scanned-actual-upgrade::after { content: "💡"; }
+        .map-tile.scanned.scanned-actual-enemy-base::after { content: "🏰";font-size: 1em; }
+        .map-tile.scanned.scanned-actual-empty::after { content: "·"; font-size:1.1em; font-weight:bold; }
+        .map-tile.scanned.scanned-actual-impassable-water::after { content: "🌊"; opacity: 0.6; }
+        .map-tile.scanned.scanned-actual-impassable-mountain::after { content: "⛰️"; opacity: 0.6; }
+        .map-tile.enemy-base::before { content: "🏰"; color: var(--accent-red); font-size: 1.1rem; }
+        .map-tile.has-active-resource { animation: pulse-resource-highlight 1.5s infinite alternate; z-index: 2; }
+        .map-tile.resource-biomass::before, .map-tile.resource-nanites::before, .map-tile.resource-crystal::before { z-index: 3; position: relative; }
+        #map-info { text-align: center; font-size: 0.7rem; margin-top: 0.25rem; color: var(--text-secondary); flex-shrink:0; }
+        #exploration-details-panels { display: flex; flex-direction: column; gap: 0.75rem; flex-shrink: 0; }
+        #exploration-details-panels > .panel { display: flex; flex-direction: column; min-height: 0; }
+        #exploration-log, #zone-list, #tile-interaction-panel { background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 0.25rem; padding: 0.5rem; font-size: 0.75rem; color: var(--text-primary); overflow-y: auto; }
+        #exploration-log { height: 120px; flex-shrink:0; }
+        #zone-list { max-height: 100px; flex-shrink:0; }
+        #tile-interaction-panel { flex-grow: 1; display: flex; flex-direction: column; } 
+        #tile-interaction-panel h4 {font-size: 0.875rem;}
+        #tile-interaction-details { margin-bottom: 0.5rem; word-break: break-word; overflow-wrap: break-word; min-height: 0; flex-shrink: 1; overflow-y: auto; }
+        #tile-interaction-details p { margin-bottom: 0.2rem; line-height: 1.3; }
+        #tile-interaction-actions { margin-top: auto; flex-shrink: 0; }
+        @media (min-width: 1024px) { /* lg */
+            #exploration-layout { flex-direction: row; }
+            #exploration-map-container { width: 65%; }
+            #exploration-details-panels { width: 35%; display: flex; flex-direction: column; gap: 0.75rem; overflow: hidden; }
+            #exploration-log, #zone-list { flex-shrink: 0; }
+            #tile-interaction-panel { flex-grow: 1; }
+        }
+        #center-map-btn { position: absolute; bottom: 8px; right: 8px; z-index: 20; }
+
+        .btn { transition: all 0.3s ease; border-radius: 0.375rem; padding: 0.5rem 1rem; font-weight: 600; cursor: pointer; text-align: center; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
+        .btn-xs { padding: 0.125rem 0.3rem; font-size: 0.75rem; }
+        .btn-primary { background-color: var(--accent-blue); color: white; } .btn-primary:hover { background-color: #3182ce; }
+        .btn-secondary { background-color: var(--border-color); color: var(--text-primary); } .btn-secondary:hover { background-color: #2d3748; }
+        .btn-danger { background-color: var(--accent-red); color: white; } .btn-danger:hover { background-color: #c53030; }
+        .btn-success { background-color: var(--accent-green); color: white; } .btn-success:hover { background-color: #38a169; }
+        .btn-warning { background-color: var(--accent-yellow); color: var(--bg-primary); } .btn-warning:hover { background-color: #d69e2e; }
+        .btn-info { background-color: #63b3ed; color: white; } .btn-info:hover { background-color: var(--accent-blue);}
+        .btn-disabled { background-color: #718096 !important; color: #a0aec0 !important; cursor: not-allowed !important; opacity: 0.7; }
+        .btn-outline { background-color: transparent; border-width: 1px; }
+        .btn-outline.btn-danger { border-color: var(--accent-red); color: var(--accent-red); }
+        .btn-outline.btn-danger:hover { background-color: rgba(229, 62, 62, 0.1); }
+
+
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 0.5rem; }
+        .modal-content { background-color: var(--bg-secondary); padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); min-width: 280px; max-width: 95%; width: auto; max-height: 90vh; overflow-y: auto; }
+        .modal-content h2, .modal-content h3 { margin-bottom: 0.5rem; }
+        .modal-content p { margin-bottom: 0.75rem; }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #718096; }
+
+        #night-assault-video-container { z-index: 1005; }
+        #night-assault-video { max-width: 90vw; max-height: 80vh; border: 3px solid var(--accent-red); box-shadow: 0 0 25px #c53030; }
+        #close-night-assault-video-btn { position: absolute; top: 10px; right: 10px; z-index: 1010; }
+
+        /* Nanobot Visualisation Section */
+        .nanobot-display {
+            aspect-ratio: 1 / 1.3; margin: 0.5rem auto; position: relative;
+            border: 2px solid var(--border-color);
+            background: radial-gradient(circle, var(--bg-secondary) 0%, var(--bg-primary) 70%);
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 8px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            width: 100%; max-width: 150px; height: auto;
+        }
+        .nanobot-core {
+            width: 30%; padding-bottom: 30%; height: 0;
+            background-color: var(--accent-blue); border: 2px solid #63b3ed;
+            box-shadow: 0 0 8px var(--accent-blue), 0 0 15px rgba(66, 153, 225, 0.5);
+            position: relative; border-radius: 50%;
+            animation: pulse-core 2.5s infinite ease-in-out;
+        }
+        .nanobot-module, .nanobot-item-visual { position: absolute; background-color: var(--text-secondary); border: 1px solid #718096; }
+        .module-arm-blade { width: 40%; height: 5%; background-color: var(--accent-red); top: 30%; left: -42%; transform: rotate(-30deg); }
+        .module-legs-antigrav { width: 12%; height: 18%; background-color: var(--accent-green); bottom: -20%; }
+        .module-legs-antigrav.left { left: 20%; } .module-legs-antigrav.right { right: 20%; }
+        .module-shield { position: absolute; top: -8%; left: -8%; right: -8%; bottom: -8%; border: 2px dashed var(--accent-blue); border-radius: 10%; animation: pulse-shield 2s infinite; }
+        .item-weapon-laser { width: 50%; height: 4%; background: linear-gradient(to right, red, orange); top: 35%; right: -48%; transform: rotate(20deg); }
+        .item-armor-plating { width: 105%; height: 105%; border: 3px solid #90cdf4; border-radius: 10%; top: -2.5%; left: -2.5%; opacity:0.6; box-sizing: border-box; }
+
+
+        /* --- COMBAT VISUALS --- */
+        #combat-modal-content { min-width: 90vw; md:min-w-[500px]; min-height: 50vh; }
+        .combat-arena {
+            display: flex; justify-content: space-around; align-items: flex-end;
+            height: 180px; background-color: var(--bg-primary); /* Fallback */
+            border: 1px solid var(--border-color); border-radius: 0.25rem;
+            padding: 8px; margin-bottom: 0.5rem; position: relative; overflow: hidden;
+            background-size: cover; background-position: center;
+            transition: background-image 0.5s ease-in-out, background-color 0.5s ease-in-out;
+        }
+        .combat-arena-verdant { background-image: url('img/bg_verdant_combat.png'); background-color: #284c37; } 
+        .combat-arena-caves { background-image: url('img/bg_caves_combat.png'); background-color: #3a3a52; } 
+        .combat-arena-default { background-color: var(--bg-primary); }
+
+        .combatant { position: relative; text-align: center; transition: transform 0.3s ease-out; }
+        .combatant-sprite {
+            width: 60px; height: 80px; border: 2px solid var(--border-color);
+            margin: 0 auto; position: relative;
+            background-size: contain; background-repeat: no-repeat; background-position: center;
+            animation: idle-breath 3s infinite ease-in-out;
+            transition: box-shadow 0.2s, filter 0.2s;
+        }
+        .combatant-sprite.is-acting { animation: none; }
+        .sprite-hit-flash { animation: hit-flash-effect 0.2s ease-out; }
+
+        #combat-nanobot-sprite { background-color: var(--accent-blue); }
+        #combat-enemy-sprite { background-color: var(--accent-red); }
+        .combatant-name { font-weight: bold; margin-bottom: 3px; font-size: 0.7rem; }
+        .health-bar-container { width: 60px; height: 7px; background-color: #718096; border-radius: 3px; margin: 3px auto 0; overflow: hidden; border: 1px solid var(--border-color);}
+        .health-bar { height: 100%; background-color: var(--accent-green); width: 100%; transition: width 0.5s ease; }
+        .health-bar.low { background-color: #f56565; }
+        .health-bar.medium { background-color: #faf089; }
+
+        .damage-float {
+            position: absolute; top: -15px; left: 50%;
+            font-size: 1rem; font-weight: bold; color: var(--accent-red);
+            animation: floatUpBase 1s ease-out forwards;
+            opacity: 0; white-space: nowrap;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+            z-index: 20;
+        }
+        .damage-float.critical {
+            color: var(--accent-yellow) !important; font-size: 1.3rem;
+            animation: floatUpCritical 1.5s ease-out forwards;
+        }
+        .damage-float[style*="color: rgb(72, 187, 120)"] { animation: floatUpHeal 1.2s ease-out forwards; }
+        .damage-float[style*="color: rgb(160, 174, 192)"] { animation: floatMiss 0.8s ease-in forwards; }
+        
+        .quest-item { background-color: var(--bg-secondary); padding: 0.5rem; border-radius: 0.25rem; margin-bottom: 0.5rem; border-left: 4px solid transparent; }
+        .quest-item h4 { font-size: 0.875rem; margin-bottom: 0.1rem;}
+        .quest-item p { font-size: 0.75em; }
+        .quest-item .objectives-list { list-style-type: disc; margin-left: 1rem; color: #90cdf4; font-size:0.7em; }
+        .quest-item .objectives-list li.completed { text-decoration: line-through; color: var(--accent-green); }
+        .quest-item .rewards { margin-top: 0.25rem; font-size: 0.7em; color: var(--accent-yellow); }
+        .quest-status-AVAILABLE { border-left-color: var(--accent-yellow); }
+        .quest-status-ACTIVE { border-left-color: var(--accent-blue); }
+        .quest-status-COMPLETED, .quest-status-FINISHED { border-left-color: var(--accent-green); }
+        .quest-status-LOCKED { display: none; }
+
+        .inventory-item, .shop-item.panel { display: flex; flex-direction: column; padding: 0.5rem; }
+        .shop-item .item-details { margin-bottom: 0.5rem;}
+        .inventory-item .item-details { flex-grow: 1; }
+        .item-name { font-weight: bold; color: var(--text-primary); font-size: 0.875rem; }
+        .item-stats { font-size: 0.7em; color: var(--text-secondary); }
+        .equipment-slot { display: flex; flex-direction: column; align-items: stretch; padding: 0.5rem; margin-bottom: 0.375rem; background-color:var(--bg-secondary); border:1px solid var(--border-color); border-radius: 0.25rem; }
+        .slot-name { font-size: 0.8rem; font-weight: 600; margin-bottom: 0.125rem; }
+        .equipped-item-name { font-size: 0.75rem; }
+        .empty-slot { font-size: 0.75rem; font-style: italic; }
+
+        #base-status-section { padding: 0.5rem; }
+        #base-health-bar-container { height: 10px; }
+        #base-status-section.night-assault-active { border: 2px dashed var(--accent-red) !important; animation: pulse-danger 1s infinite alternate; }
+        #night-assault-enemies-display { min-h-[18px]; }
+        #night-assault-log { padding: 0.4rem; height: 80px; font-size: 0.7rem; }
+        #night-assault-log p { margin-bottom: 0.2rem; word-break: break-word; }
+
+        #combat-log-details-container { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+        #combat-log-details-container summary { list-style: none; cursor: pointer;}
+        #combat-log-details-container summary::-webkit-details-marker { display: none; }
+        #combat-log-details-container summary::before { content: '▶'; display: inline-block; margin-right: 0.3em; font-size: 0.7em; transition: transform 0.2s ease-in-out; }
+        #combat-log-details-container[open] summary::before { transform: rotate(90deg); }
+        #combat-log-visual { width: 100%; box-sizing: border-box; font-family: 'Roboto Mono', monospace; line-height: 1.3; max-height: 8rem; overflow-y: auto; padding-right: 0.25rem; font-size: 0.7rem; }
+        #combat-log-visual p { margin-bottom: 0.2rem; word-break: break-word; }
+        .skill-activation { color: var(--accent-yellow); font-weight: bold;}
+        .skill-effect { color: var(--text-secondary); font-style: italic;}
+
+        #base-preview-container { max-width: 100%; aspect-ratio: calc(var(--base-grid-cols, 13) / var(--base-grid-rows, 9)); background-color: var(--bg-secondary); display: grid; gap: 1px; border: 1px solid var(--border-color); position: relative; overflow: hidden; }
+        .base-preview-cell { background-color: var(--bg-primary); display: flex; align-items: center; justify-content: center; box-sizing: border-box; font-size: 0.5rem; }
+        .base-preview-cell.core .base-core-visual { width: 60%; height: 60%; background-color: var(--accent-green); border: 1px solid #38a169; border-radius: 2px; color: var(--bg-primary); font-weight: bold; display: flex; align-items: center; justify-content: center; }
+        .base-preview-cell.occupied { background-color: var(--bg-tertiary); }
+        .base-preview-cell.placement-blocked { cursor: not-allowed; background-color: rgba(255,0,0,0.2) !important; }
+        .base-preview-cell.placement-active { cursor: copy; background-color: rgba(60,179,113,0.4) !important; }
+        .base-preview-cell.placement-active:hover { background-color: rgba(60,179,113,0.6) !important; }
+
+        .defense-visual-on-grid { text-align: center; font-weight: bold; transition: background-color 0.3s ease, border-color 0.3s ease; z-index: 2; box-sizing: border-box; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding: 1px; }
+        .defense-visual-on-grid.laserTurret { background-color: rgba(230, 160, 40, 0.7); border-color: #F6E05E; color: black; }
+        .defense-visual-on-grid.gatlingTurret { background-color: rgba(160, 174, 192, 0.7); border-color: #A0AEC0; color: black; }
+        .defense-visual-on-grid.reinforcedWall { background-color: rgba(113, 128, 150, 0.7); border-color: #718096; font-size: 0.5rem !important; writing-mode: vertical-rl; text-orientation: mixed; color: white; }
+
+        .base-enemy-visual { width: 10px; height: 10px; background-color: var(--accent-red); border: 1px solid white; border-radius: 50%; position: absolute; transition: transform 0.5s ease-out, left 0.5s linear, top 0.5s linear; box-shadow: 0 0 4px var(--accent-red); z-index: 15; background-size: contain; background-repeat: no-repeat; background-position: center; }
+        .base-enemy-visual.drone { background-color: #e53e3e; }
+        .base-enemy-visual.bot { background-color: #dd6b20; }
+        .base-enemy-visual.crawler { background-color: #d69e2e; }
+        .boss-visual-dynamic { width: 26px; height: 26px; background-color: #7f1d1d; border: 2px solid gold; border-radius: 3px; box-shadow: 0 0 8px gold; z-index: 15; background-size: contain; background-repeat: no-repeat; background-position: center; }
+        
+        .projectile-visual { position: absolute; transform-origin: 0 50%; z-index: 10; pointer-events: none; }
+        .enemy-health-bar-on-grid-container { background-color: #555; border: 1px solid #333; border-radius: 1px; overflow: hidden; box-sizing: border-box; z-index: 16; position: absolute; }
+        .enemy-health-bar-on-grid-fill { background-color: var(--accent-red); height: 100%; transition: width 0.3s ease-out; }
+        
+        #tutorial-modal .modal-content { box-shadow: 0 0 15px var(--accent-yellow); border: 2px solid var(--accent-yellow); }
+
+        @keyframes pulse-core {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 8px var(--accent-blue), 0 0 15px rgba(66, 153, 225, 0.5); }
+            50% { transform: scale(1.05); box-shadow: 0 0 12px var(--accent-blue), 0 0 25px rgba(66, 153, 225, 0.7); }
+        }
+        @keyframes pulse-shield { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+        @keyframes floatUp { 0% { opacity: 1; top: -12px; } 100% { opacity: 0; top: -40px; } }
+        @keyframes pulse-signal { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
+        @keyframes pulse-scan-border { from { box-shadow: 0 0 2px yellow; } to { box-shadow: 0 0 5px orange; } }
+        @keyframes pulse-resource-highlight { from { box-shadow: 0 0 3px 0.5px gold; } to { box-shadow: 0 0 6px 1px orange; } }
+        @keyframes pulse-danger { from { box-shadow: 0 0 5px var(--accent-red); } to { box-shadow: 0 0 10px #c53030, 0 0 3px var(--accent-red); } }
+        @keyframes pulse-dot { from { opacity: 0.7; transform: scale(0.9); } to { opacity: 1; transform: scale(1.1); } }
+        @keyframes hit-flash-effect {
+            0%, 100% { box-shadow: 0 0 0px rgba(255, 255, 255, 0); }
+            50% { box-shadow: 0 0 15px 8px rgba(255, 255, 255, 0.8); }
+        }
+        @keyframes floatUpBase {
+            0% { opacity: 1; transform: translate(-50%, 0px); }
+            100% { opacity: 0; transform: translate(-50%, -40px); }
+        }
+        @keyframes floatUpCritical {
+            0% { opacity: 1; transform: translate(-50%, 0px) scale(1); }
+            15% { transform: translate(-50%, -15px) scale(1.4); }
+            30% { transform: translate(-50%, -10px) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -60px) scale(0.8); }
+        }
+        @keyframes floatUpHeal {
+            0% { opacity: 1; transform: translate(-50%, 5px) scale(0.9); }
+            100% { opacity: 0; transform: translate(-50%, -30px) scale(1.1); }
+        }
+        @keyframes floatMiss {
+            0% { opacity: 1; transform: translate(-50%, 0px) translateX(0); }
+            50% { opacity: 0.8; transform: translate(-50%, -10px) translateX(10px); }
+            100% { opacity: 0; transform: translate(-50%, -15px) translateX(-15px); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <header id="persistent-header">
+            <h1 class="font-orbitron text-xl md:text-2xl w-full md:w-auto text-center md:text-left mb-2 md:mb-0">Nexus-7</h1>
+            <div id="header-info-container" class="w-full flex flex-col md:flex-row md:items-center md:justify-end gap-y-1 md:gap-y-0 md:gap-x-4 text-xs sm:text-sm">
+                <div class="resource-group flex justify-around md:justify-start items-center gap-x-2 md:gap-x-3">
+                    <div class="resource-item" title="Biomasse">
+                        <i class="ti ti-leaf text-green-400"></i>
+                        <div><span id="biomass">0</span><span class="rate-text">(<span id="biomassRate">0</span>/s)</span></div>
+                    </div>
+                    <div class="resource-item" title="Nanites">
+                        <i class="ti ti-settings-2 text-blue-400"></i>
+                        <div><span id="nanites">0</span><span class="rate-text">(<span id="nanitesRate">0</span>/s)</span></div>
+                    </div>
+                    <div id="crystal-shards-display-container" class="resource-item hidden" title="Cristaux">
+                        <i class="ti ti-diamond text-cyan-400"></i>
+                        <span id="crystal_shards">0</span>
+                    </div>
+                </div>
+                <div class="hidden md:block border-l border-gray-600 h-6 mx-1"></div>
+                <div class="resource-group flex justify-around md:justify-start items-center gap-x-2 md:gap-x-3">
+                    <div class="resource-item" title="Énergie (Consommée/Max)">
+                        <i class="ti ti-bolt text-yellow-400"></i>
+                        <span id="energy">0/0</span>
+                    </div>
+                    <div class="resource-item" title="Points de Mobilité">
+                        <i class="ti ti-shoe text-purple-400"></i>
+                        <span id="mobility">0/0</span>
+                    </div>
+                </div>
+                <div class="hidden md:block border-l border-gray-600 h-6 mx-1"></div>
+                <div class="resource-group flex justify-around md:justify-start items-center gap-x-2 md:gap-x-3">
+                    <div id="base-health-display" class="resource-item" title="Santé du Noyau">
+                        <i class="ti ti-shield-heart text-red-400"></i>
+                        <div><span id="base-health-value">0</span>/<span id="base-max-health-value">0</span></div>
+                    </div>
+                    <div class="resource-item" title="Cycle Actuel (Temps restant)">
+                        <i class="ti ti-clock text-gray-400"></i>
+                        <div><span id="cycleStatus">Jour</span><span id="gameTime" class="rate-text">(00:00)</span></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div id="main-layout-container">
+            <nav id="main-navigation">
+                <button class="nav-button active" data-section="base-section" title="Base"><i class="ti ti-home-shield"></i> <span class="nav-text">Base</span></button>
+                <button class="nav-button" data-section="nexus-section" title="Nexus-7"><i class="ti ti-robot"></i> <span class="nav-text">Nexus-7</span></button>
+                <button class="nav-button" data-section="world-section" title="Monde"><i class="ti ti-map-2"></i> <span class="nav-text">Monde</span></button>
+                <button class="nav-button" data-section="shop-section" title="Marché"><i class="ti ti-shopping-cart"></i> <span class="nav-text">Marché</span></button>
+            </nav>
+
+            <main id="main-content-area">
+                <!-- Section Base -->
+                <div id="base-section" class="content-section active">
+                    <div class="flex flex-col lg:flex-row gap-3 h-full">
+                        <div class="lg:w-1/3 flex flex-col gap-3">
+                            <div class="panel">
+                                <h2 class="font-orbitron text-md mb-2 text-[var(--accent-blue)]">Statut du Noyau</h2>
+                                <div id="base-status-section">
+                                    <h3 class="font-orbitron text-sm text-[var(--accent-yellow)]">Intégrité Structurelle</h3>
+                                    <div class="flex justify-between items-center text-xs mb-1">
+                                        <span>PV Noyau: <span id="overview-base-health">N/A</span></span>
+                                        <span id="base-defense-power">Défense: 0</span>
+                                    </div>
+                                    <div id="base-health-bar-container" class="w-full bg-gray-700 rounded-full h-2.5 mb-2">
+                                        <div id="base-health-bar" class="bg-green-500 h-2.5 rounded-full" style="width: 100%"></div>
+                                    </div>
+                                    <h4 class="font-orbitron text-xs text-[var(--accent-red)] mt-2 mb-1">Menaces:</h4>
+                                    <div id="night-assault-enemies-display" class="min-h-[18px] text-xs">
+                                         <p class="text-gray-500 italic text-xs">Aucune menace.</p>
+                                    </div>
+                                    <div class="mt-2 grid grid-cols-2 gap-1">
+                                        <button id="repair-base-btn" class="btn btn-success btn-xs"><i class="ti ti-tool mr-1"></i>Réparer Noyau</button>
+                                        <button id="repair-defenses-btn" class="btn btn-info btn-xs"><i class="ti ti-recycle mr-1"></i>Réparer Déf.</button>
+                                    </div>
+                                    <button id="force-cycle-change-btn" class="btn btn-warning btn-xs w-full mt-1"><i class="ti ti-refresh-alert mr-1"></i>Forcer Cycle</button>
+                                </div>
+                            </div>
+                            <div class="panel">
+                                <h3 class="font-orbitron text-md mb-1 text-[var(--accent-blue)]">Schéma Défensif</h3>
+                                <div id="base-preview-section">
+                                    <div id="base-preview-container"> <!-- Sera rempli par JS --> </div>
+                                    <div id="placement-info" class="text-center text-xs text-[var(--accent-yellow)] mt-1 hidden">
+                                        Placement: <span id="selected-defense-for-placement" class="font-bold"></span>.
+                                        <button id="cancel-placement-btn" class="btn btn-danger btn-xs ml-1">X</button>
+                                    </div>
+                                </div>
+                            </div>
+                             <div class="panel flex-grow min-h-0">
+                                <h3 class="font-orbitron text-sm mb-1 text-[var(--accent-red)] border-b border-[var(--border-color)] pb-0.5">Journal d'Assaut</h3>
+                                <div id="night-assault-log" class="h-full max-h-28 overflow-y-auto">
+                                     <p class="text-gray-500 italic text-xs">En attente...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="lg:w-2/3 panel">
+                            <div class="sub-nav-bar">
+                                <button class="sub-nav-button active" data-subtab="engineering-subtab" data-parentsection="base-section">Ingénierie</button>
+                                <button class="sub-nav-button" data-subtab="research-subtab" data-parentsection="base-section">Recherche</button>
+                            </div>
+                            <div id="engineering-subtab" class="sub-content active">
+                                <h3 class="font-orbitron text-md mb-2 text-[var(--accent-blue)] border-b border-[var(--border-color)] pb-1">Ingénierie Structurelle & Défensive</h3>
+                                <div id="buildings-section" class="flex-grow overflow-y-auto pr-1">
+                                    <p class="text-xs text-gray-400 italic">Chargement ingénierie...</p>
+                                </div>
+                            </div>
+                            <div id="research-subtab" class="sub-content">
+                                <h3 class="font-orbitron text-md mb-2 text-[var(--accent-blue)] border-b border-[var(--border-color)] pb-1">Arbre Technologique</h3>
+                                <div id="research-content" class="flex-grow overflow-y-auto pr-1">
+                                    <p class="text-xs text-gray-400 italic">Chargement recherche...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Nexus-7 -->
+                <div id="nexus-section" class="content-section">
+                     <div class="panel">
+                        <div class="sub-nav-bar">
+                            <button class="sub-nav-button active" data-subtab="nanobot-config-subtab" data-parentsection="nexus-section">Configuration</button>
+                            <button class="sub-nav-button" data-subtab="inventory-subtab" data-parentsection="nexus-section">Inventaire</button>
+                        </div>
+                        <div id="nanobot-config-subtab" class="sub-content active">
+                            <div id="nanobot-content" class="flex-grow overflow-y-auto p-1 space-y-4">
+                                <h2 class="font-orbitron text-lg mb-3 text-[var(--accent-blue)] border-b-2 border-[var(--accent-blue)] pb-1 flex items-center">
+                                    <i class="ti ti-settings-cog mr-2"></i>Configuration Nexus-7
+                                </h2>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div class="md:col-span-1 space-y-4">
+                                        <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md">
+                                            <h3 class="font-orbitron text-md mb-2 text-sky-300 flex items-center">
+                                                <i class="ti ti-eye mr-2"></i>Visualisation
+                                            </h3>
+                                            <div id="nanobot-visual-container" class="nanobot-display mx-auto mb-2">
+                                                <div id="nanobot-body" class="nanobot-core"></div>
+                                            </div>
+                                            <div id="equipped-items-display-brief" class="mt-1 text-xs text-center text-gray-400">Aucun équipement.</div>
+                                        </div>
+                                        <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md">
+                                            <h3 class="font-orbitron text-md mb-2 text-lime-300 flex items-center">
+                                                <i class="ti ti-components mr-2"></i>Modules Actifs
+                                            </h3>
+                                            <div id="equipped-modules-display" class="space-y-2 max-h-60 md:max-h-none md:flex-grow overflow-y-auto text-xs pr-1">
+                                                <p class="text-xs text-gray-500 italic">Chargement modules...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="md:col-span-1 space-y-4">
+                                        <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md">
+                                            <h3 class="font-orbitron text-md mb-2 text-amber-300 flex items-center">
+                                                <i class="ti ti-chart-bar mr-2"></i>Statistiques
+                                            </h3>
+                                            <ul class="space-y-1 text-sm">
+                                                <li class="flex justify-between items-center"><span><i class="ti ti-heart text-red-400 mr-1.5"></i>Santé:</span> <span id="nanobot-health" class="font-semibold text-gray-200">0</span></li>
+                                                <li class="flex justify-between items-center"><span><i class="ti ti-sword text-orange-400 mr-1.5"></i>Attaque:</span> <span id="nanobot-attack" class="font-semibold text-gray-200">0</span></li>
+                                                <li class="flex justify-between items-center"><span><i class="ti ti-shield text-blue-400 mr-1.5"></i>Défense:</span> <span id="nanobot-defense" class="font-semibold text-gray-200">0</span></li>
+                                                <li class="flex justify-between items-center"><span><i class="ti ti-brand-speedtest text-green-400 mr-1.5"></i>Vitesse:</span> <span id="nanobot-speed" class="font-semibold text-gray-200">0</span></li>
+                                            </ul>
+                                        </div>
+                                        <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md">
+                                            <h3 class="font-orbitron text-md mb-2 text-teal-300 flex items-center">
+                                                <i class="ti ti-tool mr-2"></i>Actions
+                                            </h3>
+                                            <div class="space-y-2">
+                                                <button id="toggle-nanobot-defend-base-btn" class="btn btn-secondary w-full btn-sm flex items-center justify-center"><i class="ti ti-home-shield mr-2"></i>Déf. Noyau</button>
+                                                <button id="simulate-combat-btn" class="btn btn-danger w-full btn-sm flex items-center justify-center"><i class="ti ti-flame mr-2"></i>Test Combat</button>
+                                            </div>
+                                        </div>
+                                        <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md h-32 flex flex-col">
+                                            <h3 class="font-orbitron text-sm mb-1 text-gray-400 flex items-center">
+                                                <i class="ti ti-file-text mr-2"></i>Log Combat
+                                            </h3>
+                                            <div id="combat-log-summary" class="flex-grow bg-black bg-opacity-20 p-2 rounded h-full overflow-y-auto text-xs">
+                                                 <h4 class="font-semibold text-gray-300 text-xs">Log Combat:</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="md:col-span-1 space-y-4">
+                                        <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md h-full flex flex-col">
+                                            <h3 class="font-orbitron text-md mb-2 text-fuchsia-300 flex items-center">
+                                                <i class="ti ti-armchair mr-2"></i>Équipement
+                                            </h3>
+                                            <div id="nanobot-equipment-slots" class="space-y-1.5 text-xs pr-1 flex-grow overflow-y-auto">
+                                                 <p class="text-xs text-gray-500 italic">Chargement équipement...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="inventory-subtab" class="sub-content">
+                            <h3 class="font-orbitron text-md mb-2 text-[var(--accent-blue)] border-b border-[var(--border-color)] pb-1">Inventaire des Objets</h3>
+                            <div id="inventory-list" class="list-item-container flex-grow overflow-y-auto pr-1">
+                                <p class="text-xs text-gray-400 italic">Inventaire vide.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Monde -->
+                <div id="world-section" class="content-section">
+                     <div class="panel">
+                        <div class="sub-nav-bar">
+                            <button class="sub-nav-button active" data-subtab="exploration-subtab" data-parentsection="world-section">Exploration</button>
+                            <button class="sub-nav-button" data-subtab="quests-subtab" data-parentsection="world-section">Quêtes</button>
+                        </div>
+                        <div id="exploration-subtab" class="sub-content active">
+                            <div id="exploration-content">
+                                <div id="exploration-layout" class="flex flex-col lg:flex-row gap-3">
+                                    <div id="exploration-map-container" class="lg:w-[60%] panel p-1 overflow-hidden">
+                                        <div id="exploration-actions-bar" class="mb-1 flex justify-between items-center">
+                                            <h3 id="exploration-title" class="font-orbitron text-sm text-[var(--accent-blue)]">Carte</h3>
+                                            <button id="scan-map-button" class="btn btn-info btn-xs">Scanner</button>
+                                        </div>
+                                        <div id="map-scroll-container" class="flex-grow relative">
+                                            <div id="map-grid"></div>
+                                            <button id="center-map-btn" class="btn btn-secondary btn-xs p-1">
+                                                <i class="ti ti-focus-centered" style="font-size: 1rem;"></i>
+                                            </button>
+                                        </div>
+                                        <div id="map-info" class="mt-1 text-center text-xs">Pos: <span id="nanobot-map-pos">N/A</span> | <span id="tile-info-display">...</span></div>
+                                    </div>
+                                    <div id="exploration-details-panels" class="lg:w-[40%] flex flex-col gap-2">
+                                        <div class="panel p-1.5 flex-shrink-0">
+                                            <h3 class="font-orbitron text-xs text-[var(--accent-blue)] mb-0.5">Zones</h3>
+                                            <div id="zone-list" class="max-h-20 overflow-y-auto text-xs">
+                                                 <p class="text-xs text-gray-400 italic">Chargement zones...</p>
+                                            </div>
+                                        </div>
+                                        <div class="panel p-1.5 flex-grow min-h-0">
+                                            <h3 class="font-orbitron text-xs text-[var(--accent-yellow)] mb-0.5">Journal Exploration</h3>
+                                            <div id="exploration-log" class="h-full overflow-y-auto text-xs">
+                                                 <p class="text-xs text-gray-400 italic">En attente...</p>
+                                            </div>
+                                        </div>
+                                        <div class="panel p-1.5 flex-grow min-h-0">
+                                            <h3 class="font-orbitron text-xs text-[var(--accent-blue)] mb-0.5">Détails Case</h3>
+                                            <div id="tile-interaction-panel" class="h-full overflow-y-auto text-xs">
+                                                <div id="tile-interaction-details"><p class="text-xs text-gray-400 italic">Cliquez une case.</p></div>
+                                                <div id="tile-interaction-actions" class="mt-1"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="quests-subtab" class="sub-content">
+                             <div id="quests-content" class="flex-grow overflow-y-auto">
+                                <h2 class="font-orbitron text-md mb-2 text-blue-300 border-b border-[var(--border-color)] pb-1">Journal des Quêtes</h2>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div class="panel p-2">
+                                        <h3 class="font-orbitron text-sm text-yellow-300 mb-1">Actives & Disponibles</h3>
+                                        <div id="active-quests-list" class="space-y-1 max-h-56 overflow-y-auto text-xs pr-1">
+                                             <p class="text-xs text-gray-400 italic">Aucune quête active.</p>
+                                        </div>
+                                    </div>
+                                    <div class="panel p-2">
+                                        <h3 class="font-orbitron text-sm text-gray-500 mb-1">Terminées</h3>
+                                        <div id="completed-quests-list" class="space-y-1 max-h-56 overflow-y-auto text-xs pr-1">
+                                             <p class="text-xs text-gray-400 italic">Aucune quête terminée.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Marché -->
+                <div id="shop-section" class="content-section">
+                    <div id="shop-content" class="panel">
+                        <h2 class="font-orbitron text-md mb-2 text-[var(--accent-blue)] border-b border-[var(--border-color)] pb-1">Marché de Ravitaillement X-9</h2>
+                        <p class="text-xs text-gray-400 mb-2">Stocks limités.</p>
+                        <div id="shop-items-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 flex-grow overflow-y-auto pr-1">
+                            <p class="text-xs text-gray-400 italic">Marché vide.</p>
+                        </div>
+                    </div>
+                </div>
+
+                 <div class="panel mt-2">
+                    <h3 class="font-orbitron text-sm text-gray-400">Journal Principal</h3>
+                    <div id="event-log" class="h-16 overflow-y-auto text-xs">
+                         <p class="text-xs text-gray-400 italic">En attente d'événements...</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modales -->
+    <div id="modal" class="modal hidden"><div class="modal-content"><h3 id="modal-title" class="font-orbitron text-lg mb-2">Titre</h3><p id="modal-message" class="mb-3 text-sm">Message.</p><div class="flex justify-end space-x-2"><button id="modal-cancel" class="btn btn-secondary btn-sm">Annuler</button><button id="modal-confirm" class="btn btn-primary btn-sm">OK</button></div></div></div>
+    <div id="combat-modal" class="modal hidden"><div id="combat-modal-content" class="modal-content"><h2 class="font-orbitron text-xl mb-1 text-center text-[var(--accent-red)]">Affrontement!</h2><div class="combat-arena"><div id="combat-nanobot" class="combatant"><div class="combatant-name">Nexus-7</div><div class="combatant-sprite" id="combat-nanobot-sprite"></div><div class="health-bar-container"><div id="combat-nanobot-healthbar" class="health-bar"></div></div></div><div id="combat-enemy" class="combatant"><div class="combatant-name" id="combat-enemy-name">Ennemi</div><div class="combatant-sprite" id="combat-enemy-sprite"></div><div class="health-bar-container"><div id="combat-enemy-healthbar" class="health-bar"></div></div></div></div><details id="combat-log-details-container" class="mt-0.5 mb-1 cursor-pointer bg-[var(--bg-primary)] border border-[var(--border-color)] rounded p-1 text-xs"><summary class="font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] select-none">Afficher/Masquer Journal de Combat</summary><div id="combat-log-visual" class="mt-1 max-h-24 overflow-y-auto pr-1"><p class="text-gray-500 italic">Début du combat...</p></div></details><div class="text-center mt-1 flex justify-center gap-2"><button id="close-combat-modal-btn" class="btn btn-secondary btn-xs">Fermer</button><button id="toggle-speed-btn" class="btn btn-info btn-xs">Vitesse x3</button></div></div></div>
+    <div id="combat-end-modal" class="modal hidden"><div class="modal-content text-center"><h3 id="combat-end-title" class="font-orbitron text-md mb-1">Victoire!</h3><p id="combat-end-rewards" class="mb-1 text-xs"></p><h4 class="text-blue-300 mt-1 mb-0.5 font-orbitron text-xs">XP & Niveau</h4><p id="xp-gain" class="text-xs mb-0.5"></p><div class="w-full bg-gray-700 rounded-full h-1.5 mb-1"><div id="xp-bar" class="bg-blue-500 h-1.5 rounded-full" style="width: 0%"></div></div><h4 class="text-yellow-300 mt-1 mb-0.5 font-orbitron text-xs">Butin</h4><ul id="loot-list" class="text-xs text-gray-300 list-disc list-inside mb-1"></ul><button id="close-end-modal" class="btn btn-primary btn-xs mt-1">Fermer</button></div></div>
+    <div id="night-assault-video-container" class="modal hidden"><div class="relative"><video id="night-assault-video" preload="auto" playsinline><source src="videos/night_assault_alert.mp4" type="video/mp4">Votre navigateur ne supporte pas la vidéo.</video><button id="close-night-assault-video-btn" class="btn btn-danger btn-xs">X</button></div></div>
+    <div id="tutorial-modal" class="modal hidden"> <!-- Contenu rempli par tutorialController.js --> </div>
+
+    <script>
+        // Script de navigation des onglets (identique à la version précédente)
+        document.addEventListener('DOMContentLoaded', () => {
+            const mainNavButtons = document.querySelectorAll('#main-navigation .nav-button');
+            const contentSections = document.querySelectorAll('#main-content-area > .content-section');
+            let initialUpdateDone = false;
+
+            function switchMainTab(targetSectionId, forceUpdate = false) {
+                let changed = false;
+                mainNavButtons.forEach(btn => {
+                    if (btn.dataset.section === targetSectionId && !btn.classList.contains('active')) changed = true;
+                    btn.classList.toggle('active', btn.dataset.section === targetSectionId);
+                });
+                contentSections.forEach(section => {
+                    const isActive = section.id === targetSectionId;
+                    if (isActive && section.style.display !== 'flex') changed = true; 
+                    section.style.display = isActive ? 'flex' : 'none'; 
+                    section.classList.toggle('active', isActive);
+                });
+
+                if (changed || forceUpdate) {
+                    const activeMainSection = document.getElementById(targetSectionId);
+                    const activeSubNavButton = activeMainSection?.querySelector('.sub-nav-button.active');
+                    const firstSubNavButton = activeMainSection?.querySelector('.sub-nav-button');
+                    const subButtonToActivate = activeSubNavButton || firstSubNavButton;
+
+                    if(subButtonToActivate) {
+                        switchSubTab(subButtonToActivate.dataset.subtab, subButtonToActivate.dataset.parentsection, true);
+                    } else {
+                         triggerUIUpdateForSection(targetSectionId);
+                    }
+                    if (targetSectionId === 'world-section' && typeof explorationUI !== 'undefined' && typeof explorationUI.centerMapOnPlayer === 'function') {
+                        const activeWorldSubTab = activeMainSection?.querySelector('.sub-nav-button.active');
+                        if (activeWorldSubTab && activeWorldSubTab.dataset.subtab === 'exploration-subtab') {
+                             explorationUI.isFirstExplorationViewUpdate = true; 
+                             explorationUI.updateFullExplorationView(); 
+                        }
+                    }
+                }
+            }
+            
+            function switchSubTab(targetSubTabId, parentSectionId, forceUpdate = false) {
+                const parentSection = document.getElementById(parentSectionId);
+                if (!parentSection) return;
+                let changed = false;
+
+                parentSection.querySelectorAll('.sub-nav-button').forEach(btn => {
+                    if (btn.dataset.subtab === targetSubTabId && !btn.classList.contains('active')) changed = true;
+                    btn.classList.toggle('active', btn.dataset.subtab === targetSubTabId);
+                });
+                parentSection.querySelectorAll('.sub-content').forEach(subContent => {
+                    const isActive = subContent.id === targetSubTabId;
+                     if (isActive && subContent.style.display !== 'flex') changed = true; 
+                    subContent.style.display = isActive ? 'flex' : 'none'; 
+                    subContent.classList.toggle('active', isActive);
+                });
+                 if (changed || forceUpdate) {
+                    triggerUIUpdateForSubTab(targetSubTabId, parentSectionId);
+                 }
+                if (parentSectionId === 'world-section' && targetSubTabId === 'exploration-subtab' && typeof explorationUI !== 'undefined' && typeof explorationUI.centerMapOnPlayer === 'function') {
+                     explorationUI.isFirstExplorationViewUpdate = true; 
+                     explorationUI.updateFullExplorationView(); 
+                }
+            }
+
+            mainNavButtons.forEach(button => {
+                button.addEventListener('click', () => switchMainTab(button.dataset.section));
+            });
+
+            document.querySelectorAll('.sub-nav-button').forEach(button => {
+                button.addEventListener('click', () => switchSubTab(button.dataset.subtab, button.dataset.parentsection));
+            });
+            
+            function triggerUIUpdateForSection(sectionId) {
+                if (typeof gameState === 'undefined' || gameState === null) return;
+                if (sectionId === 'base-section' && typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateBaseStatusDisplay === 'function') {
+                    uiUpdates.updateBaseStatusDisplay();
+                } else if (sectionId === 'shop-section' && typeof updateShopDisplay === 'function'){
+                    updateShopDisplay();
+                }
+            }
+
+            function triggerUIUpdateForSubTab(subTabId, parentSectionId) {
+                if (typeof gameState === 'undefined' || gameState === null) { return; }
+                if (parentSectionId === 'base-section') {
+                    if (subTabId === 'engineering-subtab' && typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateBuildingDisplay === 'function') uiUpdates.updateBuildingDisplay();
+                    else if (subTabId === 'research-subtab' && typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateResearchDisplay === 'function') uiUpdates.updateResearchDisplay();
+                } else if (parentSectionId === 'nexus-section') {
+                    if (subTabId === 'nanobot-config-subtab' && typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateNanobotDisplay === 'function') uiUpdates.updateNanobotDisplay();
+                    else if (subTabId === 'inventory-subtab' && typeof updateInventoryDisplay === 'function') updateInventoryDisplay();
+                } else if (parentSectionId === 'world-section') {
+                    if (subTabId === 'exploration-subtab' && typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function') explorationUI.updateFullExplorationView();
+                    else if (subTabId === 'quests-subtab' && typeof questUI !== 'undefined' && typeof questUI.updateQuestDisplay === 'function') questUI.updateQuestDisplay();
+                }
+            }
+
+            if (mainNavButtons.length > 0) {
+                const firstMainButton = mainNavButtons[0]; const targetSectionId = firstMainButton.dataset.section;
+                mainNavButtons.forEach(btn => btn.classList.toggle('active', btn === firstMainButton));
+                contentSections.forEach(section => { const isActive = section.id === targetSectionId; section.style.display = isActive ? 'flex' : 'none'; section.classList.toggle('active', isActive);}); 
+                const activeMainSection = document.getElementById(targetSectionId);
+                const firstSubNavButton = activeMainSection?.querySelector('.sub-nav-button');
+                if(firstSubNavButton) {
+                    const targetSubTabId = firstSubNavButton.dataset.subtab;
+                    activeMainSection.querySelectorAll('.sub-nav-button').forEach(btn => btn.classList.toggle('active', btn === firstSubNavButton));
+                    activeMainSection.querySelectorAll('.sub-content').forEach(subContent => { const isActive = subContent.id === targetSubTabId; subContent.style.display = isActive ? 'flex' : 'none'; subContent.classList.toggle('active', isActive);}); 
+                }
+            }
+
+            window.forceInitialUIUpdate = function() {
+                if (initialUpdateDone) return;
+                const activeButton = document.querySelector('#main-navigation .nav-button.active');
+                if (activeButton) {
+                    const activeSectionId = activeButton.dataset.section;
+                    switchMainTab(activeSectionId, true); 
+                }
+                initialUpdateDone = true;
+            }
+        });
+    </script>
+
+    <script src="js/config.js"></script>
+    <script src="js/gameState.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/mapManager.js"></script>
+    <script src="js/explorationController.js"></script>
+    <script src="js/explorationUI.js"></script>
+    <script src="js/tutorialController.js"></script>
+    <script src="js/questController.js"></script>
+    <script src="js/questUI.js"></script>
+    <script src="js/inventoryShop.js"></script>
+    <script src="js/combat.js"></script>
+    <script src="js/gameplayLogic.js"></script>
+    <script src="js/uiUpdates.js"></script>
+    <script src="js/main.js" defer></script>
+
+</body>
+</html>

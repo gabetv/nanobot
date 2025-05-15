@@ -7,21 +7,21 @@ var explorationController = {
         console.log(`explorationController: handleTileClick sur (${x},${y})`);
 
         // --- DEBUT BLOC DE DEBUG ---
-        console.log("DEBUG handleTileClick: gameState:", gameState ? "défini" : "NON DÉFINI");
-        if (gameState) {
-            console.log("DEBUG handleTileClick: gameState.map:", gameState.map ? "défini" : "NON DÉFINI");
-        }
-        console.log("DEBUG handleTileClick: ZONE_DATA:", typeof ZONE_DATA);
-        console.log("DEBUG handleTileClick: TILE_TYPES:", typeof TILE_TYPES);
-        console.log("DEBUG handleTileClick: EXPLORATION_COST_MOBILITY:", typeof EXPLORATION_COST_MOBILITY);
-        console.log("DEBUG handleTileClick: mapManager:", typeof mapManager);
+        // console.log("DEBUG handleTileClick: gameState:", gameState ? "défini" : "NON DÉFINI");
+        // if (gameState) {
+        //     console.log("DEBUG handleTileClick: gameState.map:", gameState.map ? "défini" : "NON DÉFINI");
+        // }
+        // console.log("DEBUG handleTileClick: ZONE_DATA:", typeof ZONE_DATA);
+        // console.log("DEBUG handleTileClick: TILE_TYPES:", typeof TILE_TYPES);
+        // console.log("DEBUG handleTileClick: EXPLORATION_COST_MOBILITY:", typeof EXPLORATION_COST_MOBILITY);
+        // console.log("DEBUG handleTileClick: mapManager:", typeof mapManager);
         // --- FIN BLOC DE DEBUG ---
 
         if (!gameState || !gameState.map || typeof ZONE_DATA === 'undefined' || typeof TILE_TYPES === 'undefined' || 
             typeof EXPLORATION_COST_MOBILITY === 'undefined' || 
             typeof mapManager === 'undefined') {
             console.error("explorationController.handleTileClick: Dépendances gameState, config ou mapManager manquantes.");
-            return; // Arrêter l'exécution si une dépendance manque
+            return; 
         }
         
         const currentZone = ZONE_DATA[gameState.currentZoneId];
@@ -45,7 +45,6 @@ var explorationController = {
 
         if (isCurrentPos) {
             if(typeof addLogEntry === 'function') addLogEntry(`Examen de la case actuelle (${x},${y}).`, "map-event", explorationLogEl, gameState.explorationLog);
-            // Mettre à jour le panneau d'interaction même pour la case actuelle
              if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateTileInteractionPanel === 'function') {
                 explorationUI.updateTileInteractionPanel(x, y);
             }
@@ -61,22 +60,18 @@ var explorationController = {
                 if(typeof addLogEntry === 'function') addLogEntry(`Déplacement de (${oldPos.x},${oldPos.y}) vers (${x}, ${y}). Coût: ${EXPLORATION_COST_MOBILITY} mobilité.`, "map-event", explorationLogEl, gameState.explorationLog);
 
                 this.revealTileAndSurroundings(x, y, currentZone); 
-                this.processTileContentOnArrival(x, y); // Ceci mettra aussi à jour le panneau d'interaction         
+                this.processTileContentOnArrival(x, y);        
             }
         } else {
             if(typeof addLogEntry === 'function') addLogEntry("Cette case est trop éloignée pour un déplacement direct.", "warning", explorationLogEl, gameState.explorationLog);
         }
 
-        // Mise à jour de la vue complète de l'exploration après toute action de clic (même si c'est juste une sélection)
-        // updateTileInteractionPanel est déjà appelé dans processTileContentOnArrival ou pour la case actuelle
         if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function') {
             explorationUI.updateFullExplorationView(); 
         } else if (typeof updateExplorationDisplay === 'function') { 
             updateExplorationDisplay(); 
         }
     },
-
-    // ... (le reste du fichier explorationController.js reste inchangé) ...
 
     revealTileAndSurroundings: function(x, y, currentZone) {
         if (!currentZone || !currentZone.mapSize) { console.warn("revealTileAndSurroundings: currentZone ou currentZone.mapSize non défini."); return; }
@@ -196,17 +191,124 @@ var explorationController = {
 
     attemptAttackEnemyBase: async function(x,y) {
         console.log(`explorationController: attemptAttackEnemyBase sur (${x},${y})`);
-        if (typeof gameState === 'undefined' || !gameState.map || !mapManager.getTile(x,y) || typeof explorationEnemyData === 'undefined' || typeof itemsData === 'undefined' || typeof TILE_TYPES === 'undefined' || typeof simulateCombat !== 'function' || typeof addToInventory !== 'function' || typeof gainXP !== 'function') { console.error("attemptAttackEnemyBase: Dépendances manquantes."); if(typeof addLogEntry === 'function') addLogEntry("Erreur système lors de la tentative d'attaque.", "error", explorationLogEl, gameState.explorationLog); return;}
-        const tile = mapManager.getTile(x,y); if (!tile || !tile.content || tile.content.type !== 'enemy_base' || tile.content.currentHealth <= 0) { if(typeof addLogEntry === 'function') addLogEntry("Impossible d'attaquer: base ennemie non valide ou déjà détruite.", "warning", explorationLogEl, gameState.explorationLog); if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateTileInteractionPanel === 'function') explorationUI.updateTileInteractionPanel(x,y); return;}
-        const dxPos = Math.abs(x - gameState.map.nanobotPos.x); const dyPos = Math.abs(y - gameState.map.nanobotPos.y); if (dxPos > 1 || dyPos > 1) { if(typeof addLogEntry === 'function') addLogEntry("Le Nexus-7 doit être sur la base ennemie ou une case adjacente pour attaquer.", "warning", explorationLogEl, gameState.explorationLog); return;}
-        const baseContent = tile.content; const baseDetails = baseContent.details; if(typeof addLogEntry === 'function') addLogEntry(baseDetails.onAttackText || `Attaque de ${baseDetails.name}...`, "map-event", explorationLogEl, gameState.explorationLog);
-        if (baseDetails.defenders && baseDetails.defenders.length > 0) { if(typeof addLogEntry === 'function') addLogEntry("Des défenseurs émergent !", "warning", explorationLogEl, gameState.explorationLog); if (typeof sleep === 'function') await sleep(1000); let allDefendersDefeated = true;
-            for (const defenderGroup of baseDetails.defenders) { const enemyData = explorationEnemyData[defenderGroup.id]; if (!enemyData) { console.warn(`Données de défenseur inconnues pour ${defenderGroup.id}`); continue; } for (let i = 0; i < defenderGroup.count; i++) { if(typeof addLogEntry === 'function') addLogEntry(`Affrontement avec un défenseur: ${enemyData.name} (${i + 1}/${defenderGroup.count})`, "combat", explorationLogEl, gameState.explorationLog); const enemyInstance = JSON.parse(JSON.stringify(enemyData)); enemyInstance.currentHealth = enemyInstance.health; const combatResult = await simulateCombat(enemyInstance); if (combatResult.nanobotDefeated || gameState.nanobotStats.currentHealth <= 0) { if(typeof addLogEntry === 'function') addLogEntry("Nexus-7 vaincu. L'assaut de la base ennemie a échoué.", "error", explorationLogEl, gameState.explorationLog); if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function') explorationUI.updateFullExplorationView(); allDefendersDefeated = false; return; } if (!combatResult.enemyDefeated) console.warn(`Défenseur ${enemyData.name} a survécu au combat.`); if (typeof sleep === 'function') await sleep(500); }}
-            if(allDefendersDefeated){ if(typeof addLogEntry === 'function') addLogEntry("Tous les défenseurs de la base ont été neutralisés !", "success", explorationLogEl, gameState.explorationLog);} else return; 
-        } else if(typeof addLogEntry === 'function') addLogEntry("La base semble non défendue de l'intérieur...", "info", explorationLogEl, gameState.explorationLog);
-        const damageToStructure = gameState.nanobotStats.attack * 2; baseContent.currentHealth -= damageToStructure; if(typeof addLogEntry === 'function') addLogEntry(`Nexus-7 inflige ${damageToStructure} dégâts à la structure de ${baseDetails.name}. PV restants: ${Math.max(0, baseContent.currentHealth)}/${baseDetails.health}`, "map-event", explorationLogEl, gameState.explorationLog);
-        if (baseContent.currentHealth <= 0) { baseContent.currentHealth = 0; if(typeof addLogEntry === 'function') addLogEntry(baseDetails.onDestroyedText || `${baseDetails.name} détruite !`, "success", explorationLogEl, gameState.explorationLog); if (baseDetails.loot && baseDetails.loot.length > 0) { if(typeof addLogEntry === 'function') addLogEntry("Butin récupéré de la base:", "success", explorationLogEl, gameState.explorationLog); baseDetails.loot.forEach(itemId => { if (itemsData[itemId] && itemsData[itemId].onUse && (itemsData[itemId].rarity === "consumable_reward" || itemsData[itemId].consumable)) itemsData[itemId].onUse(gameState); else addToInventory(itemId); });} tile.actualType = TILE_TYPES.RUINS; tile.content = {type: 'poi', poiType: TILE_TYPES.RUINS, isInteracted: true, originalBaseId: baseContent.id }; gainXP(baseDetails.xpReward || Math.floor(baseDetails.health / 2 + (baseDetails.defenders ? baseDetails.defenders.reduce((sum, d) => sum + d.count * 10, 0) : 0))); if (typeof questController !== 'undefined' && typeof questController.checkQuestProgress === 'function') questController.checkQuestProgress({ type: "destroy_enemy_base", baseId: baseContent.id, zoneId: gameState.currentZoneId });}
-        if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function') explorationUI.updateFullExplorationView();
+        if (typeof gameState === 'undefined' || !gameState.map || !mapManager.getTile(x,y) || typeof explorationEnemyData === 'undefined' || typeof itemsData === 'undefined' || typeof TILE_TYPES === 'undefined' || typeof simulateCombat !== 'function' || typeof addToInventory !== 'function' || typeof gainXP !== 'function') {
+            console.error("attemptAttackEnemyBase: Dépendances manquantes.");
+            if(typeof addLogEntry === 'function') addLogEntry("Erreur système lors de la tentative d'attaque.", "error", explorationLogEl, gameState.explorationLog);
+            return;
+        }
+
+        const tile = mapManager.getTile(x,y);
+        if (!tile || !tile.content || tile.content.type !== 'enemy_base') {
+            if(typeof addLogEntry === 'function') addLogEntry("Impossible d'attaquer: ceci n'est pas une structure ennemie active.", "warning", explorationLogEl, gameState.explorationLog);
+            if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateTileInteractionPanel === 'function') explorationUI.updateTileInteractionPanel(x,y);
+            return;
+        }
+        if (tile.content.currentHealth <= 0) {
+            if(typeof addLogEntry === 'function') addLogEntry("Impossible d'attaquer: base ennemie déjà détruite.", "warning", explorationLogEl, gameState.explorationLog);
+            if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateTileInteractionPanel === 'function') explorationUI.updateTileInteractionPanel(x,y);
+            return;
+        }
+
+        const dxPos = Math.abs(x - gameState.map.nanobotPos.x);
+        const dyPos = Math.abs(y - gameState.map.nanobotPos.y);
+        if (dxPos > 1 || dyPos > 1) {
+            if(typeof addLogEntry === 'function') addLogEntry("Le Nexus-7 doit être sur la base ennemie ou une case adjacente pour attaquer.", "warning", explorationLogEl, gameState.explorationLog);
+            return;
+        }
+
+        const baseContent = tile.content;
+        const baseDetails = baseContent.details;
+        console.log("Détails de la base à attaquer:", JSON.parse(JSON.stringify(baseDetails)));
+        console.log("Défenseurs initiaux:", JSON.parse(JSON.stringify(baseDetails.defenders)));
+
+        if(typeof addLogEntry === 'function') addLogEntry(baseDetails.onAttackText || `Attaque de ${baseDetails.name}...`, "map-event", explorationLogEl, gameState.explorationLog);
+        
+        if (baseDetails.defenders && baseDetails.defenders.length > 0) {
+            if(typeof addLogEntry === 'function') addLogEntry("Des défenseurs émergent !", "warning", explorationLogEl, gameState.explorationLog);
+            if (typeof sleep === 'function') await sleep(500); 
+
+            let remainingDefenderGroups = JSON.parse(JSON.stringify(baseDetails.defenders));
+            let currentGroupIndex = 0;
+
+            while(currentGroupIndex < remainingDefenderGroups.length) {
+                const defenderGroup = remainingDefenderGroups[currentGroupIndex];
+                const enemyData = explorationEnemyData[defenderGroup.id];
+                if (!enemyData) {
+                    console.warn(`Données de défenseur inconnues pour ${defenderGroup.id}, groupe ignoré.`);
+                    currentGroupIndex++;
+                    continue;
+                }
+                console.log(`Engagement du groupe de défenseurs: ${defenderGroup.count} x ${enemyData.name}`);
+
+                for (let i = 0; i < defenderGroup.count; i++) {
+                    if (gameState.nanobotStats.currentHealth <= 0) {
+                        if(typeof addLogEntry === 'function') addLogEntry("Nexus-7 hors combat. L'assaut de la base ennemie a échoué.", "error", explorationLogEl, gameState.explorationLog);
+                        if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function') explorationUI.updateFullExplorationView();
+                        return; 
+                    }
+                    if(typeof addLogEntry === 'function') addLogEntry(`Affrontement avec un défenseur: ${enemyData.name} (${i + 1}/${defenderGroup.count}) du groupe ${currentGroupIndex + 1}`, "combat", explorationLogEl, gameState.explorationLog);
+                    const enemyInstance = JSON.parse(JSON.stringify(enemyData)); 
+                    enemyInstance.currentHealth = enemyInstance.health; 
+                    
+                    console.log(`Lancement du combat avec ${enemyInstance.name}. Flag isCombatInProgress avant: ${isCombatInProgress}`);
+                    const combatResult = await simulateCombat(enemyInstance); 
+                    console.log(`Combat avec ${enemyInstance.name} terminé. Résultat:`, combatResult, `Flag isCombatInProgress après: ${isCombatInProgress}`);
+
+                    if (combatResult.outcome === "defeat" || gameState.nanobotStats.currentHealth <= 0) { 
+                        if(typeof addLogEntry === 'function') addLogEntry("Nexus-7 vaincu. L'assaut de la base ennemie a échoué.", "error", explorationLogEl, gameState.explorationLog);
+                        if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function') explorationUI.updateFullExplorationView();
+                        return; 
+                    }
+                    if (!combatResult.enemyDefeated) {
+                        console.warn(`Défenseur ${enemyData.name} a survécu au combat (résultat: ${combatResult.outcome}). L'assaut pourrait être bloqué.`);
+                        if(typeof addLogEntry === 'function') addLogEntry(`Le défenseur ${enemyData.name} est toujours actif. L'assaut est bloqué.`, "error", explorationLogEl, gameState.explorationLog);
+                         if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function') explorationUI.updateFullExplorationView();
+                        return; 
+                    }
+                    if (typeof sleep === 'function') await sleep(300); 
+                }
+                currentGroupIndex++; 
+            }
+            if(typeof addLogEntry === 'function') addLogEntry("Tous les défenseurs de la base ont été neutralisés !", "success", explorationLogEl, gameState.explorationLog);
+        } else {
+            if(typeof addLogEntry === 'function') addLogEntry("La base semble non défendue de l'intérieur...", "info", explorationLogEl, gameState.explorationLog);
+        }
+
+        if (gameState.nanobotStats.currentHealth <= 0) {
+            console.log("Nanobot vaincu après la phase des défenseurs, avant d'attaquer la structure.");
+            return; 
+        }
+
+        console.log("Attaque de la structure de la base...");
+        const damageToStructure = gameState.nanobotStats.attack * 2; 
+        baseContent.currentHealth -= damageToStructure;
+        if(typeof addLogEntry === 'function') addLogEntry(`Nexus-7 inflige ${damageToStructure} dégâts à la structure de ${baseDetails.name}. PV restants: ${Math.max(0, baseContent.currentHealth)}/${baseDetails.health}`, "map-event", explorationLogEl, gameState.explorationLog);
+        
+        if (baseContent.currentHealth <= 0) {
+            baseContent.currentHealth = 0;
+            if(typeof addLogEntry === 'function') addLogEntry(baseDetails.onDestroyedText || `${baseDetails.name} détruite !`, "success", explorationLogEl, gameState.explorationLog);
+            if (baseDetails.loot && baseDetails.loot.length > 0) {
+                if(typeof addLogEntry === 'function') addLogEntry("Butin récupéré de la base:", "success", explorationLogEl, gameState.explorationLog);
+                baseDetails.loot.forEach(itemId => {
+                    if (itemsData[itemId] && itemsData[itemId].onUse && (itemsData[itemId].rarity === "consumable_reward" || itemsData[itemId].consumable)) {
+                        itemsData[itemId].onUse(gameState);
+                    } else {
+                        addToInventory(itemId);
+                    }
+                });
+            }
+            tile.actualType = TILE_TYPES.RUINS;
+            tile.content = {type: 'poi', poiType: TILE_TYPES.RUINS, isInteracted: true, originalBaseId: baseContent.id }; 
+            
+            gainXP(baseDetails.xpReward || Math.floor(baseDetails.health / 2 + (baseDetails.defenders ? baseDetails.defenders.reduce((sum, d) => sum + d.count * 10, 0) : 0)));
+            
+            if (typeof questController !== 'undefined' && typeof questController.checkQuestProgress === 'function') {
+                questController.checkQuestProgress({ type: "destroy_enemy_base", baseId: baseContent.id, zoneId: gameState.currentZoneId });
+            }
+        }
+        if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function') {
+            explorationUI.updateFullExplorationView();
+        }
     }
 };
 
