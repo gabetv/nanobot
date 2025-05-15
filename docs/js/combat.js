@@ -52,28 +52,64 @@ function setupCombatVisuals(nanobot, enemy) {
 
     combatNanobotHealthbar.style.width = '100%';
     combatNanobotHealthbar.classList.remove('low', 'medium');
+    
     combatNanobotSprite.innerHTML = ''; 
 
+    // 1. Afficher l'image de base du Nanobot
+    const nanobotBaseImagePath = 'images/nanobot_base_body.png';
+    const bodyBaseVisualEl = document.createElement('div');
+    // Donner une classe pour le style de base du corps si nécessaire, ou styler directement
+    bodyBaseVisualEl.style.width = '100%'; 
+    bodyBaseVisualEl.style.height = '100%'; 
+    bodyBaseVisualEl.style.position = 'absolute'; 
+    bodyBaseVisualEl.style.left = '0';
+    bodyBaseVisualEl.style.top = '0';
+    bodyBaseVisualEl.style.backgroundImage = `url('${nanobotBaseImagePath}')`;
+    bodyBaseVisualEl.style.backgroundSize = 'contain'; 
+    bodyBaseVisualEl.style.backgroundPosition = 'center bottom'; 
+    bodyBaseVisualEl.style.backgroundRepeat = 'no-repeat';
+    combatNanobotSprite.appendChild(bodyBaseVisualEl);
+
+
+    // 2. Ajouter les modules par-dessus l'image de base
     if (gameState && gameState.nanobotModuleLevels && typeof nanobotModulesData !== 'undefined') {
         for (const moduleId in gameState.nanobotModuleLevels) {
             const currentLevel = gameState.nanobotModuleLevels[moduleId];
             if (currentLevel > 0) {
                 const moduleData = nanobotModulesData[moduleId];
-                if (moduleData) {
-                    if (moduleData.visualClass) { const visualEl = document.createElement('div'); visualEl.className = `nanobot-module ${moduleData.visualClass}`; combatNanobotSprite.appendChild(visualEl); }
-                    else if (moduleData.visualClasses) { moduleData.visualClasses.forEach(className => { const visualEl = document.createElement('div'); visualEl.className = `nanobot-module ${className}`; combatNanobotSprite.appendChild(visualEl); }); }
+                if (moduleData) { 
+                    const imagePath = `images/module_visual_${moduleId}.png`;
+
+                    const createAndAppendVisual = (baseClass, specificClassFromData) => {
+                        const visualEl = document.createElement('div');
+                        visualEl.className = `${baseClass} ${specificClassFromData || ''}`;
+                        visualEl.style.backgroundImage = `url('${imagePath}')`;
+                        combatNanobotSprite.appendChild(visualEl);
+                    };
+
+                    if (moduleData.visualClass) {
+                        createAndAppendVisual('nanobot-module', moduleData.visualClass);
+                    } else if (moduleData.visualClasses) {
+                        moduleData.visualClasses.forEach(className => {
+                            createAndAppendVisual('nanobot-module', className);
+                        });
+                    }
                 }
             }
         }
     }
 
+    // 3. Ajouter les équipements visibles par-dessus
     if (gameState && gameState.nanobotEquipment && typeof itemsData !== 'undefined') {
         for (const slot in gameState.nanobotEquipment) {
             const itemId = gameState.nanobotEquipment[slot];
             if (itemId && itemsData[itemId] && itemsData[itemId].visualClass) {
                 const item = itemsData[itemId];
+                const imagePath = `images/item_visual_${itemId}.png`;
+
                 const visualEl = document.createElement('div');
                 visualEl.className = `nanobot-item-visual ${item.visualClass}`;
+                visualEl.style.backgroundImage = `url('${imagePath}')`;
                 combatNanobotSprite.appendChild(visualEl);
             }
         }
@@ -238,7 +274,7 @@ async function _simulateCombat(enemyDetailsInput) {
     console.log("Combat: _simulateCombat appelé avec:", JSON.parse(JSON.stringify(enemyDetailsInput)));
     if (isCombatInProgress) {
         console.warn("Combat: _simulateCombat - Un combat est déjà en cours. Nouvel appel ignoré.");
-        return { outcome: "already_in_progress", enemyDefeated: false, nanobotDefeated: true, enemyData: enemyDetailsInput }; // S'assurer de retourner un objet valide
+        return { outcome: "already_in_progress", enemyDefeated: false, nanobotDefeated: true, enemyData: enemyDetailsInput }; 
     }
     isCombatInProgress = true;
 

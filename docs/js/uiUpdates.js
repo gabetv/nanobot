@@ -6,7 +6,7 @@ var uiUpdates = {
         // console.log("UI: updateResourceDisplay CALLED");
         if (!gameState) { console.warn("UI: updateResourceDisplay - gameState non défini."); return; }
         if (!gameState.resources || !gameState.productionRates || !gameState.capacity || 
-            typeof gameState.mobilityRechargeTimer === 'undefined') { // Vérifier aussi mobilityRechargeTimer
+            typeof gameState.mobilityRechargeTimer === 'undefined') { 
             console.warn("UI: updateResourceDisplay - gameState.resources, productionRates, capacity ou mobilityRechargeTimer non défini.");
             return;
         }
@@ -14,17 +14,14 @@ var uiUpdates = {
         if(biomassEl) biomassEl.textContent = Math.floor(gameState.resources.biomass);
         if(nanitesEl) nanitesEl.textContent = Math.floor(gameState.resources.nanites);
         
-        // AFFICHAGE MOBILITÉ ET TIMER
         if(mobilityEl && typeof gameState.resources.mobility !== 'undefined' && typeof MAX_MOBILITY_POINTS !== 'undefined' && typeof MOBILITY_RECHARGE_TICKS !== 'undefined' && typeof TICK_SPEED !== 'undefined' && typeof formatTime === 'function') {
             let mobilityText = `${Math.floor(gameState.resources.mobility)} / ${MAX_MOBILITY_POINTS}`;
-            if (gameState.resources.mobility < MAX_MOBILITY_POINTS && MOBILITY_RECHARGE_TICKS > 0) { // S'assurer que MOBILITY_RECHARGE_TICKS n'est pas 0 pour éviter NaN
+            if (gameState.resources.mobility < MAX_MOBILITY_POINTS && MOBILITY_RECHARGE_TICKS > 0) { 
                 const ticksRemaining = MOBILITY_RECHARGE_TICKS - gameState.mobilityRechargeTimer;
-                // S'assurer que ticksRemaining est positif avant de calculer secondsRemaining
                 const secondsRemaining = ticksRemaining > 0 ? Math.ceil(ticksRemaining * (TICK_SPEED / 1000)) : 0;
                 if (secondsRemaining > 0) {
                     mobilityText += ` (+1 dans ${formatTime(secondsRemaining)})`;
                 } else if (gameState.resources.mobility < MAX_MOBILITY_POINTS) {
-                    // Si secondsRemaining est 0 mais pas encore rechargé (peut arriver avec des timers très courts)
                     mobilityText += ` (Recharge...)`;
                 }
             }
@@ -32,7 +29,6 @@ var uiUpdates = {
         } else if (mobilityEl) {
             mobilityEl.textContent = '? / ?';
         }
-        // FIN AFFICHAGE MOBILITÉ ET TIMER
         
         if(typeof gameState.resources.crystal_shards !== 'undefined'){
             if(crystalShardsDisplayContainer) crystalShardsDisplayContainer.classList.toggle('hidden', gameState.resources.crystal_shards <= 0 && !crystalShardsDisplayContainer.classList.contains('always-visible'));
@@ -316,43 +312,60 @@ var uiUpdates = {
         if(nanobotDefenseEl) nanobotDefenseEl.textContent = gameState.nanobotStats.defense;
         if(nanobotSpeedEl) nanobotSpeedEl.textContent = gameState.nanobotStats.speed;
 
-        if(nanobotVisualBody) nanobotVisualBody.innerHTML = ''; 
-        if (gameState.nanobotModuleLevels && typeof nanobotModulesData !== 'undefined') {
+        if(nanobotVisualBody) { // nanobotVisualBody est document.getElementById('nanobot-body')
+            nanobotVisualBody.innerHTML = ''; 
+            
+            const nanobotBaseImagePath = 'images/nanobot_base_body.png'; 
+            nanobotVisualBody.style.backgroundImage = `url('${nanobotBaseImagePath}')`;
+            // Les styles CSS pour #nanobot-body (background-size, position, repeat) gèrent l'affichage.
+        }
+        
+        if (gameState.nanobotModuleLevels && typeof nanobotModulesData !== 'undefined' && nanobotVisualBody) {
             for (const moduleId in gameState.nanobotModuleLevels) {
                 const currentLevel = gameState.nanobotModuleLevels[moduleId];
                 if (currentLevel > 0) {
                     const moduleData = nanobotModulesData[moduleId];
-                    if (moduleData && nanobotVisualBody) {
-                        if (moduleData.visualClass) {
+                    if (moduleData) { 
+                        const imagePath = `images/module_visual_${moduleId}.png`;
+
+                        const createAndAppendVisual = (baseClass, specificClassFromData) => {
                             const visualEl = document.createElement('div');
-                            visualEl.className = `nanobot-module ${moduleData.visualClass}`;
-                            nanobotVisualBody.appendChild(visualEl);
+                            visualEl.className = `${baseClass} ${specificClassFromData || ''}`;
+                            visualEl.style.backgroundImage = `url('${imagePath}')`;
+                            nanobotVisualBody.appendChild(visualEl); 
+                        };
+
+                        if (moduleData.visualClass) {
+                            createAndAppendVisual('nanobot-module', moduleData.visualClass);
                         } else if (moduleData.visualClasses) {
                             moduleData.visualClasses.forEach(className => {
-                                const visualEl = document.createElement('div');
-                                visualEl.className = `nanobot-module ${className}`;
-                                nanobotVisualBody.appendChild(visualEl);
+                                createAndAppendVisual('nanobot-module', className);
                             });
                         }
                     }
                 }
             }
         }
-        let equippedItemsNames = [];
-        if (gameState.nanobotEquipment && typeof itemsData !== 'undefined') {
+        
+        let equippedItemsNames = []; 
+        if (gameState.nanobotEquipment && typeof itemsData !== 'undefined' && nanobotVisualBody) {
             for (const slot in gameState.nanobotEquipment) {
                 const itemId = gameState.nanobotEquipment[slot];
                 if (itemId && itemsData[itemId]) {
                     const item = itemsData[itemId];
-                    equippedItemsNames.push(item.name);
-                    if (item.visualClass && nanobotVisualBody) {
+                    equippedItemsNames.push(item.name); 
+                    if (item.visualClass) { 
+                        const imagePath = `images/item_visual_${itemId}.png`;
+
                         const visualEl = document.createElement('div');
                         visualEl.className = `nanobot-item-visual ${item.visualClass}`;
-                        nanobotVisualBody.appendChild(visualEl);
+                        visualEl.style.backgroundImage = `url('${imagePath}')`;
+                        nanobotVisualBody.appendChild(visualEl); 
                     }
                 }
             }
         }
+
         if(equippedItemsDisplayBriefEl) {
             equippedItemsDisplayBriefEl.textContent = equippedItemsNames.length > 0 ? `Actif: ${equippedItemsNames.join(', ')}` : "Aucun équipement actif sur le visuel.";
         }
@@ -370,8 +383,7 @@ var uiUpdates = {
             container.innerHTML = "<p class='text-xs text-gray-500 italic'>Données d'équipement non disponibles.</p>";
             return;
         }
-        let hasEquipment = false;
-        for (const slotId in EQUIPMENT_SLOTS) {
+        for (const slotId in EQUIPMENT_SLOTS) { // Utiliser EQUIPMENT_SLOTS pour l'ordre
             const slotName = EQUIPMENT_SLOTS[slotId];
             const itemId = gameState.nanobotEquipment[slotId];
             const item = itemId ? itemsData[itemId] : null;
@@ -382,7 +394,6 @@ var uiUpdates = {
             let contentHtml = `<div class="flex justify-between items-center mb-1">
                                   <span class="slot-name text-sm font-semibold text-fuchsia-400">${slotName}:</span>`;
             if (item) {
-                hasEquipment = true;
                 contentHtml +=    `<span class="equipped-item-name text-sm text-gray-100">${item.name}</span>
                                </div>`; 
                 let itemEffects = [];
@@ -408,9 +419,6 @@ var uiUpdates = {
             }
             slotDiv.innerHTML = contentHtml;
             container.appendChild(slotDiv);
-        }
-        if (!hasEquipment && Object.keys(EQUIPMENT_SLOTS).length > 0 && Object.values(gameState.nanobotEquipment).every(val => val === null)) {
-           // Optionnel
         }
     },
 

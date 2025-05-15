@@ -264,32 +264,107 @@
         #night-assault-video { max-width: 90vw; max-height: 80vh; border: 3px solid var(--accent-red); box-shadow: 0 0 25px #c53030; }
         #close-night-assault-video-btn { position: absolute; top: 10px; right: 10px; z-index: 1010; }
 
-        /* Nanobot Visualisation Section */
-        .nanobot-display {
-            aspect-ratio: 1 / 1.3; margin: 0.5rem auto; position: relative;
+        /* --- DEBUT Nanobot Visualisation Section --- */
+        .nanobot-display { /* Conteneur #nanobot-visual-container */
+            aspect-ratio: 1 / 1.3; 
+            margin: 0.5rem auto; 
+            position: relative;
             border: 2px solid var(--border-color);
             background: radial-gradient(circle, var(--bg-secondary) 0%, var(--bg-primary) 70%);
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 8px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-            width: 100%; max-width: 150px; height: auto;
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            border-radius: 8px; 
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            width: 100%; 
+            max-width: 150px; 
+            height: auto;
+            overflow: hidden;
         }
-        .nanobot-core {
-            width: 30%; padding-bottom: 30%; height: 0;
-            background-color: var(--accent-blue); border: 2px solid #63b3ed;
-            box-shadow: 0 0 8px var(--accent-blue), 0 0 15px rgba(66, 153, 225, 0.5);
-            position: relative; border-radius: 50%;
-            animation: pulse-core 2.5s infinite ease-in-out;
+        
+        /* #nanobot-body est l'élément qui reçoit l'image de base via JS */
+        /* et qui sert de parent pour les modules/items en position absolue. */
+        #nanobot-body {
+            width: 100%; 
+            height: 100%; 
+            position: relative; /* Pour que les modules enfants se positionnent par rapport à lui */
+            background-size: contain; /* Pour que l'image nanobot_base_body.png s'adapte */
+            background-position: center; /* Centre l'image de base */
+            background-repeat: no-repeat; /* Évite la répétition de l'image de base */
         }
-        .nanobot-module, .nanobot-item-visual { position: absolute; background-color: var(--text-secondary); border: 1px solid #718096; }
-        .module-arm-blade { width: 40%; height: 5%; background-color: var(--accent-red); top: 30%; left: -42%; transform: rotate(-30deg); }
-        .module-legs-antigrav { width: 12%; height: 18%; background-color: var(--accent-green); bottom: -20%; }
-        .module-legs-antigrav.left { left: 20%; } .module-legs-antigrav.right { right: 20%; }
-        .module-shield { position: absolute; top: -8%; left: -8%; right: -8%; bottom: -8%; border: 2px dashed var(--accent-blue); border-radius: 10%; animation: pulse-shield 2s infinite; }
-        .item-weapon-laser { width: 50%; height: 4%; background: linear-gradient(to right, red, orange); top: 35%; right: -48%; transform: rotate(20deg); }
-        .item-armor-plating { width: 105%; height: 105%; border: 3px solid #90cdf4; border-radius: 10%; top: -2.5%; left: -2.5%; opacity:0.6; box-sizing: border-box; }
+
+        /* Style général pour les div des modules et items visuels */
+        /* Ces div sont ajoutées en JS comme enfants de #nanobot-body */
+        .nanobot-module, .nanobot-item-visual {
+            position: absolute; 
+            background-size: contain;    
+            background-repeat: no-repeat;
+            background-position: center;
+            /* La taille et la position sont définies par les classes spécifiques ci-dessous */
+        }
+
+        /* Styles spécifiques pour chaque module/item (FALLBACKS et POSITIONNEMENT) */
+        /* IMPORTANT: Vous devrez ajuster width, height, top, left, transform pour chaque image */
+        .module-arm-blade {
+            width: 70%; height: 70%; /* Taille de l'image de la lame */
+            background-color: var(--accent-red); /* Fallback si image absente */
+            top: 50%; 
+            left: 5%; 
+            transform: translate(-30%, -50%) rotate(-15deg); 
+            transform-origin: 30% 50%; 
+            z-index: 10; /* S'assurer qu'elle est bien visible */
+        }
+        .module-legs-antigrav { 
+            width: 35%; height: 45%; 
+            background-color: var(--accent-green); /* Fallback */
+            bottom: -8%; /* Ajustez pour que ça colle bien sous le corps */
+            z-index: 5;
+        }
+        .module-legs-antigrav.left { left: 10%; transform: rotate(-10deg) translateX(-5%); } 
+        .module-legs-antigrav.right { right: 10%; transform: rotate(10deg) translateX(5%); } 
+        
+        .module-shield { 
+            width: 110%; /* Plus grand pour englober le nanobot */
+            height: 110%;
+            top: -5%; 
+            left: -5%; 
+            /* L'image module_visual_shieldGeneratorMk1.png sera appliquée par JS */
+            /* Pas de couleur de fond de fallback ici, c'est un effet. */
+            /* La bordure animée peut être conservée si l'image du bouclier est juste une texture/motif */
+            border: 2px dashed var(--accent-blue); 
+            border-radius: 50%; 
+            animation: pulse-shield 2s infinite;
+            z-index: 1; /* Derrière les modules "physiques" mais au-dessus du corps */
+        }
+                
+        .item-weapon-laser { 
+            /* Adaptez à la taille/forme de votre image de laser */
+            width: 45%; 
+            height: 25%; 
+            background-color: orange; /* Fallback */
+            top: 35%; 
+            right: -15%; 
+            transform: rotate(20deg) translateY(-50%); 
+            transform-origin: 0% 50%; /* Point de pivot pour la rotation */
+            z-index: 10;
+        }
+        .item-armor-plating { 
+            width: 105%; 
+            height: 105%; 
+            /* L'image item_visual_item_plating_basic.png sera appliquée par JS */
+            /* Fallback si image absente: juste une bordure par exemple */
+            /* border: 3px solid #90cdf4; */ 
+            border-radius: 10%; 
+            top: -2.5%; 
+            left: -2.5%; 
+            /* opacity:0.6; */ /* L'opacité devrait être dans l'image si besoin */
+            box-sizing: border-box;
+            z-index: 0; /* Légèrement derrière le corps ou les modules principaux */
+        }
+        /* --- FIN Nanobot Visualisation Section --- */
 
 
-        /* --- COMBAT VISUALS --- */
+        /* --- DEBUT COMBAT VISUALS --- */
         #combat-modal-content { min-width: 90vw; md:min-w-[500px]; min-height: 50vh; }
         .combat-arena {
             display: flex; justify-content: space-around; align-items: flex-end;
@@ -303,19 +378,33 @@
         .combat-arena-caves { background-image: url('img/bg_caves_combat.png'); background-color: #3a3a52; } 
         .combat-arena-default { background-color: var(--bg-primary); }
 
-        .combatant { position: relative; text-align: center; transition: transform 0.3s ease-out; }
+        .combatant { 
+            position: relative; 
+            text-align: center; 
+            transition: transform 0.3s ease-out; 
+            width: 80px; 
+        }
+        /* #combat-nanobot-sprite et #combat-enemy-sprite */
+        /* Cet élément reçoit l'image de base du nanobot (ou ennemi) ET les modules/items en enfant via JS */
         .combatant-sprite {
-            width: 60px; height: 80px; border: 2px solid var(--border-color);
-            margin: 0 auto; position: relative;
-            background-size: contain; background-repeat: no-repeat; background-position: center;
+            width: 60px; 
+            height: 80px; 
+            /* border: 2px solid var(--border-color); */ /* Peut être retiré si les sprites sont complets */
+            margin: 0 auto; 
+            position: relative; /* CRUCIAL pour positionner les modules enfants */
+            background-size: contain; 
+            background-repeat: no-repeat; 
+            background-position: center bottom; /* Souvent mieux pour les sprites de personnages */
             animation: idle-breath 3s infinite ease-in-out;
             transition: box-shadow 0.2s, filter 0.2s;
         }
         .combatant-sprite.is-acting { animation: none; }
         .sprite-hit-flash { animation: hit-flash-effect 0.2s ease-out; }
 
-        #combat-nanobot-sprite { background-color: var(--accent-blue); }
-        #combat-enemy-sprite { background-color: var(--accent-red); }
+        /* #combat-nanobot-sprite est stylé par le JS avec l'image de base nanobot_base_body.png */
+        /* Les modules sont ensuite ajoutés comme enfants et positionnés par leur propre classe CSS */
+        #combat-enemy-sprite { background-color: var(--accent-red); } /* Conserver pour les ennemis sans spritePath */
+        
         .combatant-name { font-weight: bold; margin-bottom: 3px; font-size: 0.7rem; }
         .health-bar-container { width: 60px; height: 7px; background-color: #718096; border-radius: 3px; margin: 3px auto 0; overflow: hidden; border: 1px solid var(--border-color);}
         .health-bar { height: 100%; background-color: var(--accent-green); width: 100%; transition: width 0.5s ease; }
@@ -336,6 +425,7 @@
         }
         .damage-float[style*="color: rgb(72, 187, 120)"] { animation: floatUpHeal 1.2s ease-out forwards; }
         .damage-float[style*="color: rgb(160, 174, 192)"] { animation: floatMiss 0.8s ease-in forwards; }
+        /* --- FIN COMBAT VISUALS --- */
         
         .quest-item { background-color: var(--bg-secondary); padding: 0.5rem; border-radius: 0.25rem; margin-bottom: 0.5rem; border-left: 4px solid transparent; }
         .quest-item h4 { font-size: 0.875rem; margin-bottom: 0.1rem;}
@@ -574,7 +664,9 @@
                                                 <i class="ti ti-eye mr-2"></i>Visualisation
                                             </h3>
                                             <div id="nanobot-visual-container" class="nanobot-display mx-auto mb-2">
-                                                <div id="nanobot-body" class="nanobot-core"></div>
+                                                <div id="nanobot-body">
+                                                    <!-- Les modules et items visuels seront ajoutés ici par JS -->
+                                                </div>
                                             </div>
                                             <div id="equipped-items-display-brief" class="mt-1 text-xs text-center text-gray-400">Aucun équipement.</div>
                                         </div>
