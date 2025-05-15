@@ -9,8 +9,6 @@ var explorationUI = {
             console.warn("explorationUI.updateFullExplorationView: gameState ou gameState.map non défini.");
             return;
         }
-        // La visibilité de l'onglet est maintenant gérée par uiUpdates.js et le script de navigation
-        // On assume que si cette fonction est appelée, c'est parce que la section est active.
 
         if (typeof this.updateExplorationMapDisplay !== 'function' ||
             typeof this.updateExplorationLogDisplay !== 'function' ||
@@ -19,7 +17,7 @@ var explorationUI = {
             console.error("explorationUI.updateFullExplorationView: Une ou plusieurs fonctions de mise à jour sont manquantes sur this.");
             return;
         }
-        this.updateExplorationMapDisplay();
+        this.updateExplorationMapDisplay(); // Ceci appellera centerMapOnPlayer
         this.updateExplorationLogDisplay();
         if (gameState.map.selectedTile) {
             this.updateTileInteractionPanel(gameState.map.selectedTile.x, gameState.map.selectedTile.y);
@@ -27,21 +25,20 @@ var explorationUI = {
             if (gameState.map.nanobotPos) {
                 this.updateTileInteractionPanel(gameState.map.nanobotPos.x, gameState.map.nanobotPos.y);
             } else {
-                this.updateTileInteractionPanel(); // Affiche le message par défaut
+                this.updateTileInteractionPanel();
             }
         }
     },
 
     updateExplorationMapDisplay: function() {
         // console.log("explorationUI: updateExplorationMapDisplay CALLED");
-        // Supprimé 'explorationContentEl' de la vérification des éléments DOM
         if(!mapGridEl || !nanobotMapPosEl || !tileInfoDisplayEl || !explorationTitleEl ) {
             console.warn("explorationUI.updateExplorationMapDisplay: Un ou plusieurs éléments DOM de base sont manquants ! (mapGridEl, nanobotMapPosEl, tileInfoDisplayEl, explorationTitleEl)");
             return;
         }
         if (typeof ZONE_DATA === 'undefined' || !gameState || !gameState.map || !gameState.currentZoneId || !ZONE_DATA[gameState.currentZoneId]) {
             console.warn("explorationUI.updateExplorationMapDisplay: ZONE_DATA ou gameState pour la carte non défini.");
-            if(mapGridEl) mapGridEl.innerHTML = "<p class='text-red-400'>Erreur: Données de zone non disponibles.</p>";
+            if(mapGridEl) mapGridEl.innerHTML = "<p class='text-red-400 text-xs'>Erreur: Données de zone indisponibles.</p>";
             return;
         }
 
@@ -49,58 +46,39 @@ var explorationUI = {
         else console.warn("explorationUI: this.updateZoneSelectionUI non trouvée dans updateExplorationMapDisplay.");
 
         const currentZone = ZONE_DATA[gameState.currentZoneId];
-        if(explorationTitleEl) explorationTitleEl.textContent = `Carte: ${currentZone.name}`; // Titre plus court
+        if(explorationTitleEl) explorationTitleEl.textContent = `Carte: ${currentZone.name}`;
         
-        if(mapGridEl) {
+        const mapScrollContainer = document.getElementById('map-scroll-container');
+
+        if(mapGridEl && mapScrollContainer) {
             mapGridEl.innerHTML = '';
-            const mapContainer = document.getElementById('exploration-content-container'); // Le conteneur de la grille
-            if (mapContainer) {
-                // Ajuster la taille des tuiles dynamiquement pour essayer de remplir l'espace disponible
-                // Ou utiliser une taille fixe et laisser le overflow s'en charger
-                const containerWidth = mapContainer.clientWidth - 2; // -2 pour les bordures de mapGridEl
-                const containerHeight = mapContainer.clientHeight - 2; // -2 pour les bordures de mapGridEl
-                
-                let tileSizeWidth = Math.floor(containerWidth / currentZone.mapSize.width);
-                let tileSizeHeight = Math.floor(containerHeight / currentZone.mapSize.height);
-                let tileSize = Math.min(tileSizeWidth, tileSizeHeight, 25); // Max 25px, ou plus petit si ne rentre pas
-                if (tileSize < 10) tileSize = 10; // Min 10px
+            
+            const fixedTileSize = 22; // Taille fixe pour les tuiles (en px)
+            document.documentElement.style.setProperty('--map-tile-effective-size', `${fixedTileSize}px`);
 
-                mapGridEl.style.gridTemplateRows = `repeat(${currentZone.mapSize.height}, ${tileSize}px)`;
-                mapGridEl.style.gridTemplateColumns = `repeat(${currentZone.mapSize.width}, ${tileSize}px)`;
+            mapGridEl.style.gridTemplateRows = `repeat(${currentZone.mapSize.height}, ${fixedTileSize}px)`;
+            mapGridEl.style.gridTemplateColumns = `repeat(${currentZone.mapSize.width}, ${fixedTileSize}px)`;
+            mapGridEl.style.width = `${currentZone.mapSize.width * (fixedTileSize + 1) -1}px`; // +1 pour le gap de 1px, -1 pour la dernière ligne de gap
+            mapGridEl.style.height = `${currentZone.mapSize.height * (fixedTileSize + 1) -1}px`;
 
-                // Appliquer la taille aux tuiles via une variable CSS si on veut faire du ::before/::after responsive
-                // document.documentElement.style.setProperty('--map-tile-size', `${tileSize}px`);
-            } else {
-                // Fallback si le conteneur n'est pas prêt (ne devrait pas arriver si le DOM est chargé)
-                const tileSize = 22; // Taille fixe par défaut
-                mapGridEl.style.gridTemplateRows = `repeat(${currentZone.mapSize.height}, ${tileSize}px)`;
-                mapGridEl.style.gridTemplateColumns = `repeat(${currentZone.mapSize.width}, ${tileSize}px)`;
-            }
+        } else {
+            console.warn("explorationUI: mapGridEl ou mapScrollContainer non trouvé lors de la configuration de la grille.");
+            return;
         }
 
         let scanButton = document.getElementById('scan-map-button');
-        // Le bouton scan est déjà dans le HTML statique, on le met à jour directement.
-
         if (scanButton && typeof SCAN_ENERGY_COST !== 'undefined' && typeof SCAN_COOLDOWN_DURATION_SECONDS !== 'undefined' && typeof TICK_SPEED !== 'undefined' && gameState && gameState.nanobotStats) {
             const stats = gameState.nanobotStats;
             const scanCost = SCAN_ENERGY_COST;
             const scanCooldownTimeInTicks = SCAN_COOLDOWN_DURATION_SECONDS * (1000 / TICK_SPEED);
             const onCooldown = gameState.gameTime < (stats.lastScanTime || 0) + scanCooldownTimeInTicks;
             const canAffordScan = gameState.resources.energy >= scanCost;
-
             scanButton.disabled = onCooldown || !canAffordScan;
             scanButton.classList.toggle('btn-disabled', onCooldown || !canAffordScan);
-
-            if (onCooldown) {
-                scanButton.textContent = `Scan (CD: ${formatTime(Math.ceil(((stats.lastScanTime || 0) + scanCooldownTimeInTicks - gameState.gameTime) * (TICK_SPEED/1000))) })`;
-            } else if (!canAffordScan) {
-                scanButton.textContent = `Scan (${scanCost} NRG) - Insuff.`;
-            } else {
-                scanButton.textContent = `Scanner (${scanCost} NRG)`;
-            }
+            if (onCooldown) scanButton.textContent = `Scan (CD: ${formatTime(Math.ceil(((stats.lastScanTime || 0) + scanCooldownTimeInTicks - gameState.gameTime) * (TICK_SPEED/1000))) })`;
+            else if (!canAffordScan) scanButton.textContent = `Scan (${scanCost} NRG) - Insuff.`;
+            else scanButton.textContent = `Scanner (${scanCost} NRG)`;
         }
-
-        if (!mapGridEl) return;
 
         if (!Array.isArray(gameState.map.tiles) || gameState.map.tiles.length !== currentZone.mapSize.height) {
             mapGridEl.innerHTML = "<p class='text-yellow-400 italic text-xs'>Initialisation de la carte...</p>";
@@ -111,12 +89,10 @@ var explorationUI = {
             if (!Array.isArray(gameState.map.tiles[y]) || gameState.map.tiles[y].length !== currentZone.mapSize.width) continue;
             for (let x = 0; x < currentZone.mapSize.width; x++) {
                 const tileDiv = document.createElement('div');
-                const tileData = this.getTile(x,y); // Utiliser la fonction getTile pour la robustesse
-                const tileClassesString = tileData ? this.getTileDisplayClass(x, y) : 'unexplored unexplored-flat'; // Fallback
+                const tileData = this.getTile(x,y);
+                const tileClassesString = tileData ? this.getTileDisplayClass(x, y) : 'unexplored unexplored-flat';
                 tileDiv.className = `map-tile ${tileClassesString}`;
-                // Récupérer la taille de la tuile depuis la grille pour que ::before/::after fonctionne
-                const tileSizeForIcon = mapGridEl.style.gridTemplateColumns.split(' ')[0] || '22px';
-                tileDiv.style.fontSize = `calc(${tileSizeForIcon} * 0.6)`; // Ajuster la taille de l'icône relativement
+                // La taille de police pour ::before/::after est maintenant gérée par CSS via var(--map-tile-effective-size)
 
                 tileDiv.dataset.x = x; tileDiv.dataset.y = y;
                 tileDiv.addEventListener('click', () => {
@@ -133,21 +109,62 @@ var explorationUI = {
                 mapGridEl.appendChild(tileDiv);
             }
         }
+
         if (nanobotMapPosEl && gameState && gameState.map && gameState.map.nanobotPos) {
             nanobotMapPosEl.textContent = `(${gameState.map.nanobotPos.x}, ${gameState.map.nanobotPos.y}) / ${currentZone.name}`;
-            // La jauge d'énergie pour le mouvement a été retirée du header,
-            // elle pourrait être intégrée ici ou dans le panneau d'interaction si souhaité.
+        }
+        
+        this.centerMapOnPlayer(true); // Centrage instantané après le redessin
+
+        const centerBtn = document.getElementById('center-map-btn');
+        if (centerBtn && !centerBtn.dataset.listenerAttached) {
+            centerBtn.addEventListener('click', () => this.centerMapOnPlayer(false)); // false pour défilement doux
+            centerBtn.dataset.listenerAttached = 'true';
         }
     },
 
-    getTileDisplayClass: function(x, y) {
-        // ... (logique inchangée)
-        if (!gameState || !gameState.map || !gameState.map.tiles || !gameState.map.tiles[y] || !gameState.map.tiles[y][x] || typeof TILE_TYPES === 'undefined') {
-            return 'unexplored unexplored-flat'; // Fallback
+    centerMapOnPlayer: function(instant = false) {
+        const mapScrollContainer = document.getElementById('map-scroll-container');
+        const mapGrid = document.getElementById('map-grid'); // On en aura peut-être besoin pour la taille totale
+        if (!mapScrollContainer || !mapGrid || !gameState || !gameState.map.nanobotPos) {
+            // console.warn("centerMapOnPlayer: Element manquant ou gameState non prêt.");
+            return;
         }
-        const tile = gameState.map.tiles[y][x];
-        let classes = [];
 
+        const tileSizeString = getComputedStyle(document.documentElement).getPropertyValue('--map-tile-effective-size');
+        const tileSize = parseFloat(tileSizeString) || 22; // Fallback
+        const gap = 1; // Correspond au 'gap' CSS de #map-grid
+
+        const playerTileX = gameState.map.nanobotPos.x;
+        const playerTileY = gameState.map.nanobotPos.y;
+
+        // Position en pixels du coin supérieur gauche de la tuile du joueur DANS la grille
+        const playerPixelX = playerTileX * (tileSize + gap);
+        const playerPixelY = playerTileY * (tileSize + gap);
+
+        // Centre de la tuile du joueur
+        const playerCenterX = playerPixelX + tileSize / 2;
+        const playerCenterY = playerPixelY + tileSize / 2;
+
+        // Nouvelles valeurs de scroll pour centrer la tuile du joueur
+        const targetScrollLeft = playerCenterX - mapScrollContainer.clientWidth / 2;
+        const targetScrollTop = playerCenterY - mapScrollContainer.clientHeight / 2;
+        
+        // console.log(`Centering map. TileSize: ${tileSize}, Player: (${playerTileX},${playerTileY}), PlayerCenter: (${playerCenterX.toFixed(1)},${playerCenterY.toFixed(1)}), TargetScroll: (${targetScrollLeft.toFixed(1)},${targetScrollTop.toFixed(1)})`);
+
+        mapScrollContainer.scrollTo({
+            top: targetScrollTop,
+            left: targetScrollLeft,
+            behavior: instant ? 'auto' : 'smooth'
+        });
+    },
+
+    getTileDisplayClass: function(x, y) {
+        if (!gameState || !gameState.map || !this.getTile(x,y) || typeof TILE_TYPES === 'undefined') {
+            return 'unexplored unexplored-flat';
+        }
+        const tile = this.getTile(x,y);
+        let classes = [];
         const isNanobotCurrentPos = gameState.map.nanobotPos.x === x && gameState.map.nanobotPos.y === y;
 
         if (isNanobotCurrentPos) {
@@ -188,7 +205,6 @@ var explorationUI = {
                 case TILE_TYPES.PLAYER_BASE: classes.push('base'); break; 
                 default: classes.push('unexplored-flat'); break;
             }
-
             if (tile.structureType) {
                 switch (tile.structureType) {
                     case TILE_TYPES.PRE_RUIN_SILHOUETTE: classes.push('unexplored-ruin-outline'); break;
@@ -197,7 +213,6 @@ var explorationUI = {
                     case TILE_TYPES.PRE_DISTRESS_SIGNAL: classes.push('unexplored-distress-signal'); break;
                 }
             }
-            
             if (tile.isScanned && tile.scannedActualType !== null && gameState.gameTime <= tile.scannedRevealTime) {
                 classes.push('scanned');
                 switch(tile.scannedActualType) {
@@ -209,9 +224,6 @@ var explorationUI = {
                     case TILE_TYPES.ENEMY_OUTPOST_TILE: classes.push('scanned-actual-enemy-base'); break;
                     case TILE_TYPES.IMPASSABLE_DEEP_WATER: classes.push('scanned-actual-impassable-water'); break;
                     case TILE_TYPES.IMPASSABLE_HIGH_PEAK: classes.push('scanned-actual-impassable-mountain'); break;
-                    case TILE_TYPES.EMPTY_GRASSLAND: case TILE_TYPES.EMPTY_DESERT: case TILE_TYPES.EMPTY_WATER:
-                    case TILE_TYPES.FOREST: case TILE_TYPES.MOUNTAIN: case TILE_TYPES.RUINS:
-                        classes.push('scanned-actual-empty'); break; 
                     default: classes.push('scanned-actual-empty'); break; 
                 }
             }
@@ -220,17 +232,15 @@ var explorationUI = {
     },
 
     getTileInfo: function(x,y) {
-        // ... (logique inchangée)
-        if (!gameState || !gameState.map || !gameState.map.tiles || !gameState.map.tiles[y] || !gameState.map.tiles[y][x] || typeof TILE_TYPES === 'undefined' || typeof MAP_FEATURE_DATA === 'undefined') {
+        if (!gameState || !gameState.map || !this.getTile(x,y) || typeof TILE_TYPES === 'undefined' || typeof MAP_FEATURE_DATA === 'undefined') {
             return "Données indisponibles.";
         }
-        const tile = gameState.map.tiles[y][x];
+        const tile = this.getTile(x,y);
         if (tile.isExplored) { const actualType = tile.actualType; const content = tile.content; let tileName = this.getTileContentName(actualType, content); if (content) { if (content.type === 'resource' && content.amount > 0) return `${tileName} (${content.amount} u).`; else if (content.type === 'resource' && content.amount <= 0) return `${tileName} (Épuisé).`; if (content.type === 'enemy_patrol') return `Danger! ${content.details?.name || "Patrouille"}.`; if (content.type === 'cache') return content.isOpened ? `${tileName} (Vide).` : tileName; if (content.type === 'poi') return `${tileName}. ${content.isInteracted ? "(Examiné)" : ""}`; if (content.type === 'enemy_base') return `${tileName} (PV: ${content.currentHealth}/${content.details?.health}).`;} return tileName;
         } else {  let info = "NE. "; info += `Terr: ${this.getTerrainTypeName(tile.baseType)}. `; if (tile.structureType) info += `Struct: ${this.getStructureTypeName(tile.structureType)}. `; if (tile.isScanned && tile.scannedActualType !== null && gameState.gameTime <= tile.scannedRevealTime) info += `Scan: ${this.getTileContentName(tile.scannedActualType, null) || "Signal?"}.`; return info.trim(); }
     },
 
     updateExplorationLogDisplay: function() {
-        // ... (logique inchangée, mais s'assurer que explorationLogEl est bien défini)
         if (!explorationLogEl || !gameState || !gameState.explorationLog) { console.warn("explorationUI.updateExplorationLogDisplay: Elément de log ou gameState.explorationLog manquant."); return; }
         explorationLogEl.innerHTML = ''; 
         if (gameState.explorationLog.length === 0 || (gameState.explorationLog.length === 1 && gameState.explorationLog[0].includes("initialisé"))) { if (!explorationLogEl.querySelector('p.text-gray-500.italic')) { const placeholderP = document.createElement('p'); placeholderP.className = 'text-gray-500 italic text-xs'; placeholderP.textContent = 'Aucun événement récent...'; explorationLogEl.appendChild(placeholderP);}}
@@ -239,18 +249,24 @@ var explorationUI = {
     },
 
     updateTileInteractionPanel: function(x, y) {
-        // ... (logique inchangée, mais classes btn-xs et s'assurer que les éléments du panneau sont bien définis)
         const panel = tileInteractionPanelEl; const detailsDiv = tileInteractionDetailsEl; const actionsDiv = tileInteractionActionsEl;
         if (!panel || !detailsDiv || !actionsDiv) { console.warn("explorationUI.updateTileInteractionPanel: Eléments panneau manquants."); return; }
-        if (x === undefined || y === undefined || !gameState || !gameState.map || !mapManager.getTile(x,y) ) { detailsDiv.innerHTML = `<h4 class="font-orbitron text-sm text-blue-300 mb-1">Interaction</h4><p class="text-gray-500 italic text-xs">Cliquez une case.</p>`; actionsDiv.innerHTML = ''; return; }
-        const tile = mapManager.getTile(x,y); const nanobotIsOnThisTile = gameState.map.nanobotPos.x === x && gameState.map.nanobotPos.y === y;
+        if (x === undefined || y === undefined || !gameState || !gameState.map || !this.getTile(x,y) ) { detailsDiv.innerHTML = `<h4 class="font-orbitron text-sm text-blue-300 mb-1">Interaction</h4><p class="text-gray-500 italic text-xs">Cliquez une case.</p>`; actionsDiv.innerHTML = ''; return; }
+        const tile = this.getTile(x,y); const nanobotIsOnThisTile = gameState.map.nanobotPos.x === x && gameState.map.nanobotPos.y === y;
         let detailsHtml = `<h4 class="font-orbitron text-sm text-blue-300 mb-1">Détails (${x}, ${y})</h4>`; detailsHtml += `<p class="text-xs"><b>Statut:</b> ${tile.isExplored ? 'Explorée' : 'Non explorée'}</p>`; detailsHtml += `<p class="text-xs"><b>Terrain:</b> ${this.getTerrainTypeName(tile.baseType)}</p>`;
         if (!tile.isExplored && tile.structureType) detailsHtml += `<p class="text-xs"><b>Structure:</b> ${this.getStructureTypeName(tile.structureType)}</p>`;
         actionsDiv.innerHTML = ''; 
         if (tile.isExplored) {
             detailsHtml += `<p class="text-xs"><b>Contenu:</b> ${this.getTileContentName(tile.actualType, tile.content)}</p>`;
-            if (tile.content) { const content = tile.content; /* ... (logique affichage contenu et boutons d'action, avec btn-xs) ... */ }
-        } else if (tile.isScanned && tile.scannedActualType !== null && gameState.gameTime <= tile.scannedRevealTime) { detailsHtml += `<p class="text-xs text-yellow-300"><b>Scan Actif:</b> ${this.getTileContentName(tile.scannedActualType, null) || "Signal?"}</p>`;}
+            if (tile.content) { const content = tile.content; 
+                if (content.type === 'resource' && content.amount > 0) { detailsHtml += `<p class="text-xs">Quantité: ${content.amount}</p>`;}
+                else if (content.type === 'resource' && content.amount <= 0) { detailsHtml += `<p class="text-xs text-gray-500">Épuisé.</p>`;}
+                else if (content.type === 'enemy_patrol') { detailsHtml += `<p class="text-xs text-red-400">Ennemi: ${content.details.name}</p>`;}
+                else if (content.type === 'cache' ) { detailsHtml += `<p class="text-xs text-yellow-400">Cache ${content.isOpened ? "(Vide)" : "non ouverte"}.</p>`;}
+                else if (content.type === 'poi') { detailsHtml += `<p class="text-xs text-blue-300">${(typeof MAP_FEATURE_DATA !== 'undefined' && MAP_FEATURE_DATA[content.poiType]?.description) || "Point d'intérêt."} ${content.isInteracted ? "(Déjà examiné)" : "(À examiner)"}</p>`; if (nanobotIsOnThisTile && !content.isInteracted) { const interactButton = document.createElement('button'); interactButton.className = 'btn btn-info btn-xs w-full mt-1'; interactButton.textContent = `Examiner ${this.getTileContentName(tile.actualType, content)}`; interactButton.onclick = () => { if (typeof explorationController !== 'undefined' && typeof explorationController.processTileContentOnArrival === 'function') explorationController.processTileContentOnArrival(x, y); }; actionsDiv.appendChild(interactButton);}}
+                else if (content.type === 'enemy_base') { detailsHtml += `<p class="text-xs font-semibold">${content.details.name}</p>`; detailsHtml += `<p class="text-xs">Intégrité: <span class="${content.currentHealth > 0 ? 'text-red-400' : 'text-green-400'}">${content.currentHealth}/${content.details.health}</span></p>`; if (content.currentHealth > 0) { const dxPosBase = Math.abs(x - gameState.map.nanobotPos.x); const dyPosBase = Math.abs(y - gameState.map.nanobotPos.y); const isAdjacentOrOnTileForBase = (dxPosBase <= 1 && dyPosBase <= 1); if (isAdjacentOrOnTileForBase) { const attackButton = document.createElement('button'); attackButton.className = 'btn btn-danger btn-xs w-full mt-1'; attackButton.textContent = `Attaquer ${content.details.name}`; attackButton.onclick = () => { if(typeof explorationController !== 'undefined' && typeof explorationController.attemptAttackEnemyBase === 'function') explorationController.attemptAttackEnemyBase(x,y); }; actionsDiv.appendChild(attackButton);} else { actionsDiv.innerHTML = `<p class="text-xs text-yellow-500 italic">Rapprochez-vous.</p>`;}} else { detailsHtml += `<p class="text-xs text-green-400">Détruite.</p>`;}}
+            }
+        } else if (tile.isScanned && tile.scannedActualType !== null && gameState.gameTime <= tile.scannedRevealTime) { detailsHtml += `<p class="text-xs text-yellow-300"><b>Scan:</b> ${this.getTileContentName(tile.scannedActualType, null) || "Signal?"}</p>`;}
         const dxPosMove = Math.abs(x - gameState.map.nanobotPos.x); const dyPosMove = Math.abs(y - gameState.map.nanobotPos.y); const isAdjacentMove = dxPosMove <= 1 && dyPosMove <= 1 && !(dxPosMove === 0 && dyPosMove === 0);
         if (!nanobotIsOnThisTile && isAdjacentMove && tile.actualType !== TILE_TYPES.IMPASSABLE_DEEP_WATER && tile.actualType !== TILE_TYPES.IMPASSABLE_HIGH_PEAK) { const moveButton = document.createElement('button'); moveButton.className = 'btn btn-primary btn-xs mt-1 w-full'; moveButton.textContent = `Déplacer (${EXPLORATION_COST_ENERGY} Énergie)`; if (gameState.resources.energy < EXPLORATION_COST_ENERGY) { moveButton.disabled = true; moveButton.classList.add('btn-disabled'); } moveButton.onclick = () => { if (typeof explorationController !== 'undefined' && typeof explorationController.handleTileClick === 'function') explorationController.handleTileClick(x, y); }; actionsDiv.appendChild(moveButton);}
         if (actionsDiv.innerHTML === '') actionsDiv.innerHTML = `<p class="text-xs text-gray-500 italic">Aucune action ici.</p>`;
@@ -258,7 +274,6 @@ var explorationUI = {
     },
 
     updateZoneSelectionUI: function() {
-        // ... (logique inchangée, mais classes pour texte plus petit)
         const zoneListContainer = zoneListContainerEl; if (!zoneListContainer) return;
         if (typeof ZONE_DATA === 'undefined' || !gameState || !gameState.unlockedZones || typeof researchData === 'undefined' || typeof QUEST_DATA === 'undefined') { zoneListContainer.innerHTML = "<p class='text-red-400 italic text-xs'>Erreur zones.</p>"; return;}
         zoneListContainer.innerHTML = ''; 
@@ -270,13 +285,10 @@ var explorationUI = {
         }
     },
 
-    getTerrainTypeName: function(baseType) { /* ... (inchangé) ... */ return TILE_TYPES ? ({[TILE_TYPES.PRE_EMPTY]:"Plaines", [TILE_TYPES.PRE_WATER]:"Eau", [TILE_TYPES.PRE_ROUGH_TERRAIN]:"Accidenté", [TILE_TYPES.PRE_HIGH_MOUNTAIN]:"Sommets", [TILE_TYPES.PLAYER_BASE]:"Votre Base",})[baseType] || "Terr. Inconnu" : "Terr. Inconnu";},
-    getStructureTypeName: function(structureType) { /* ... (inchangé) ... */ return (TILE_TYPES && MAP_FEATURE_DATA) ? MAP_FEATURE_DATA[structureType]?.name || "Struct. Non Ident." : "Struct. Inconnue";},
-    getTileContentName: function(actualType, content) { /* ... (inchangé) ... */ if(TILE_TYPES && MAP_FEATURE_DATA){ if (content?.details?.name) return content.details.name; if (content?.type === 'resource' && content.resourceType) { for(const key in TILE_TYPES) if (TILE_TYPES[key] === content.resourceType) return key.replace('RESOURCE_', '').replace('_PATCH', '').replace('_DEPOSIT', '').replace('_VEIN', '').split('_').map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()).join(' ');} return ({[TILE_TYPES.EMPTY_GRASSLAND]:"Prairie", [TILE_TYPES.EMPTY_DESERT]:"Désert", [TILE_TYPES.EMPTY_WATER]:"Eau peu prof.", [TILE_TYPES.FOREST]:"Forêt", [TILE_TYPES.MOUNTAIN]:"Montagne", [TILE_TYPES.RUINS]:MAP_FEATURE_DATA[TILE_TYPES.RUINS]?.name||"Ruines", [TILE_TYPES.PLAYER_BASE]:"Noyau Nexus-7", [TILE_TYPES.RESOURCE_BIOMASS_PATCH]:"Biomasse", [TILE_TYPES.RESOURCE_NANITE_DEPOSIT]:"Nanites", [TILE_TYPES.RESOURCE_CRYSTAL_VEIN]:"Cristaux", [TILE_TYPES.UPGRADE_CACHE]:"Cache", [TILE_TYPES.POI_ANCIENT_STRUCTURE]:MAP_FEATURE_DATA[TILE_TYPES.POI_ANCIENT_STRUCTURE]?.name||"Struct. Antique", [TILE_TYPES.ENEMY_OUTPOST_TILE]:MAP_FEATURE_DATA[TILE_TYPES.ENEMY_OUTPOST_TILE]?.name||"Avant-poste En.", [TILE_TYPES.MERCHANT_WRECKAGE]:MAP_FEATURE_DATA[TILE_TYPES.MERCHANT_WRECKAGE]?.name||"Épave March.", [TILE_TYPES.ENEMY_PATROL_WEAK]:"Patrouille faible", [TILE_TYPES.ENEMY_PATROL_MEDIUM]:"Patrouille moy.", [TILE_TYPES.IMPASSABLE_DEEP_WATER]:"Eau Profonde (X)", [TILE_TYPES.IMPASSABLE_HIGH_PEAK]:"Pic Infranch.(X)"})[actualType] || "Vide";} return "Contenu Inconnu"; }
-
-    // Fonction getTile pour robustesse, au cas où elle serait appelée avant que mapManager soit pleinement initialisé globalement
-    // ou pour éviter une dépendance directe si ce fichier est chargé différemment.
-    ,getTile: function(x, y) {
+    getTerrainTypeName: function(baseType) { return TILE_TYPES ? ({[TILE_TYPES.PRE_EMPTY]:"Plaines", [TILE_TYPES.PRE_WATER]:"Eau", [TILE_TYPES.PRE_ROUGH_TERRAIN]:"Accidenté", [TILE_TYPES.PRE_HIGH_MOUNTAIN]:"Sommets", [TILE_TYPES.PLAYER_BASE]:"Votre Base",})[baseType] || "Terr. Inconnu" : "Terr. Inconnu";},
+    getStructureTypeName: function(structureType) { return (TILE_TYPES && MAP_FEATURE_DATA) ? MAP_FEATURE_DATA[structureType]?.name || "Struct. Non Ident." : "Struct. Inconnue";},
+    getTileContentName: function(actualType, content) { if(TILE_TYPES && MAP_FEATURE_DATA){ if (content?.details?.name) return content.details.name; if (content?.type === 'resource' && content.resourceType) { for(const key in TILE_TYPES) if (TILE_TYPES[key] === content.resourceType) return key.replace('RESOURCE_', '').replace('_PATCH', '').replace('_DEPOSIT', '').replace('_VEIN', '').split('_').map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()).join(' ');} return ({[TILE_TYPES.EMPTY_GRASSLAND]:"Prairie", [TILE_TYPES.EMPTY_DESERT]:"Désert", [TILE_TYPES.EMPTY_WATER]:"Eau peu prof.", [TILE_TYPES.FOREST]:"Forêt", [TILE_TYPES.MOUNTAIN]:"Montagne", [TILE_TYPES.RUINS]:MAP_FEATURE_DATA[TILE_TYPES.RUINS]?.name||"Ruines", [TILE_TYPES.PLAYER_BASE]:"Noyau Nexus-7", [TILE_TYPES.RESOURCE_BIOMASS_PATCH]:"Biomasse", [TILE_TYPES.RESOURCE_NANITE_DEPOSIT]:"Nanites", [TILE_TYPES.RESOURCE_CRYSTAL_VEIN]:"Cristaux", [TILE_TYPES.UPGRADE_CACHE]:"Cache", [TILE_TYPES.POI_ANCIENT_STRUCTURE]:MAP_FEATURE_DATA[TILE_TYPES.POI_ANCIENT_STRUCTURE]?.name||"Struct. Antique", [TILE_TYPES.ENEMY_OUTPOST_TILE]:MAP_FEATURE_DATA[TILE_TYPES.ENEMY_OUTPOST_TILE]?.name||"Avant-poste En.", [TILE_TYPES.MERCHANT_WRECKAGE]:MAP_FEATURE_DATA[TILE_TYPES.MERCHANT_WRECKAGE]?.name||"Épave March.", [TILE_TYPES.ENEMY_PATROL_WEAK]:"Patrouille faible", [TILE_TYPES.ENEMY_PATROL_MEDIUM]:"Patrouille moy.", [TILE_TYPES.IMPASSABLE_DEEP_WATER]:"Eau Profonde (X)", [TILE_TYPES.IMPASSABLE_HIGH_PEAK]:"Pic Infranch.(X)"})[actualType] || "Vide";} return "Contenu Inconnu"; },
+    getTile: function(x, y) {
         if (gameState && gameState.map && gameState.map.tiles && gameState.map.tiles[y] && gameState.map.tiles[y][x]) {
             return gameState.map.tiles[y][x];
         }
