@@ -3,6 +3,7 @@ console.log("main.js - Fichier chargé et en cours d'analyse...");
 
 // --- Références DOM ---
 let biomassEl, nanitesEl, energyEl, biomassRateEl, nanitesRateEl, crystalShardsEl;
+let mobilityEl; // Pour la nouvelle jauge de mobilité
 let eventLogEl, gameTimeEl, cycleStatusEl;
 let modal, modalTitle, modalMessage, modalConfirm, modalCancel;
 let nanobotHealthEl, nanobotAttackEl, nanobotDefenseEl, nanobotSpeedEl;
@@ -33,6 +34,7 @@ function initDOMReferences() {
         biomassEl=document.getElementById('biomass');
         nanitesEl=document.getElementById('nanites');
         energyEl=document.getElementById('energy');
+        mobilityEl=document.getElementById('mobility'); // Récupération du nouvel élément
         biomassRateEl=document.getElementById('biomassRate');
         nanitesRateEl=document.getElementById('nanitesRate');
         crystalShardsDisplayContainer=document.getElementById('crystal-shards-display-container');
@@ -176,6 +178,20 @@ function gameLoop() {
                 gameState.resources.nanites += gameState.productionRates.nanites * (TICK_SPEED / 1000);
             }
         }
+        
+        // RECHARGE DE LA MOBILITÉ
+        if (typeof MAX_MOBILITY_POINTS !== 'undefined' && typeof MOBILITY_RECHARGE_TICKS !== 'undefined') {
+            if (gameState.resources.mobility < MAX_MOBILITY_POINTS) {
+                gameState.mobilityRechargeTimer = (gameState.mobilityRechargeTimer || 0) + 1; 
+                if (gameState.mobilityRechargeTimer >= MOBILITY_RECHARGE_TICKS) {
+                    gameState.resources.mobility = Math.min(MAX_MOBILITY_POINTS, gameState.resources.mobility + 1);
+                    gameState.mobilityRechargeTimer = 0; 
+                }
+            } else {
+                gameState.mobilityRechargeTimer = 0; 
+            }
+        }
+
 
         if (gameState.activeResearch && typeof researchData !== 'undefined' && researchData[gameState.activeResearch.id] && typeof buildingsData !== 'undefined' && typeof TICK_SPEED !== 'undefined') {
             const research = researchData[gameState.activeResearch.id];
@@ -259,7 +275,7 @@ function init() {
     console.log(`main.js: init() - Tentative ${initAttempts + 1}`);
     initAttempts++;
 
-    if (typeof ZONE_DATA === 'undefined' || typeof BASE_COORDINATES === 'undefined' || typeof BASE_INITIAL_HEALTH === 'undefined' || typeof TICK_SPEED === 'undefined' || typeof buildingsData === 'undefined' || typeof QUEST_STATUS === 'undefined' || typeof QUEST_DATA === 'undefined' || typeof itemsData === 'undefined' || typeof nanobotModulesData === 'undefined' || typeof researchData === 'undefined' || typeof nightAssaultEnemies === 'undefined' || typeof bossDefinitions === 'undefined' || typeof nightEvents === 'undefined' || typeof nanobotSkills === 'undefined' || typeof explorationEnemyData === 'undefined' || typeof enemyBaseDefinitions === 'undefined' || typeof MAP_FEATURE_DATA === 'undefined' || typeof DAMAGE_TYPES === 'undefined' || typeof TILE_TYPES === 'undefined' || typeof TILE_TYPES_TO_RESOURCE_KEY === 'undefined') {
+    if (typeof ZONE_DATA === 'undefined' || typeof BASE_COORDINATES === 'undefined' || typeof BASE_INITIAL_HEALTH === 'undefined' || typeof TICK_SPEED === 'undefined' || typeof buildingsData === 'undefined' || typeof QUEST_STATUS === 'undefined' || typeof QUEST_DATA === 'undefined' || typeof itemsData === 'undefined' || typeof nanobotModulesData === 'undefined' || typeof researchData === 'undefined' || typeof nightAssaultEnemies === 'undefined' || typeof bossDefinitions === 'undefined' || typeof nightEvents === 'undefined' || typeof nanobotSkills === 'undefined' || typeof explorationEnemyData === 'undefined' || typeof enemyBaseDefinitions === 'undefined' || typeof MAP_FEATURE_DATA === 'undefined' || typeof DAMAGE_TYPES === 'undefined' || typeof TILE_TYPES === 'undefined' || typeof TILE_TYPES_TO_RESOURCE_KEY === 'undefined' || typeof MAX_MOBILITY_POINTS === 'undefined' || typeof MOBILITY_RECHARGE_TICKS === 'undefined') { // Ajout des nouvelles constantes
         if (initAttempts < MAX_INIT_ATTEMPTS) {
             console.warn(`main.js: init() - Constantes de config.js non prêtes. Tentative ${initAttempts}/${MAX_INIT_ATTEMPTS}. Nouvel essai dans 250ms...`);
             setTimeout(init, 250);
@@ -277,7 +293,12 @@ function init() {
 
         console.log("main.js: init() - Initialisation de gameState...");
         gameState = {
-            resources: { biomass: 250, nanites: 100, energy: 0, crystal_shards: 0, totalEnergyConsumed: 0, energyConsumedByDefenses: 0 },
+            resources: { 
+                biomass: 250, nanites: 100, energy: 0, crystal_shards: 0, 
+                totalEnergyConsumed: 0, energyConsumedByDefenses: 0,
+                mobility: MAX_MOBILITY_POINTS // Initialiser la mobilité au maximum
+            },
+            mobilityRechargeTimer: 0, // Timer pour la recharge de mobilité
             productionRates: { biomass: 0, nanites: 0 },
             capacity: { energy: 50 },
             buildings: {}, research: {}, gameTime: 0, isDay: true, currentCycleTime: 0, deficitWarningLogged: 0,
@@ -307,7 +328,7 @@ function init() {
             nightAssault: { isActive: false, wave: 0, enemies: [], lastAttackTime: 0, log: ["Journal d'assaut initialisé."], currentEvent: null, globalModifiers: {} },
             activeCombatSkills: {}, 
             activeResearch: null,
-            tutorialCompleted: false // *** MODIFICATION ICI ***
+            tutorialCompleted: false
         };
         console.log("main.js: init() - gameState initialisé.");
 
@@ -326,16 +347,13 @@ function init() {
         console.log("main.js: init() - gameState après loadGame().");
 
 
-        // *** MODIFICATION ICI : Appel au tutorialController ***
         if (typeof tutorialController !== 'undefined' && typeof tutorialController.checkAndOfferTutorial === 'function') {
-            // Mettre un petit délai pour s'assurer que le reste de l'UI est un peu stable
             setTimeout(() => {
                 tutorialController.checkAndOfferTutorial();
             }, 500); 
         } else {
             console.warn("tutorialController.checkAndOfferTutorial non défini.");
         }
-        // *** FIN DE LA MODIFICATION ***
 
 
         if (typeof mapManager !== 'undefined' && typeof mapManager.generateMap === 'function') {
@@ -358,7 +376,7 @@ function init() {
         if(eventLogEl && gameState && Array.isArray(gameState.eventLog)) { eventLogEl.innerHTML = ''; gameState.eventLog.forEach(msg => { const e = document.createElement('p'); e.innerHTML = msg; eventLogEl.appendChild(e); }); eventLogEl.scrollTop = eventLogEl.scrollHeight; }
         if(combatLogSummaryEl && gameState && Array.isArray(gameState.combatLogSummary)) { combatLogSummaryEl.innerHTML = '<h4 class="font-semibold text-gray-300 text-xs">Log Combat:</h4>'; gameState.combatLogSummary.forEach(msg => { const e = document.createElement('p'); e.innerHTML = msg; combatLogSummaryEl.appendChild(e); }); combatLogSummaryEl.scrollTop = combatLogSummaryEl.scrollHeight; }
         if(nightAssaultLogEl && gameState && gameState.nightAssault && Array.isArray(gameState.nightAssault.log)) {
-            nightAssaultLogEl.innerHTML = ''; // Titre est maintenant statique dans HTML
+            nightAssaultLogEl.innerHTML = ''; 
             (gameState.nightAssault.log).forEach(msg => {
                 const entry = document.createElement('p');
                 if (typeof msg === 'string') {
@@ -393,7 +411,6 @@ function init() {
             console.error("ERREUR CRITIQUE: gameLoop n'est pas défini !");
         }
 
-        // Forcer une mise à jour initiale de l'UI après que gameState est prêt
         if (typeof window.forceInitialUIUpdate === 'function') {
             console.log("main.js: init() - Appel de forceInitialUIUpdate.");
             window.forceInitialUIUpdate();
@@ -410,15 +427,11 @@ function init() {
     }
 }
 
-const SAVE_KEY = 'nexus7GameState_v1.1.2'; // Adaptez la version si la structure de sauvegarde change
+const SAVE_KEY = 'nexus7GameState_v1.1.2';
 function saveGame() { 
     try { 
         if (typeof gameState === 'undefined') { console.warn("saveGame: gameState non défini."); return; } 
-        // Avant de sauvegarder, s'assurer que les objets complexes comme la carte sont "propres"
-        // Par exemple, si `map.tiles` contient des références circulaires ou des fonctions, les nettoyer
-        // Pour ce projet, la structure de `map.tiles` semble être des données JSON-friendly.
         localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
-        // console.log("Partie sauvegardée."); // Moins de logs en production
     } catch (e) { 
         console.error("Erreur lors de la sauvegarde:", e); 
         if(typeof addLogEntry === 'function' && eventLogEl && gameState?.eventLog) {
@@ -432,17 +445,12 @@ function loadGame() {
         console.log("loadGame: Sauvegarde (" + SAVE_KEY + ") trouvée..."); 
         try { 
             const loadedState = JSON.parse(savedGame); 
-            // Fusionner l'état chargé avec l'état par défaut pour gérer les nouvelles propriétés
             for (const key in gameState) {
                 if (loadedState.hasOwnProperty(key)) {
-                    // Pour les objets imbriqués, une fusion plus profonde pourrait être nécessaire
-                    // si vous voulez conserver des sous-propriétés par défaut si elles manquent dans la sauvegarde.
-                    // Pour l'instant, une fusion de premier niveau, avec gestion spéciale pour certains.
                     if (typeof gameState[key] === 'object' && gameState[key] !== null && !Array.isArray(gameState[key]) &&
                         typeof loadedState[key] === 'object' && loadedState[key] !== null && !Array.isArray(loadedState[key])) {
                         
                         if (key === 'map' && loadedState.map && typeof TILE_TYPES !== 'undefined' && typeof ZONE_DATA !== 'undefined' && typeof BASE_COORDINATES !== 'undefined' && typeof DEFAULT_MAP_SIZE !== 'undefined') {
-                            // Gestion spécifique de la carte pour s'assurer qu'elle est correctement structurée
                             gameState.map.tiles = loadedState.map.tiles || [];
                             const zoneForPos = loadedState.currentZoneId || gameState.currentZoneId || 'verdant_archipelago';
                             const defaultPos = (ZONE_DATA[zoneForPos]?.entryPoint) ? 
@@ -453,7 +461,6 @@ function loadGame() {
                             gameState.map.selectedTile = loadedState.map.selectedTile || null;
                             gameState.map.currentEnemyEncounter = loadedState.map.currentEnemyEncounter || null;
 
-                            // Valider et reconstruire `map.tiles` si nécessaire pour correspondre à la taille de la zone
                             if(Array.isArray(gameState.map.tiles)){
                                 const zoneMapSize = ZONE_DATA[gameState.map.zoneId]?.mapSize || DEFAULT_MAP_SIZE;
                                 const expectedHeight = zoneMapSize.height;
@@ -478,7 +485,7 @@ function loadGame() {
                                 }
                                 gameState.map.tiles = newTiles;
                             } else {
-                                gameState.map.tiles = []; // Fallback si non array
+                                gameState.map.tiles = []; 
                             }
 
                         } else if (key === 'nanobotStats' && loadedState.nanobotStats) {
@@ -491,36 +498,37 @@ function loadGame() {
                             gameState.nightAssault = { ...gameState.nightAssault, ...loadedState.nightAssault };
                             if (!Array.isArray(gameState.nightAssault.log)) gameState.nightAssault.log = ["Journal d'assaut initialisé."];
                         } else if (key === 'quests' && loadedState.quests && typeof QUEST_DATA !== 'undefined' && typeof QUEST_STATUS !== 'undefined') {
-                            // Valider les quêtes chargées par rapport à QUEST_DATA
-                            gameState.quests = {}; // Réinitialiser pour éviter les anciennes données non valides
+                            gameState.quests = {}; 
                             for(const qId in loadedState.quests) {
-                                if (QUEST_DATA[qId]) { // S'assurer que la quête existe toujours dans la définition
+                                if (QUEST_DATA[qId]) { 
                                     gameState.quests[qId] = {
                                         id: qId,
                                         status: loadedState.quests[qId].status !== undefined ? loadedState.quests[qId].status : QUEST_STATUS.LOCKED,
                                         progress: loadedState.quests[qId].progress || {},
                                         objectivesCompleted: loadedState.quests[qId].objectivesCompleted || QUEST_DATA[qId].objectives.map(() => false)
                                     };
-                                    // S'assurer que objectivesCompleted a la bonne longueur
                                     if (gameState.quests[qId].objectivesCompleted.length !== QUEST_DATA[qId].objectives.length) {
                                         gameState.quests[qId].objectivesCompleted = QUEST_DATA[qId].objectives.map(() => false);
                                     }
                                 }
                             }
                         } else {
-                            gameState[key] = { ...gameState[key], ...loadedState[key] }; // Fusion simple pour les autres objets
+                            gameState[key] = { ...gameState[key], ...loadedState[key] }; 
                         }
                     } else {
-                        gameState[key] = loadedState[key]; // Remplacement direct pour les types primitifs ou les tableaux
+                        gameState[key] = loadedState[key]; 
                     }
                 }
             }
-             // Assurer que les nouvelles propriétés (non présentes dans la sauvegarde) ont leurs valeurs par défaut
             if (gameState.resources.totalEnergyConsumed === undefined) gameState.resources.totalEnergyConsumed = 0;
             if (gameState.resources.energyConsumedByDefenses === undefined) gameState.resources.energyConsumedByDefenses = 0;
-            if (gameState.capacity.energy === undefined) gameState.capacity.energy = 50; // Valeur par défaut de powerPlant niveau 0 ou 1
+            if (gameState.capacity.energy === undefined) gameState.capacity.energy = 50; 
             if (gameState.nanobotStats.lastScanTime === undefined) gameState.nanobotStats.lastScanTime = 0;
-            if (gameState.tutorialCompleted === undefined) gameState.tutorialCompleted = false; // Assurer que cette propriété existe
+            if (gameState.tutorialCompleted === undefined) gameState.tutorialCompleted = false;
+            // Assurer que la mobilité et son timer sont présents si la sauvegarde est ancienne
+            if (gameState.resources.mobility === undefined) gameState.resources.mobility = MAX_MOBILITY_POINTS;
+            if (gameState.mobilityRechargeTimer === undefined) gameState.mobilityRechargeTimer = 0;
+
 
             if(typeof addLogEntry === 'function' && eventLogEl && gameState.eventLog) addLogEntry(`Partie chargée (${SAVE_KEY}).`, "info", eventLogEl, gameState.eventLog);
             console.log("loadGame: Partie chargée avec succès.");
@@ -532,13 +540,12 @@ function loadGame() {
     } else {
         console.log("loadGame: Aucune sauvegarde (" + SAVE_KEY + ").");
     }
-    // Assurer que les logs sont des tableaux même si la sauvegarde est corrompue ou absente
     if (!Array.isArray(gameState.eventLog)) gameState.eventLog = ["Journal événements initialisé."];
     if (!Array.isArray(gameState.explorationLog)) gameState.explorationLog = ["Journal exploration initialisé."];
     if (!Array.isArray(gameState.combatLogSummary)) gameState.combatLogSummary = ["Journal combat initialisé."];
     if (gameState.nightAssault && !Array.isArray(gameState.nightAssault.log)) gameState.nightAssault.log = ["Journal assaut initialisé."];
     if (!gameState.quests || typeof gameState.quests !== 'object') gameState.quests = {};
-    if (gameState.map && gameState.map.selectedTile === undefined) gameState.map.selectedTile = null; // Assurer que selectedTile est au moins null
+    if (gameState.map && gameState.map.selectedTile === undefined) gameState.map.selectedTile = null;
 }
 
 

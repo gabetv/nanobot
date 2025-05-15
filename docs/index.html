@@ -42,6 +42,8 @@
             #persistent-header > h1 { width: auto; text-align: left; margin-bottom:0; font-size: 1.5rem;}
             .resource-item {font-size: 0.8rem; margin-top: 0;}
         }
+        /* Styles pour la nouvelle ressource mobilité */
+        #mobility { color: var(--accent-blue); /* Ou une autre couleur si vous préférez */ }
 
 
         #main-layout-container { display: flex; flex-grow: 1; overflow: hidden; }
@@ -194,29 +196,18 @@
 
         /* Nanobot Visualisation Section */
         .nanobot-display {
-            aspect-ratio: 1 / 1.3; /* Maintenir le ratio */
-            margin: 0.5rem auto;
-            position: relative;
+            aspect-ratio: 1 / 1.3; margin: 0.5rem auto; position: relative;
             border: 2px solid var(--border-color);
             background: radial-gradient(circle, var(--bg-secondary) 0%, var(--bg-primary) 70%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-            width: 100%; /* Prend la largeur de son conteneur panel */
-            max-width: 150px; /* Limite la taille maximale */
-            height: auto; /* Hauteur s'ajuste au ratio */
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 8px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            width: 100%; max-width: 150px; height: auto;
         }
         .nanobot-core {
-            width: 30%; /* Pourcentage de la largeur du .nanobot-display */
-            padding-bottom: 30%; /* Pour faire un carré responsif */
-            height: 0; /* Nécessaire pour padding-bottom trick */
-            background-color: var(--accent-blue);
-            border: 2px solid #63b3ed;
+            width: 30%; padding-bottom: 30%; height: 0;
+            background-color: var(--accent-blue); border: 2px solid #63b3ed;
             box-shadow: 0 0 8px var(--accent-blue), 0 0 15px rgba(66, 153, 225, 0.5);
-            position: relative;
-            border-radius: 50%;
+            position: relative; border-radius: 50%;
             animation: pulse-core 2.5s infinite ease-in-out;
         }
         .nanobot-module, .nanobot-item-visual { position: absolute; background-color: var(--text-secondary); border: 1px solid #718096; }
@@ -228,16 +219,54 @@
         .item-armor-plating { width: 105%; height: 105%; border: 3px solid #90cdf4; border-radius: 10%; top: -2.5%; left: -2.5%; opacity:0.6; box-sizing: border-box; }
 
 
+        /* --- COMBAT VISUALS --- */
         #combat-modal-content { min-width: 90vw; md:min-w-[500px]; min-height: 50vh; }
-        .combat-arena { display: flex; justify-content: space-around; align-items: flex-end; height: 180px; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 0.25rem; padding: 8px; margin-bottom: 0.5rem; position: relative; overflow: hidden;}
+        .combat-arena {
+            display: flex; justify-content: space-around; align-items: flex-end;
+            height: 180px; background-color: var(--bg-primary); /* Fallback */
+            border: 1px solid var(--border-color); border-radius: 0.25rem;
+            padding: 8px; margin-bottom: 0.5rem; position: relative; overflow: hidden;
+            background-size: cover; background-position: center;
+            transition: background-image 0.5s ease-in-out, background-color 0.5s ease-in-out;
+        }
+        /* REMPLACEZ LES URLS PAR VOS IMAGES */
+        .combat-arena-verdant { background-image: url('img/bg_verdant_combat.png'); background-color: #284c37; } 
+        .combat-arena-caves { background-image: url('img/bg_caves_combat.png'); background-color: #3a3a52; } 
+        .combat-arena-default { background-color: var(--bg-primary); }
+
         .combatant { position: relative; text-align: center; transition: transform 0.3s ease-out; }
-        .combatant-sprite { width: 60px; height: 80px; border: 2px solid var(--border-color); margin: 0 auto; position: relative; background-size: contain; background-repeat: no-repeat; background-position: center; }
-        #combat-nanobot-sprite { background-color: var(--accent-blue); } #combat-enemy-sprite { background-color: var(--accent-red); }
+        .combatant-sprite {
+            width: 60px; height: 80px; border: 2px solid var(--border-color);
+            margin: 0 auto; position: relative;
+            background-size: contain; background-repeat: no-repeat; background-position: center;
+            animation: idle-breath 3s infinite ease-in-out;
+            transition: box-shadow 0.2s, filter 0.2s;
+        }
+        .combatant-sprite.is-acting { animation: none; }
+        .sprite-hit-flash { animation: hit-flash-effect 0.2s ease-out; }
+
+        #combat-nanobot-sprite { background-color: var(--accent-blue); }
+        #combat-enemy-sprite { background-color: var(--accent-red); }
         .combatant-name { font-weight: bold; margin-bottom: 3px; font-size: 0.7rem; }
         .health-bar-container { width: 60px; height: 7px; background-color: #718096; border-radius: 3px; margin: 3px auto 0; overflow: hidden; border: 1px solid var(--border-color);}
         .health-bar { height: 100%; background-color: var(--accent-green); width: 100%; transition: width 0.5s ease; }
-        .health-bar.low { background-color: #f56565; } .health-bar.medium { background-color: #faf089; }
-        .damage-float { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 0.9rem; font-weight: bold; color: var(--accent-red); animation: floatUp 1s ease-out forwards; opacity: 0; white-space: nowrap; }
+        .health-bar.low { background-color: #f56565; }
+        .health-bar.medium { background-color: #faf089; }
+
+        .damage-float {
+            position: absolute; top: -15px; left: 50%;
+            font-size: 1rem; font-weight: bold; color: var(--accent-red);
+            animation: floatUpBase 1s ease-out forwards;
+            opacity: 0; white-space: nowrap;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+            z-index: 20;
+        }
+        .damage-float.critical {
+            color: var(--accent-yellow) !important; font-size: 1.3rem;
+            animation: floatUpCritical 1.5s ease-out forwards;
+        }
+        .damage-float[style*="color: rgb(72, 187, 120)"] { animation: floatUpHeal 1.2s ease-out forwards; }
+        .damage-float[style*="color: rgb(160, 174, 192)"] { animation: floatMiss 0.8s ease-in forwards; }
         
         .quest-item { background-color: var(--bg-secondary); padding: 0.5rem; border-radius: 0.25rem; margin-bottom: 0.5rem; border-left: 4px solid transparent; }
         .quest-item h4 { font-size: 0.875rem; margin-bottom: 0.1rem;}
@@ -259,7 +288,6 @@
         .slot-name { font-size: 0.8rem; font-weight: 600; margin-bottom: 0.125rem; }
         .equipped-item-name { font-size: 0.75rem; }
         .empty-slot { font-size: 0.75rem; font-style: italic; }
-
 
         #base-status-section { padding: 0.5rem; }
         #base-health-bar-container { height: 10px; }
@@ -314,6 +342,29 @@
         @keyframes pulse-resource-highlight { from { box-shadow: 0 0 3px 0.5px gold; } to { box-shadow: 0 0 6px 1px orange; } }
         @keyframes pulse-danger { from { box-shadow: 0 0 5px var(--accent-red); } to { box-shadow: 0 0 10px #c53030, 0 0 3px var(--accent-red); } }
         @keyframes pulse-dot { from { opacity: 0.7; transform: scale(0.9); } to { opacity: 1; transform: scale(1.1); } }
+        @keyframes hit-flash-effect {
+            0%, 100% { box-shadow: 0 0 0px rgba(255, 255, 255, 0); }
+            50% { box-shadow: 0 0 15px 8px rgba(255, 255, 255, 0.8); }
+        }
+        @keyframes floatUpBase {
+            0% { opacity: 1; transform: translate(-50%, 0px); }
+            100% { opacity: 0; transform: translate(-50%, -40px); }
+        }
+        @keyframes floatUpCritical {
+            0% { opacity: 1; transform: translate(-50%, 0px) scale(1); }
+            15% { transform: translate(-50%, -15px) scale(1.4); }
+            30% { transform: translate(-50%, -10px) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -60px) scale(0.8); }
+        }
+        @keyframes floatUpHeal {
+            0% { opacity: 1; transform: translate(-50%, 5px) scale(0.9); }
+            100% { opacity: 0; transform: translate(-50%, -30px) scale(1.1); }
+        }
+        @keyframes floatMiss {
+            0% { opacity: 1; transform: translate(-50%, 0px) translateX(0); }
+            50% { opacity: 0.8; transform: translate(-50%, -10px) translateX(10px); }
+            100% { opacity: 0; transform: translate(-50%, -15px) translateX(-15px); }
+        }
 
     </style>
 </head>
@@ -327,6 +378,7 @@
                 <div class="resource-item" title="Nanites"><i class="ti ti-settings-2"></i>&nbsp;<span id="nanites">0</span>(<span id="nanitesRate">0</span>/s)</div>
                 <div id="crystal-shards-display-container" class="resource-item hidden" title="Cristaux"><i class="ti ti-diamond"></i>&nbsp;<span id="crystal_shards">0</span></div>
                 <div class="resource-item" title="Énergie (Consommée/Max)"><i class="ti ti-bolt"></i>&nbsp;<span id="energy">0</span></div>
+                <div class="resource-item" title="Points de Mobilité"><i class="ti ti-shoe"></i>&nbsp;<span id="mobility">0</span></div> 
             </div>
             <div class="flex items-center space-x-2 md:space-x-3 text-xs mt-1 sm:mt-0 justify-center sm:justify-start">
                 <div id="base-health-display" title="Santé du Noyau"><i class="ti ti-shield-heart"></i>&nbsp;<span id="base-health-value">0</span>/<span id="base-max-health-value">0</span></div>
@@ -409,20 +461,17 @@
 
                 <!-- Section Nexus-7 -->
                 <div id="nexus-section" class="content-section">
-                     <div class="panel"> <!-- Panel principal de la section Nexus-7 -->
+                     <div class="panel">
                         <div class="sub-nav-bar">
                             <button class="sub-nav-button active" data-subtab="nanobot-config-subtab" data-parentsection="nexus-section">Configuration</button>
                             <button class="sub-nav-button" data-subtab="inventory-subtab" data-parentsection="nexus-section">Inventaire</button>
                         </div>
-
-                        <!-- Contenu du sous-onglet Configuration -->
                         <div id="nanobot-config-subtab" class="sub-content active">
                             <div id="nanobot-content" class="flex-grow overflow-y-auto p-1 space-y-4">
                                 <h2 class="font-orbitron text-lg mb-3 text-[var(--accent-blue)] border-b-2 border-[var(--accent-blue)] pb-1 flex items-center">
                                     <i class="ti ti-settings-cog mr-2"></i>Configuration Nexus-7
                                 </h2>
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <!-- Colonne 1: Visualisation & Modules -->
                                     <div class="md:col-span-1 space-y-4">
                                         <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md">
                                             <h3 class="font-orbitron text-md mb-2 text-sky-300 flex items-center">
@@ -433,7 +482,6 @@
                                             </div>
                                             <div id="equipped-items-display-brief" class="mt-1 text-xs text-center text-gray-400">Aucun équipement.</div>
                                         </div>
-                                
                                         <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md">
                                             <h3 class="font-orbitron text-md mb-2 text-lime-300 flex items-center">
                                                 <i class="ti ti-components mr-2"></i>Modules Actifs
@@ -443,8 +491,6 @@
                                             </div>
                                         </div>
                                     </div>
-                                
-                                    <!-- Colonne 2: Statistiques & Actions -->
                                     <div class="md:col-span-1 space-y-4">
                                         <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md">
                                             <h3 class="font-orbitron text-md mb-2 text-amber-300 flex items-center">
@@ -457,7 +503,6 @@
                                                 <li class="flex justify-between items-center"><span><i class="ti ti-brand-speedtest text-green-400 mr-1.5"></i>Vitesse:</span> <span id="nanobot-speed" class="font-semibold text-gray-200">0</span></li>
                                             </ul>
                                         </div>
-                                
                                         <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md">
                                             <h3 class="font-orbitron text-md mb-2 text-teal-300 flex items-center">
                                                 <i class="ti ti-tool mr-2"></i>Actions
@@ -476,8 +521,6 @@
                                             </div>
                                         </div>
                                     </div>
-                                
-                                    <!-- Colonne 3: Équipement -->
                                     <div class="md:col-span-1 space-y-4">
                                         <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md h-full flex flex-col">
                                             <h3 class="font-orbitron text-md mb-2 text-fuchsia-300 flex items-center">
@@ -491,8 +534,6 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Contenu du sous-onglet Inventaire -->
                         <div id="inventory-subtab" class="sub-content">
                             <h3 class="font-orbitron text-md mb-2 text-[var(--accent-blue)] border-b border-[var(--border-color)] pb-1">Inventaire des Objets</h3>
                             <div id="inventory-list" class="list-item-container flex-grow overflow-y-auto pr-1">
@@ -501,7 +542,6 @@
                         </div>
                     </div>
                 </div>
-
 
                 <!-- Section Monde -->
                 <div id="world-section" class="content-section">

@@ -5,14 +5,19 @@ var TICK_SPEED = 1000;
 var DAY_DURATION = 5 * 60 * (1000 / TICK_SPEED);
 var NIGHT_DURATION = 3 * 60 * (1000 / TICK_SPEED);
 var COMBAT_ANIMATION_DELAY_BASE = 700;
-var EXPLORATION_COST_ENERGY = 5;
+// var EXPLORATION_COST_ENERGY = 5; // Ancienne constante, peut être supprimée ou commentée
+var EXPLORATION_COST_MOBILITY = 1; // Coût d'un déplacement en points de mobilité
+var MAX_MOBILITY_POINTS = 10; // Maximum de points de mobilité
+var MOBILITY_RECHARGE_RATE_PER_MINUTE = 1; // Combien de points sont rechargés par minute
+var MOBILITY_RECHARGE_TICKS = Math.floor(60 / MOBILITY_RECHARGE_RATE_PER_MINUTE * (1000 / TICK_SPEED)); // Ticks nécessaires pour recharger 1 point
+
 var DEFAULT_MAP_SIZE = { width: 25, height: 20 };
 var BASE_GRID_SIZE = { rows: 9, cols: 13 };
-var SCAN_ENERGY_COST = 15;
+var SCAN_ENERGY_COST = 15; // Le scan continue d'utiliser de l'énergie
 var SCAN_COOLDOWN_DURATION_SECONDS = 10;
 var SCAN_REVEAL_DURATION_SECONDS = 20;
-var SCAN_COOLDOWN_DURATION = SCAN_COOLDOWN_DURATION_SECONDS; // Sera calculé en ticks dans main.js
-var SCAN_REVEAL_DURATION = SCAN_REVEAL_DURATION_SECONDS;   // Sera calculé en ticks dans main.js
+var SCAN_COOLDOWN_DURATION = SCAN_COOLDOWN_DURATION_SECONDS; 
+var SCAN_REVEAL_DURATION = SCAN_REVEAL_DURATION_SECONDS;   
 
 var TILE_TYPES = {
     UNEXPLORED: 0, EMPTY_GRASSLAND: 1, EMPTY_DESERT: 2, EMPTY_WATER: 3, FOREST: 4, MOUNTAIN: 5, RUINS: 6, PLAYER_BASE: 7,
@@ -86,7 +91,6 @@ var enemyBaseDefinitions = {
     }
 };
 
-// --- ITEMS ---
 var itemsData = {
     'comp_av': { id: 'comp_av', name: "Composant Avancé", slot: null, description: "Matériau de fabrication pour modules et équipements de haut niveau.", cost: null, rarity: "material" },
     'mod_proto': { id: 'mod_proto', name: "Module Prototypé", slot: null, description: "Un prototype de module, instable mais puissant. Utilisé dans des crafts avancés.", cost: null, rarity: "material"},
@@ -104,7 +108,6 @@ var itemsData = {
     'item_advanced_scope': { id: 'item_advanced_scope', name: "Viseur Avancé", slot: "utility2", description: "Améliore la précision des systèmes d'armes, augmentant légèrement l'attaque.", statBoost: { attack: 3, speed: -1 }, cost: { nanites: 200 }, rarity: "uncommon" }
 };
 
-// --- BUILDINGS ---
 var buildingsData = {
     'biomassHarvester': { name: "Collecteur de Biomasse", type:"production", description: "Récolte la Biomasse organique environnante.", levels: [ { level: 1, costToUnlockOrUpgrade: { biomass: 50 }, production: { biomass: 1 }, energyConsumption: 2 }, { level: 2, costToUpgrade: { biomass: 120, nanites: 20 }, production: { biomass: 3 }, energyConsumption: 4 }, { level: 3, costToUpgrade: { biomass: 250, nanites: 50, comp_av: 1 }, production: { biomass: 6 }, energyConsumption: 6 } ] },
     'naniteFactory': { name: "Usine de Nanites", type:"production", description: "Assemble des Nanites à partir de matériaux bruts.", levels: [ { level: 1, costToUnlockOrUpgrade: { biomass: 80, nanites: 10 }, production: { nanites: 0.5 }, energyConsumption: 5 }, { level: 2, costToUpgrade: { biomass: 200, nanites: 50 }, production: { nanites: 1.5 }, energyConsumption: 8 }, { level: 3, costToUpgrade: { biomass: 400, nanites: 120, comp_av: 1 }, production: { nanites: 3 }, energyConsumption: 12 } ] },
@@ -115,7 +118,6 @@ var buildingsData = {
     'gatlingTurret': { name: "Tourelle Gatling", type: "defense", description: "Tourelle à haute cadence de tir, idéale contre les groupes d'ennemis.", placementCost: { biomass: 100, nanites: 30 }, energyConsumption: 8, levels: [ { level: 1, stats: { attack: 4, health: 150, attackSpeed: 2.5, damageType: DAMAGE_TYPES.KINETIC, range: 70 }, costToUnlockOrUpgrade: { biomass: 120, nanites: 60 }, energyConsumption: 8 }, { level: 2, stats: { attack: 7, health: 250, attackSpeed: 3.0, damageType: DAMAGE_TYPES.KINETIC, range: 80 }, costToUpgrade: { biomass: 280, nanites: 140, comp_av: 1 }, energyConsumption: 12 }, ] },
     'reinforcedWall': { name: "Mur Renforcé", type: "defense", description: "Structure défensive passive augmentant les PV du Noyau et bloquant les ennemis.", placementCost: { biomass: 50, nanites: 10 }, energyConsumption: 1, levels: [ { level: 1, baseHealthBonus: 250, stats: { health: 300 }, costToUnlockOrUpgrade: { biomass: 150, nanites: 50 }, energyConsumption: 1 }, { level: 2, baseHealthBonus: 500, stats: { health: 600 }, costToUpgrade: { biomass: 300, nanites: 120, comp_av:1 }, energyConsumption: 1 } ] }
 };
-// Validation
 for (const id in buildingsData) { if (!buildingsData[id].levels || !Array.isArray(buildingsData[id].levels) || buildingsData[id].levels.length === 0) { console.error(`ERREUR buildingsData: Bâtiment '${id}' n'a pas de tableau 'levels' valide ou est vide.`); } else { if (buildingsData[id].energyConsumption !== undefined && buildingsData[id].levels[0].energyConsumption === undefined) { buildingsData[id].levels[0].energyConsumption = buildingsData[id].energyConsumption; } buildingsData[id].levels.forEach((lvlData, index) => { if (index === 0) { if (!lvlData.costToUnlockOrUpgrade) { console.error(`ERREUR buildingsData: Niveau 1 de '${id}' manque 'costToUnlockOrUpgrade'.`); } } else { if (!lvlData.costToUpgrade && index < buildingsData[id].levels.length -1 ) { /* console.warn(`AVERTISSEMENT buildingsData: Niveau ${lvlData.level} de '${id}' manque 'costToUpgrade' mais n'est pas le dernier.`); */ } } if (buildingsData[id].type === "defense" && (!lvlData.stats || lvlData.stats.health === undefined)) { console.error(`ERREUR buildingsData: Défense '${id}' niveau ${lvlData.level} manque stats.health.`); } if (buildingsData[id].type === "defense" && lvlData.energyConsumption === undefined) { lvlData.energyConsumption = buildingsData[id].energyConsumption || 0; } }); } if (buildingsData[id].type === "defense" && !buildingsData[id].placementCost) { console.error(`ERREUR buildingsData: Défense '${id}' manque 'placementCost'.`); } }
 
 var nanobotModulesData = {
@@ -125,9 +127,9 @@ var nanobotModulesData = {
     'shieldGeneratorMk2': { id: 'shieldGeneratorMk2', name: "Bouclier Énergétique Mk2", description: "Génère un champ de force protecteur amélioré. Remplace Mk1.", visualClass: 'module-shield', unlockMethod: { building: 'defenseFoundry', buildingLevel: 2 }, replaces: 'shieldGeneratorMk1', levels: [ { level: 1, statBoost: { defense: 20, health: 50 }, costToUnlockOrUpgrade: { nanites: 250, biomass: 150, mod_proto: 2 } }, { level: 2, statBoost: { defense: 30, health: 75 }, costToUpgrade: { nanites: 400, biomass: 250, arte_rare: 1 } } ] }
 };
 
-var researchData = { // time est en secondes, sera converti en ticks dans la logique de jeu
-    'basic_navigation': { name: "Navigation de Base", description: "Permet le voyage vers des zones proches et améliore la vitesse d'exploration.", cost: { biomass: 100, nanites: 50}, time: 60, requirements: { buildings: { researchLab: 1}}, grantsStatBoost: { speed: 2} }, // Débloque aussi des zones via quest/event
-    'advanced_geology': { name: "Géologie Avancée", description: "Permet l'identification et l'accès à des zones riches en cristaux.", cost: {biomass: 250, nanites: 150, crist_stock: 5}, time: 180, requirements: {buildings: {researchLab: 1}, research: ['basic_navigation']}}, // Débloque crystal_caves
+var researchData = { 
+    'basic_navigation': { name: "Navigation de Base", description: "Permet le voyage vers des zones proches et améliore la vitesse d'exploration.", cost: { biomass: 100, nanites: 50}, time: 60, requirements: { buildings: { researchLab: 1}}, grantsStatBoost: { speed: 2} }, 
+    'advanced_geology': { name: "Géologie Avancée", description: "Permet l'identification et l'accès à des zones riches en cristaux.", cost: {biomass: 250, nanites: 150, crist_stock: 5}, time: 180, requirements: {buildings: {researchLab: 1}, research: ['basic_navigation']}}, 
     'combatAlgorithms': { name: "Algorithmes de Combat", description: "Améliore l'efficacité au combat du Nexus-7.", cost: { biomass: 150, nanites: 300 }, time: 120, requirements: { buildings: { researchLab: 1 } }, grantsStatBoost: { attack: 5, defense: 3 } },
     'weaponizedNanites': { name: "Nanites Armés", description: "Intègre des nanites offensives dans les systèmes du Nexus-7.", cost: { biomass: 400, nanites: 250 }, time: 240, requirements: { buildings: { researchLab: 2 } }, grantsModule: 'armBlade' },
     'graviticManipulation': { name: "Manipulation Gravitique", description: "Développement de modules de déplacement avancés.", cost: { biomass: 300, nanites: 200, arte_rare: 1 }, time: 180, requirements: { buildings: { researchLab: 2 } }, grantsModule: 'gravLegs' },
@@ -146,18 +148,18 @@ var ZONE_DATA = {
         mapSize: { width: 25, height: 20 },
         entryPoint: { x: 3, y: 3 },
         basePlayerCoordinates: { x: 3, y: 3 },
-        baseTerrainLayout: [], // Sera rempli par mapManager.js ou défini statiquement ici
-        visibleStructureLayout: [], // Sera rempli par mapManager.js ou défini statiquement ici
-        tileContentDistribution: { // Chance de trouver ce contenu sur une tuile générique explorable
+        baseTerrainLayout: [], 
+        visibleStructureLayout: [], 
+        tileContentDistribution: { 
             [TILE_TYPES.RESOURCE_BIOMASS_PATCH]: 0.12,
             [TILE_TYPES.RESOURCE_NANITE_DEPOSIT]: 0.04,
             [TILE_TYPES.FOREST]: 0.15,
             [TILE_TYPES.RUINS]: 0.03,
             [TILE_TYPES.UPGRADE_CACHE]: 0.02,
             [TILE_TYPES.POI_ANCIENT_STRUCTURE]: 0.01,
-            'drone_scout': 0.04, // Clé de explorationEnemyData
-            'raider_grunt': 0.03, // Clé de explorationEnemyData
-            'outpost_alpha': 0.01, // Clé de enemyBaseDefinitions
+            'drone_scout': 0.04, 
+            'raider_grunt': 0.03, 
+            'outpost_alpha': 0.01, 
         },
         patrolEnemyPool: ['drone_scout', 'raider_grunt']
     },
@@ -177,7 +179,7 @@ var ZONE_DATA = {
             'crystal_hive_node': 0.015,
         },
         patrolEnemyPool: ['enemy_crystal_golem_weak', 'enemy_spark_wisp_scout'],
-        unlockCondition: { research: 'advanced_geology' } // Exemple: ID d'une recherche
+        unlockCondition: { research: 'advanced_geology' } 
     }
 };
 
@@ -207,7 +209,7 @@ var nightEvents = [
 ];
 var nanobotSkills = {
     'powerStrike': { id: 'powerStrike', name: "Frappe Puissante", description: "Attaque concentrée à 150% dégâts.", type: "attack_boost", cost: { rage: 30 }, effect: { damageMultiplier: 1.5 }, cooldown: 0, activationMessage: "Nexus-7 concentre son énergie pour une Frappe Puissante !", effectMessage: (damage) => `L'attaque inflige ${damage} dégâts critiques !` },
-    'emergencyShield': { id: 'emergencyShield', name: "Bouclier d'Urgence", description: "Bouclier temporaire absorbant 20 dégâts.", type: "defensive_buff", trigger: { healthPercentBelow: 30 }, effect: { damageAbsorption: 20, duration: 1 /* rounds */ }, cooldown: 10 /* ticks */, activationMessage: "Systèmes d'urgence ! Bouclier temporaire activé !", effectMessage: "Le bouclier absorbe les prochains dégâts." },
+    'emergencyShield': { id: 'emergencyShield', name: "Bouclier d'Urgence", description: "Bouclier temporaire absorbant 20 dégâts.", type: "defensive_buff", trigger: { healthPercentBelow: 30 }, effect: { damageAbsorption: 20, duration: 1 }, cooldown: 10 , activationMessage: "Systèmes d'urgence ! Bouclier temporaire activé !", effectMessage: "Le bouclier absorbe les prochains dégâts." },
     'adaptiveFocus': { id: 'adaptiveFocus', name: "Concentration Adaptative", description: "Chaque attaque réussie augmente les dégâts.", type: "passive_buff_stack", trigger: { onNanobotAttackHit: true }, effect: { damageBonusPerStack: 2, maxStacks: 3 }, resetCondition: { onNanobotHit: true }, cooldown: 0, activationMessage: (stacks) => `Concentration accrue (x${stacks}) !` }
 };
 

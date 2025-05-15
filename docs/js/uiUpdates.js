@@ -12,6 +12,14 @@ var uiUpdates = {
 
         if(biomassEl) biomassEl.textContent = Math.floor(gameState.resources.biomass);
         if(nanitesEl) nanitesEl.textContent = Math.floor(gameState.resources.nanites);
+        
+        // AFFICHAGE MOBILITÉ
+        if(mobilityEl && typeof gameState.resources.mobility !== 'undefined' && typeof MAX_MOBILITY_POINTS !== 'undefined') {
+            mobilityEl.textContent = `${Math.floor(gameState.resources.mobility)} / ${MAX_MOBILITY_POINTS}`;
+        } else if (mobilityEl) {
+            mobilityEl.textContent = '? / ?';
+        }
+        
         if(typeof gameState.resources.crystal_shards !== 'undefined'){
             if(crystalShardsDisplayContainer) crystalShardsDisplayContainer.classList.toggle('hidden', gameState.resources.crystal_shards <= 0 && !crystalShardsDisplayContainer.classList.contains('always-visible'));
             if(crystalShardsEl) crystalShardsEl.textContent = Math.floor(gameState.resources.crystal_shards || 0);
@@ -53,7 +61,7 @@ var uiUpdates = {
             const nextLevelDefinition = building.levels && building.levels[level] ? building.levels[level] : null;
 
             const div = document.createElement('div');
-            div.className = 'panel p-2 mb-2'; // Utilise le style .panel de base
+            div.className = 'panel p-2 mb-2'; 
             let content = `<h4 class="text-sm font-semibold ${building.type === 'defense' ? 'text-[var(--accent-yellow)]' : 'text-[var(--accent-blue)]'}">${building.name} (Niv. ${level})</h4>`;
             content += `<p class="text-xs text-gray-400 mb-1">${building.description}</p>`;
 
@@ -135,7 +143,7 @@ var uiUpdates = {
             const progress = Math.min(100, (effectiveTotalTimeSeconds > 0 ? (elapsedSeconds / effectiveTotalTimeSeconds) : 0) * 100);
 
             const researchDiv = document.createElement('div');
-            researchDiv.className = 'panel p-2 mb-2'; // Utilise le style .panel de base
+            researchDiv.className = 'panel p-2 mb-2';
             researchDiv.innerHTML = `
                 <h4 class="text-sm font-semibold text-yellow-400">En cours: ${research.name}</h4>
                 <p class="text-xs text-gray-400 mb-1">${research.description}</p>
@@ -151,7 +159,7 @@ var uiUpdates = {
             const research = researchData[id];
             if (gameState.research[id]) {
                 const div = document.createElement('div');
-                div.className = 'panel p-2 mb-2 opacity-60'; // Utilise le style .panel de base
+                div.className = 'panel p-2 mb-2 opacity-60';
                 div.innerHTML = `
                     <h4 class="text-sm font-semibold text-green-400">${research.name} (Acquis)</h4>
                     <p class="text-xs text-gray-500">${research.description}</p>`;
@@ -166,7 +174,7 @@ var uiUpdates = {
                 if (research.requirements.buildings) { for (const buildingId in research.requirements.buildings) { if ((gameState.buildings[buildingId] || 0) < research.requirements.buildings[buildingId]) { canResearch = false; requirementText += `<span class="text-red-400">${buildingsData[buildingId]?.name || buildingId} Niv. ${research.requirements.buildings[buildingId]} requis.</span><br>`;}}}
                 if (research.requirements.research) { research.requirements.research.forEach(reqResearchId => { if (!gameState.research[reqResearchId]) { canResearch = false; requirementText += `<span class="text-red-400">Recherche "${researchData[reqResearchId]?.name || reqResearchId}" requise.</span><br>`;}});}}
 
-            const div = document.createElement('div'); div.className = 'panel p-2 mb-2'; // Utilise le style .panel de base
+            const div = document.createElement('div'); div.className = 'panel p-2 mb-2';
             let costString = Object.entries(research.cost).map(([res, val]) => `${val} ${res.charAt(0).toUpperCase() + res.slice(1)}`).join(', ');
             let effectsText = "";
             if(research.grantsStatBoost) effectsText += `Stats: ${Object.entries(research.grantsStatBoost).map(([s,v])=>`${s}:+${v}`).join(', ')}. `;
@@ -186,9 +194,9 @@ var uiUpdates = {
     },
 
     updateNanobotModulesDisplay: function() {
-        const container = equippedModulesDisplayEl; // C'est l'ID du div dans la colonne 1
+        const container = equippedModulesDisplayEl;
         if (!container) { console.warn("UI: updateNanobotModulesDisplay - #equipped-modules-display non trouvé."); return; }
-        container.innerHTML = ''; // Vider le contenu précédent
+        container.innerHTML = '';
         let hasModules = false;
         if (typeof nanobotModulesData === 'undefined' || Object.keys(nanobotModulesData).length === 0) {
             container.innerHTML = "<p class='text-xs text-gray-500 italic'>Données modules non chargées.</p>"; return;
@@ -206,7 +214,7 @@ var uiUpdates = {
                 if (moduleData.unlockMethod.research && gameState.research[moduleData.unlockMethod.research]) isUnlocked = true;
                 else if (moduleData.unlockMethod.building && typeof buildingsData !== 'undefined' && buildingsData[moduleData.unlockMethod.building] && (gameState.buildings[moduleData.unlockMethod.building] || 0) >= moduleData.unlockMethod.buildingLevel) isUnlocked = true;
             } else {
-                isUnlocked = true; // Pas de condition de déblocage spécifique
+                isUnlocked = true;
             }
 
             let isReplacedByActiveHigherTier = false;
@@ -216,13 +224,11 @@ var uiUpdates = {
                     break;
                 }
             }
-            // Ne pas afficher un module de base si sa version améliorée est active et que le module de base n'est pas installé
             if(isReplacedByActiveHigherTier && currentLevel === 0) continue;
 
             if (isUnlocked || currentLevel > 0) {
                 hasModules = true;
                 const moduleDiv = document.createElement('div');
-                // Appliquer les classes de "carte" pour chaque module
                 moduleDiv.className = 'module-card bg-gray-700 bg-opacity-70 p-2.5 rounded-md shadow border border-gray-600';
 
                 let content = `<div class="flex justify-between items-baseline mb-1">
@@ -238,14 +244,14 @@ var uiUpdates = {
                     }
                 } else if (isReplacedByActiveHigherTier) {
                     content += `<p class="text-xs text-gray-500 italic">Remplacé par une version supérieure.</p>`;
-                } else { // isUnlocked mais currentLevel === 0
+                } else {
                     content += `<p class="text-xs text-yellow-400">Prêt à activer.</p>`;
                 }
                 
-                moduleDiv.innerHTML = content; // Appliquer le contenu de base
+                moduleDiv.innerHTML = content;
 
                 const nextLevelData = moduleData.levels.find(l => l.level === currentLevel + 1);
-                const costDataForNextLevel = currentLevel === 0 ? moduleData.levels[0].costToUnlockOrUpgrade : (nextLevelData ? nextLevelData.costToUpgrade : null);
+                const costDataForNextLevel = currentLevel === 0 ? moduleData.levels[0].costToUnlockOrUpgrade : (nextLevelData ? nextLevelData.costToUpgrade : null) ;
 
                 if (costDataForNextLevel && (currentLevel < moduleData.levels.length) && !isReplacedByActiveHigherTier) {
                     let costHtml = "";
@@ -255,9 +261,9 @@ var uiUpdates = {
                     
                     let canAfford = true;
                     for(const res_1 in costDataForNextLevel) {
-                        if (typeof itemsData !== 'undefined' && itemsData[res_1]) { // C'est un item matériel
+                        if (typeof itemsData !== 'undefined' && itemsData[res_1]) { 
                             if ((gameState.inventory || []).filter(itemId => itemId === res_1).length < costDataForNextLevel[res_1]) canAfford = false;
-                        } else { // C'est une ressource principale
+                        } else { 
                             if ((gameState.resources[res_1] || 0) < costDataForNextLevel[res_1]) canAfford = false;
                         }
                         if (!canAfford) break;
@@ -269,7 +275,7 @@ var uiUpdates = {
                         costHtml += `<div class="text-xs text-gray-400 mt-1"><strong>Prochain Niv (${nextLevelData.level}):</strong> ${Object.entries(nextLevelData.statBoost).map(([s,v]) => `${s.charAt(0).toUpperCase() + s.slice(1)}:+${v}`).join(', ')}</div>`;
                     }
                     costHtml += `<div class="text-xs text-amber-400 mt-1"><strong>Coût ${buttonText}:</strong> ${costString}</div>`;
-                    moduleDiv.innerHTML += costHtml; // Ajouter les infos de coût
+                    moduleDiv.innerHTML += costHtml;
 
                     const upgradeButton = document.createElement('button');
                     upgradeButton.className = `btn ${canAfford ? 'btn-primary' : 'btn-disabled'} btn-xs mt-2 w-full`;
@@ -288,17 +294,15 @@ var uiUpdates = {
         }
     },
 
-    updateNanobotDisplay: function() { // Se concentre sur les stats et le visuel du nanobot lui-même
+    updateNanobotDisplay: function() { 
         if (!gameState || !gameState.nanobotStats) { console.error("UI: updateNanobotDisplay - gameState ou nanobotStats non défini."); return; }
         
-        // Mise à jour des statistiques textuelles
         if(nanobotHealthEl) nanobotHealthEl.textContent = `${Math.floor(gameState.nanobotStats.currentHealth)} / ${gameState.nanobotStats.health}`;
         if(nanobotAttackEl) nanobotAttackEl.textContent = gameState.nanobotStats.attack;
         if(nanobotDefenseEl) nanobotDefenseEl.textContent = gameState.nanobotStats.defense;
         if(nanobotSpeedEl) nanobotSpeedEl.textContent = gameState.nanobotStats.speed;
 
-        // Mise à jour du visuel du nanobot (modules et items sur le sprite)
-        if(nanobotVisualBody) nanobotVisualBody.innerHTML = ''; // Vider les anciens visuels
+        if(nanobotVisualBody) nanobotVisualBody.innerHTML = ''; 
         if (gameState.nanobotModuleLevels && typeof nanobotModulesData !== 'undefined') {
             for (const moduleId in gameState.nanobotModuleLevels) {
                 const currentLevel = gameState.nanobotModuleLevels[moduleId];
@@ -339,15 +343,14 @@ var uiUpdates = {
             equippedItemsDisplayBriefEl.textContent = equippedItemsNames.length > 0 ? `Actif: ${equippedItemsNames.join(', ')}` : "Aucun équipement actif sur le visuel.";
         }
 
-        // Appeler les fonctions séparées pour les listes de modules et d'équipements
         if(typeof this.updateEquippedItemsDisplay === 'function') this.updateEquippedItemsDisplay();
         if(typeof this.updateNanobotModulesDisplay === 'function') this.updateNanobotModulesDisplay();
     },
 
     updateEquippedItemsDisplay: function() {
-        const container = nanobotEquipmentSlotsEl; // C'est l'ID du div dans la colonne 3
+        const container = nanobotEquipmentSlotsEl; 
         if(!container) { console.warn("UI: updateEquippedItemsDisplay - #nanobot-equipment-slots non trouvé."); return;}
-        container.innerHTML = ''; // Vider le contenu précédent
+        container.innerHTML = ''; 
 
         if (typeof EQUIPMENT_SLOTS === 'undefined' || typeof itemsData === 'undefined' || !gameState || !gameState.nanobotEquipment) {
             container.innerHTML = "<p class='text-xs text-gray-500 italic'>Données d'équipement non disponibles.</p>";
@@ -360,7 +363,6 @@ var uiUpdates = {
             const item = itemId ? itemsData[itemId] : null;
 
             const slotDiv = document.createElement('div');
-            // Appliquer les classes de "carte" pour chaque slot
             slotDiv.className = 'equipment-slot bg-gray-700 bg-opacity-70 p-2.5 rounded-md shadow border border-gray-600';
             
             let contentHtml = `<div class="flex justify-between items-center mb-1">
@@ -368,7 +370,7 @@ var uiUpdates = {
             if (item) {
                 hasEquipment = true;
                 contentHtml +=    `<span class="equipped-item-name text-sm text-gray-100">${item.name}</span>
-                               </div>`; // Fin du flex pour titre/nom
+                               </div>`; 
                 let itemEffects = [];
                 if (item.statBoost) {
                     itemEffects.push(Object.entries(item.statBoost).map(([s,v]) => 
@@ -382,20 +384,19 @@ var uiUpdates = {
                     contentHtml += `<div class="text-xs text-gray-300 mt-0.5 mb-1.5">${itemEffects.join('; ')}</div>`;
                 }
                 contentHtml += `<p class="text-xs text-gray-400 mb-2 italic">${item.description}</p>`;
-                // Bouton Retirer
                 contentHtml += `<button class="btn btn-outline btn-danger btn-xs w-full" onclick="unequipItem('${slotId}')">Retirer</button>`;
 
             } else {
                 contentHtml +=    `<span class="empty-slot text-sm text-gray-500 italic">Vide</span>
-                               </div>`; // Fin du flex pour titre/nom vide
-                contentHtml += `<p class="text-xs text-gray-500 h-10 mb-2">Choisissez un objet depuis l'inventaire pour l'équiper.</p>`; // Placeholder
-                 contentHtml += `<button class="btn btn-disabled btn-xs w-full" disabled>Retirer</button>`; // Bouton désactivé
+                               </div>`; 
+                contentHtml += `<p class="text-xs text-gray-500 h-10 mb-2">Choisissez un objet depuis l'inventaire pour l'équiper.</p>`;
+                 contentHtml += `<button class="btn btn-disabled btn-xs w-full" disabled>Retirer</button>`;
             }
             slotDiv.innerHTML = contentHtml;
             container.appendChild(slotDiv);
         }
         if (!hasEquipment && Object.keys(EQUIPMENT_SLOTS).length > 0 && Object.values(gameState.nanobotEquipment).every(val => val === null)) {
-           // Optionnel : message si tous les slots sont vides, mais la structure ci-dessus gère déjà "Vide" par slot.
+           // Optionnel
         }
     },
 
@@ -669,13 +670,10 @@ var uiUpdates = {
                 else if (activeSubTabId === 'research-subtab' && typeof this.updateResearchDisplay === 'function') this.updateResearchDisplay();
             }
         } else if (activeMainSectionId === 'nexus-section') {
-            // La mise à jour de nanobotDisplay (qui inclut modules et equipement) est appelée par switchSubTab ou forceInitialUIUpdate
             const activeSubTabButton = document.querySelector('#nexus-section .sub-nav-button.active');
             if (activeSubTabButton) {
                 const activeSubTabId = activeSubTabButton.dataset.subtab;
                 if (activeSubTabId === 'nanobot-config-subtab' && typeof this.updateNanobotDisplay === 'function') {
-                    // Déjà appelé par la logique de navigation si l'onglet est actif,
-                    // mais un appel ici peut être utile si des stats changent sans changer d'onglet.
                     this.updateNanobotDisplay();
                 }
                 else if (activeSubTabId === 'inventory-subtab' && typeof updateInventoryDisplay === 'function') updateInventoryDisplay();
@@ -691,7 +689,7 @@ var uiUpdates = {
             if (typeof updateShopDisplay === 'function') updateShopDisplay();
         }
     }
-};
+}; // FIN DE L'OBJET uiUpdates
 
 window.handleDefenseAction = function(instanceId, action, row, col) {
     if (action === 'upgrade') {

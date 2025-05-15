@@ -5,10 +5,25 @@ var explorationController = {
 
     handleTileClick: function(x, y) {
         console.log(`explorationController: handleTileClick sur (${x},${y})`);
-        if (!gameState || !gameState.map || typeof ZONE_DATA === 'undefined' || typeof TILE_TYPES === 'undefined' || typeof EXPLORATION_COST_ENERGY === 'undefined' || typeof mapManager === 'undefined') {
-            console.error("explorationController.handleTileClick: Dépendances gameState, config ou mapManager manquantes.");
-            return;
+
+        // --- DEBUT BLOC DE DEBUG ---
+        console.log("DEBUG handleTileClick: gameState:", gameState ? "défini" : "NON DÉFINI");
+        if (gameState) {
+            console.log("DEBUG handleTileClick: gameState.map:", gameState.map ? "défini" : "NON DÉFINI");
         }
+        console.log("DEBUG handleTileClick: ZONE_DATA:", typeof ZONE_DATA);
+        console.log("DEBUG handleTileClick: TILE_TYPES:", typeof TILE_TYPES);
+        console.log("DEBUG handleTileClick: EXPLORATION_COST_MOBILITY:", typeof EXPLORATION_COST_MOBILITY);
+        console.log("DEBUG handleTileClick: mapManager:", typeof mapManager);
+        // --- FIN BLOC DE DEBUG ---
+
+        if (!gameState || !gameState.map || typeof ZONE_DATA === 'undefined' || typeof TILE_TYPES === 'undefined' || 
+            typeof EXPLORATION_COST_MOBILITY === 'undefined' || 
+            typeof mapManager === 'undefined') {
+            console.error("explorationController.handleTileClick: Dépendances gameState, config ou mapManager manquantes.");
+            return; // Arrêter l'exécution si une dépendance manque
+        }
+        
         const currentZone = ZONE_DATA[gameState.currentZoneId];
         if (!currentZone || x < 0 || x >= currentZone.mapSize.width || y < 0 || y >= currentZone.mapSize.height) {
             if(typeof addLogEntry === 'function') addLogEntry("Clic hors des limites de la carte.", "warning", explorationLogEl, gameState.explorationLog);
@@ -22,7 +37,6 @@ var explorationController = {
         }
 
         gameState.map.selectedTile = { x, y };
-        // console.log(`explorationController: Tuile sélectionnée mise à jour: (${x},${y})`); // Moins verbeux
 
         const dxPos = Math.abs(x - gameState.map.nanobotPos.x);
         const dyPos = Math.abs(y - gameState.map.nanobotPos.y);
@@ -31,24 +45,30 @@ var explorationController = {
 
         if (isCurrentPos) {
             if(typeof addLogEntry === 'function') addLogEntry(`Examen de la case actuelle (${x},${y}).`, "map-event", explorationLogEl, gameState.explorationLog);
+            // Mettre à jour le panneau d'interaction même pour la case actuelle
+             if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateTileInteractionPanel === 'function') {
+                explorationUI.updateTileInteractionPanel(x, y);
+            }
         } else if (isAdjacent) {
             if (targetTile.actualType === TILE_TYPES.IMPASSABLE_DEEP_WATER || targetTile.actualType === TILE_TYPES.IMPASSABLE_HIGH_PEAK) {
                 if(typeof addLogEntry === 'function') addLogEntry("Impossible de se déplacer sur ce terrain infranchissable.", "warning", explorationLogEl, gameState.explorationLog);
-            } else if (gameState.resources.energy < EXPLORATION_COST_ENERGY) {
-                if(typeof addLogEntry === 'function') addLogEntry(`Énergie insuffisante pour se déplacer (Requis: ${EXPLORATION_COST_ENERGY}). Actuel: ${Math.floor(gameState.resources.energy)}.`, "error", eventLogEl, gameState.eventLog);
+            } else if (gameState.resources.mobility < EXPLORATION_COST_MOBILITY) { 
+                if(typeof addLogEntry === 'function') addLogEntry(`Mobilité insuffisante pour se déplacer (Requis: ${EXPLORATION_COST_MOBILITY}). Actuel: ${Math.floor(gameState.resources.mobility)}. Recharge en cours...`, "error", eventLogEl, gameState.eventLog);
             } else {
-                gameState.resources.energy -= EXPLORATION_COST_ENERGY;
+                gameState.resources.mobility -= EXPLORATION_COST_MOBILITY; 
                 const oldPos = { ...gameState.map.nanobotPos };
                 gameState.map.nanobotPos = { x, y };
-                if(typeof addLogEntry === 'function') addLogEntry(`Déplacement de (${oldPos.x},${oldPos.y}) vers (${x}, ${y}). Coût: ${EXPLORATION_COST_ENERGY} énergie.`, "map-event", explorationLogEl, gameState.explorationLog);
+                if(typeof addLogEntry === 'function') addLogEntry(`Déplacement de (${oldPos.x},${oldPos.y}) vers (${x}, ${y}). Coût: ${EXPLORATION_COST_MOBILITY} mobilité.`, "map-event", explorationLogEl, gameState.explorationLog);
 
                 this.revealTileAndSurroundings(x, y, currentZone); 
-                this.processTileContentOnArrival(x, y);          
+                this.processTileContentOnArrival(x, y); // Ceci mettra aussi à jour le panneau d'interaction         
             }
         } else {
             if(typeof addLogEntry === 'function') addLogEntry("Cette case est trop éloignée pour un déplacement direct.", "warning", explorationLogEl, gameState.explorationLog);
         }
 
+        // Mise à jour de la vue complète de l'exploration après toute action de clic (même si c'est juste une sélection)
+        // updateTileInteractionPanel est déjà appelé dans processTileContentOnArrival ou pour la case actuelle
         if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function') {
             explorationUI.updateFullExplorationView(); 
         } else if (typeof updateExplorationDisplay === 'function') { 
@@ -56,21 +76,21 @@ var explorationController = {
         }
     },
 
+    // ... (le reste du fichier explorationController.js reste inchangé) ...
+
     revealTileAndSurroundings: function(x, y, currentZone) {
-        // console.log(`explorationController: revealTileAndSurroundings (${x},${y})`); // Moins verbeux
         if (!currentZone || !currentZone.mapSize) { console.warn("revealTileAndSurroundings: currentZone ou currentZone.mapSize non défini."); return; }
         const tile = mapManager.getTile(x,y); let newTilesExploredCount = 0;
-        if (tile && !tile.isExplored) { tile.isExplored = true; newTilesExploredCount++; /* console.log(`explorationController: Tuile (${x},${y}) explorée.`); */}
-        for (let dy = -1; dy <= 1; dy++) { for (let dx = -1; dx <= 1; dx++) { const nx = x + dx; const ny = y + dy; if (nx >= 0 && nx < currentZone.mapSize.width && ny >= 0 && ny < currentZone.mapSize.height) { const adjacentTile = mapManager.getTile(nx, ny); if(adjacentTile && !adjacentTile.isExplored) { adjacentTile.isExplored = true; newTilesExploredCount++; /* console.log(`explorationController: Tuile adjacente (${nx},${ny}) explorée.`); */}}}}
+        if (tile && !tile.isExplored) { tile.isExplored = true; newTilesExploredCount++; }
+        for (let dy = -1; dy <= 1; dy++) { for (let dx = -1; dx <= 1; dx++) { const nx = x + dx; const ny = y + dy; if (nx >= 0 && nx < currentZone.mapSize.width && ny >= 0 && ny < currentZone.mapSize.height) { const adjacentTile = mapManager.getTile(nx, ny); if(adjacentTile && !adjacentTile.isExplored) { adjacentTile.isExplored = true; newTilesExploredCount++; }}}}
         if (newTilesExploredCount > 0 && typeof questController !== 'undefined' && typeof questController.checkQuestProgress === 'function') { questController.checkQuestProgress({ type: "explore_tiles", count: newTilesExploredCount });}
     },
 
     processTileContentOnArrival: function(x, y) {
-        // console.log(`explorationController: processTileContentOnArrival pour la tuile (${x},${y})`); // Moins verbeux
         const tile = mapManager.getTile(x,y); if (!tile) { console.warn(`processTileContentOnArrival: Tuile non trouvée en (${x},${y})`); return; }
         if (typeof questController !== 'undefined' && typeof questController.checkQuestProgress === 'function') { questController.checkQuestProgress({ type: "explore_tile_type", tileType: tile.actualType, zoneId: gameState.currentZoneId, x:x, y:y });}
         if (!tile.content) { const terrainName = (typeof explorationUI !== 'undefined' && typeof explorationUI.getTileContentName === 'function') ? explorationUI.getTileContentName(tile.actualType, null) : "terrain inconnu"; if (tile.actualType === TILE_TYPES.PLAYER_BASE) { if(typeof addLogEntry === 'function') addLogEntry("Retour au Noyau Central. Systèmes légèrement régénérés.", "map-event", explorationLogEl, gameState.explorationLog); gameState.nanobotStats.currentHealth = Math.min(gameState.nanobotStats.health, gameState.nanobotStats.currentHealth + Math.floor(gameState.nanobotStats.health * 0.1)); if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateNanobotDisplay === 'function') uiUpdates.updateNanobotDisplay(); } else if (tile.actualType !== TILE_TYPES.EMPTY_WATER && tile.actualType !== TILE_TYPES.IMPASSABLE_DEEP_WATER) { if(typeof addLogEntry === 'function') addLogEntry(`Arrivée sur ${terrainName} en (${x},${y}).`, "map-event", explorationLogEl, gameState.explorationLog); } if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateTileInteractionPanel === 'function') explorationUI.updateTileInteractionPanel(x, y); return; }
-        const content = tile.content; // console.log(`processTileContentOnArrival: Traitement du contenu de type "${content.type}"`, JSON.parse(JSON.stringify(content)));
+        const content = tile.content; 
         if (content.type === 'resource' && content.amount > 0) { if (typeof TILE_TYPES_TO_RESOURCE_KEY === 'undefined') { console.error("TILE_TYPES_TO_RESOURCE_KEY is not defined!"); if(typeof addLogEntry === 'function') addLogEntry(`Erreur config: Impossible de collecter ressource en (${x},${y}).`, "error", explorationLogEl, gameState.explorationLog); return; } const resourceKey = TILE_TYPES_TO_RESOURCE_KEY[content.resourceType]; if (resourceKey) { const amountCollected = content.amount; gameState.resources[resourceKey] = (gameState.resources[resourceKey] || 0) + amountCollected; if(typeof addLogEntry === 'function') addLogEntry(`Collecté ${amountCollected} ${resourceKey.charAt(0).toUpperCase() + resourceKey.slice(1)} en (${x},${y}).`, "success", explorationLogEl, gameState.explorationLog); if (typeof questController !== 'undefined' && typeof questController.checkQuestProgress === 'function') questController.checkQuestProgress({ type: "collect_resource", resource: resourceKey, amount: amountCollected }); tile.actualType = tile.baseType === TILE_TYPES.PRE_WATER ? TILE_TYPES.EMPTY_WATER : TILE_TYPES.EMPTY_GRASSLAND; tile.content = null;} else { console.warn(`Clé de ressource non mappée pour resourceType: ${content.resourceType}`); if(typeof addLogEntry === 'function') addLogEntry(`Type de ressource non reconnu (${content.resourceType}) en (${x},${y}). Impossible de collecter.`, "warning", explorationLogEl, gameState.explorationLog);}}
         else if (content.type === 'enemy_patrol') { if(typeof addLogEntry === 'function') addLogEntry(`Patrouille ennemie (${content.details.name}) engagée en (${x},${y})!`, "error", explorationLogEl, gameState.explorationLog); gameState.map.currentEnemyEncounter = { x, y, details: content.details, idInMap: content.id }; if (typeof simulateCombat === 'function') simulateCombat(content.details); else console.error("simulateCombat non défini.");}
         else if (content.type === 'cache') { if (!content.isOpened) { if(typeof addLogEntry === 'function') addLogEntry(`Cache de matériaux trouvée et ouverte en (${x},${y})!`, "success", explorationLogEl, gameState.explorationLog); const loot = content.lootTable || []; if (typeof itemsData !== 'undefined' && typeof addToInventory === 'function') { loot.forEach(itemId => { if (itemsData[itemId] && itemsData[itemId].onUse && (itemsData[itemId].rarity === "consumable_reward" || itemsData[itemId].consumable)) itemsData[itemId].onUse(gameState); else addToInventory(itemId); });} content.isOpened = true; } else if(typeof addLogEntry === 'function') addLogEntry(`Cache déjà ouverte en (${x},${y}).`, "info", explorationLogEl, gameState.explorationLog);}
@@ -165,9 +185,8 @@ var explorationController = {
         
         if(typeof addLogEntry === 'function') addLogEntry(`Voyage vers ${targetZone.name} réussi.`, "success", explorationLogEl, gameState.explorationLog);
         
-        // Forcer la mise à jour et le centrage de la carte
         if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function') {
-            explorationUI.isFirstExplorationViewUpdate = true; // Pour forcer le recentrage après changement de zone
+            explorationUI.isFirstExplorationViewUpdate = true; 
             explorationUI.updateFullExplorationView();
         }
         if (typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateDisplays === 'function') {

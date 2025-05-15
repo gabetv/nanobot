@@ -2,11 +2,10 @@
 console.log("explorationUI.js - Fichier chargé et en cours d'analyse...");
 
 var explorationUI = {
-    isFirstExplorationViewUpdate: true, // Pour forcer le centrage la première fois
-    centerRetryTimeoutId: null, // Pour le timeout de secours
+    isFirstExplorationViewUpdate: true, 
+    centerRetryTimeoutId: null, 
 
     updateFullExplorationView: function() {
-        // console.log("explorationUI: updateFullExplorationView CALLED");
         if (!gameState || !gameState.map) {
             console.warn("explorationUI.updateFullExplorationView: gameState ou gameState.map non défini.");
             return;
@@ -31,22 +30,18 @@ var explorationUI = {
             }
         }
 
-        // Forcer le centrage la première fois que cet onglet est affiché,
-        // ou si la carte vient d'être générée (ce qui pourrait arriver après le premier affichage de l'onglet)
         if (this.isFirstExplorationViewUpdate) {
             console.log("updateFullExplorationView: First update flag is true, attempting to center map.");
-            // Le délai est crucial ici pour s'assurer que le layout CSS (surtout avec flex) est appliqué
             setTimeout(() => {
-                this.centerMapOnPlayer(true); // true pour instantané
-            }, 0); // Un délai de 0ms pousse l'exécution après le cycle de rendu actuel du navigateur
+                this.centerMapOnPlayer(true); 
+            }, 0); 
             this.isFirstExplorationViewUpdate = false;
         }
     },
 
     updateExplorationMapDisplay: function() {
-        // console.log("explorationUI: updateExplorationMapDisplay CALLED");
         if(!mapGridEl || !nanobotMapPosEl || !tileInfoDisplayEl || !explorationTitleEl ) {
-            console.warn("explorationUI.updateExplorationMapDisplay: Un ou plusieurs éléments DOM de base sont manquants ! (mapGridEl, nanobotMapPosEl, tileInfoDisplayEl, explorationTitleEl)");
+            console.warn("explorationUI.updateExplorationMapDisplay: Un ou plusieurs éléments DOM de base sont manquants !");
             return;
         }
         if (typeof ZONE_DATA === 'undefined' || !gameState || !gameState.map || !gameState.currentZoneId || !ZONE_DATA[gameState.currentZoneId]) {
@@ -65,15 +60,12 @@ var explorationUI = {
 
         if(mapGridEl && mapScrollContainer) {
             mapGridEl.innerHTML = '';
-            
             const fixedTileSize = 22; 
             document.documentElement.style.setProperty('--map-tile-effective-size', `${fixedTileSize}px`);
-
             mapGridEl.style.gridTemplateRows = `repeat(${currentZone.mapSize.height}, ${fixedTileSize}px)`;
             mapGridEl.style.gridTemplateColumns = `repeat(${currentZone.mapSize.width}, ${fixedTileSize}px)`;
             mapGridEl.style.width = `${currentZone.mapSize.width * (fixedTileSize + 1) -1}px`;
             mapGridEl.style.height = `${currentZone.mapSize.height * (fixedTileSize + 1) -1}px`;
-
         } else {
             console.warn("explorationUI: mapGridEl ou mapScrollContainer non trouvé lors de la configuration de la grille.");
             return;
@@ -106,11 +98,8 @@ var explorationUI = {
             }
         }
 
-
         if (!Array.isArray(gameState.map.tiles) || gameState.map.tiles.length !== currentZone.mapSize.height) {
             mapGridEl.innerHTML = "<p class='text-yellow-400 italic text-xs'>Initialisation de la carte...</p>";
-            // Il est important que la carte soit centrée une fois que la grille est peuplée
-            // Si c'est la première fois, on le fera via updateFullExplorationView
             return;
         }
 
@@ -121,7 +110,6 @@ var explorationUI = {
                 const tileData = this.getTile(x,y);
                 const tileClassesString = tileData ? this.getTileDisplayClass(x, y) : 'unexplored unexplored-flat';
                 tileDiv.className = `map-tile ${tileClassesString}`;
-
                 tileDiv.dataset.x = x; tileDiv.dataset.y = y;
                 tileDiv.addEventListener('click', () => {
                     if(typeof explorationController !== 'undefined' && typeof explorationController.handleTileClick === 'function') {
@@ -142,19 +130,15 @@ var explorationUI = {
             nanobotMapPosEl.textContent = `(${gameState.map.nanobotPos.x}, ${gameState.map.nanobotPos.y}) / ${currentZone.name}`;
         }
         
-        // Si ce n'est pas le premier affichage complet (géré par updateFullExplorationView),
-        // ou si la carte est explicitement mise à jour (ex: changement de zone), on centre.
         if (!this.isFirstExplorationViewUpdate) {
-            console.log("updateExplorationMapDisplay: Not first view, attempting center.");
-             setTimeout(() => { // Délai pour assurer que le DOM est prêt
+             setTimeout(() => { 
                 this.centerMapOnPlayer(true);
             }, 0);
         }
 
-
         const centerBtn = document.getElementById('center-map-btn');
         if (centerBtn && !centerBtn.dataset.listenerAttached) {
-            centerBtn.addEventListener('click', () => this.centerMapOnPlayer(false)); // false pour smooth
+            centerBtn.addEventListener('click', () => this.centerMapOnPlayer(false));
             centerBtn.dataset.listenerAttached = 'true';
         }
     },
@@ -162,58 +146,35 @@ var explorationUI = {
     centerMapOnPlayer: function(instant = false) {
         const mapScrollContainer = document.getElementById('map-scroll-container');
         const mapGrid = document.getElementById('map-grid');
+        if (!mapScrollContainer || !mapGrid || !gameState || !gameState.map.nanobotPos) { return; }
 
-        console.log("centerMapOnPlayer called. Instant:", instant);
-        if (!mapScrollContainer) { console.error("centerMapOnPlayer: mapScrollContainer NOT FOUND"); return; }
-        if (!mapGrid) { console.error("centerMapOnPlayer: mapGrid NOT FOUND"); return; }
-        if (!gameState || !gameState.map.nanobotPos) {
-            console.warn("centerMapOnPlayer: gameState or nanobotPos missing.");
-            return;
-        }
-        console.log("centerMapOnPlayer: nanobotPos:", gameState.map.nanobotPos.x, gameState.map.nanobotPos.y);
-
-        // Utiliser requestAnimationFrame pour s'assurer que les dimensions sont calculées
         requestAnimationFrame(() => {
-            console.log("centerMapOnPlayer (RAF): ScrollContainer Dims:", mapScrollContainer.clientWidth, "x", mapScrollContainer.clientHeight);
-            console.log("centerMapOnPlayer (RAF): MapGrid Dims:", mapGrid.offsetWidth, "x", mapGrid.offsetHeight);
-            
             if (!mapScrollContainer.clientWidth || !mapScrollContainer.clientHeight) {
-                console.warn("centerMapOnPlayer (in RAF): mapScrollContainer n'a pas de dimensions significatives. Peut-être caché ou layout non final.");
-                // Si c'est un centrage instantané (souvent le premier), on peut essayer de le refaire après un court délai
-                if (instant && !this.centerRetryTimeoutId) { // Vérifier si un timeout n'est pas déjà en cours
+                if (instant && !this.centerRetryTimeoutId) { 
                     this.centerRetryTimeoutId = setTimeout(() => {
-                        console.log("centerMapOnPlayer: Retrying after 100ms timeout...");
-                        this.centerRetryTimeoutId = null; // Réinitialiser l'ID du timeout
-                        this.centerMapOnPlayer(instant); // Réessayer
+                        this.centerRetryTimeoutId = null; 
+                        this.centerMapOnPlayer(instant); 
                     }, 100);
                 }
                 return;
             }
-            // Si on arrive ici et qu'on avait un timeout de retry, on l'annule
             if (this.centerRetryTimeoutId) {
                 clearTimeout(this.centerRetryTimeoutId);
                 this.centerRetryTimeoutId = null;
             }
 
-
             const tileSizeString = getComputedStyle(document.documentElement).getPropertyValue('--map-tile-effective-size');
             const tileSize = parseFloat(tileSizeString) || 22;
             const gap = 1; 
-
             const playerTileX = gameState.map.nanobotPos.x;
             const playerTileY = gameState.map.nanobotPos.y;
-
             const playerPixelX = playerTileX * (tileSize + gap);
             const playerPixelY = playerTileY * (tileSize + gap);
-
             const playerCenterX = playerPixelX + tileSize / 2;
             const playerCenterY = playerPixelY + tileSize / 2;
-
             const targetScrollLeft = playerCenterX - mapScrollContainer.clientWidth / 2;
             const targetScrollTop = playerCenterY - mapScrollContainer.clientHeight / 2;
             
-            console.log(`centerMapOnPlayer (RAF): tileSize: ${tileSize}, playerTile: (${playerTileX},${playerTileY}), playerCenterPx: (${playerCenterX},${playerCenterY}), targetScroll: (${targetScrollLeft.toFixed(1)},${targetScrollTop.toFixed(1)})`);
-
             mapScrollContainer.scrollTo({
                 top: targetScrollTop,
                 left: targetScrollLeft,
@@ -330,8 +291,21 @@ var explorationUI = {
                 else if (content.type === 'enemy_base') { detailsHtml += `<p class="text-xs font-semibold">${content.details.name}</p>`; detailsHtml += `<p class="text-xs">Intégrité: <span class="${content.currentHealth > 0 ? 'text-red-400' : 'text-green-400'}">${content.currentHealth}/${content.details.health}</span></p>`; if (content.currentHealth > 0) { const dxPosBase = Math.abs(x - gameState.map.nanobotPos.x); const dyPosBase = Math.abs(y - gameState.map.nanobotPos.y); const isAdjacentOrOnTileForBase = (dxPosBase <= 1 && dyPosBase <= 1); if (isAdjacentOrOnTileForBase) { const attackButton = document.createElement('button'); attackButton.className = 'btn btn-danger btn-xs w-full mt-1'; attackButton.textContent = `Attaquer ${content.details.name}`; attackButton.onclick = () => { if(typeof explorationController !== 'undefined' && typeof explorationController.attemptAttackEnemyBase === 'function') explorationController.attemptAttackEnemyBase(x,y); }; actionsDiv.appendChild(attackButton);} else { actionsDiv.innerHTML = `<p class="text-xs text-yellow-500 italic">Rapprochez-vous.</p>`;}} else { detailsHtml += `<p class="text-xs text-green-400">Détruite.</p>`;}}
             }
         } else if (tile.isScanned && tile.scannedActualType !== null && gameState.gameTime <= tile.scannedRevealTime) { detailsHtml += `<p class="text-xs text-yellow-300"><b>Scan:</b> ${this.getTileContentName(tile.scannedActualType, null) || "Signal?"}</p>`;}
+        
         const dxPosMove = Math.abs(x - gameState.map.nanobotPos.x); const dyPosMove = Math.abs(y - gameState.map.nanobotPos.y); const isAdjacentMove = dxPosMove <= 1 && dyPosMove <= 1 && !(dxPosMove === 0 && dyPosMove === 0);
-        if (!nanobotIsOnThisTile && isAdjacentMove && tile.actualType !== TILE_TYPES.IMPASSABLE_DEEP_WATER && tile.actualType !== TILE_TYPES.IMPASSABLE_HIGH_PEAK) { const moveButton = document.createElement('button'); moveButton.className = 'btn btn-primary btn-xs mt-1 w-full'; moveButton.textContent = `Déplacer (${EXPLORATION_COST_ENERGY} Énergie)`; if (gameState.resources.energy < EXPLORATION_COST_ENERGY) { moveButton.disabled = true; moveButton.classList.add('btn-disabled'); } moveButton.onclick = () => { if (typeof explorationController !== 'undefined' && typeof explorationController.handleTileClick === 'function') explorationController.handleTileClick(x, y); }; actionsDiv.appendChild(moveButton);}
+        
+        if (!nanobotIsOnThisTile && isAdjacentMove && tile.actualType !== TILE_TYPES.IMPASSABLE_DEEP_WATER && tile.actualType !== TILE_TYPES.IMPASSABLE_HIGH_PEAK) {
+            const moveButton = document.createElement('button');
+            moveButton.className = 'btn btn-primary btn-xs mt-1 w-full';
+            moveButton.textContent = `Déplacer (${EXPLORATION_COST_MOBILITY} Mobilité)`; // Affiche coût mobilité
+            if (gameState.resources.mobility < EXPLORATION_COST_MOBILITY) { // Vérifie mobilité
+                moveButton.disabled = true;
+                moveButton.classList.add('btn-disabled');
+            }
+            moveButton.onclick = () => { if (typeof explorationController !== 'undefined' && typeof explorationController.handleTileClick === 'function') explorationController.handleTileClick(x, y); };
+            actionsDiv.appendChild(moveButton);
+        }
+
         if (actionsDiv.innerHTML === '') actionsDiv.innerHTML = `<p class="text-xs text-gray-500 italic">Aucune action ici.</p>`;
         detailsDiv.innerHTML = detailsHtml;
     },
