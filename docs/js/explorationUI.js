@@ -3,6 +3,7 @@ console.log("explorationUI.js - Fichier chargé et en cours d'analyse...");
 
 var explorationUI = {
     isFirstExplorationViewUpdate: true, // Pour forcer le centrage la première fois
+    centerRetryTimeoutId: null, // Pour le timeout de secours
 
     updateFullExplorationView: function() {
         // console.log("explorationUI: updateFullExplorationView CALLED");
@@ -18,7 +19,7 @@ var explorationUI = {
             console.error("explorationUI.updateFullExplorationView: Une ou plusieurs fonctions de mise à jour sont manquantes sur this.");
             return;
         }
-        this.updateExplorationMapDisplay(); // Ceci appellera centerMapOnPlayer
+        this.updateExplorationMapDisplay();
         this.updateExplorationLogDisplay();
         if (gameState.map.selectedTile) {
             this.updateTileInteractionPanel(gameState.map.selectedTile.x, gameState.map.selectedTile.y);
@@ -30,12 +31,16 @@ var explorationUI = {
             }
         }
 
-        // *** MODIFICATION ICI: Forcer le centrage la première fois que cet onglet est affiché ***
+        // Forcer le centrage la première fois que cet onglet est affiché,
+        // ou si la carte vient d'être générée (ce qui pourrait arriver après le premier affichage de l'onglet)
         if (this.isFirstExplorationViewUpdate) {
-            this.centerMapOnPlayer(true); // true pour instantané
+            console.log("updateFullExplorationView: First update flag is true, attempting to center map.");
+            // Le délai est crucial ici pour s'assurer que le layout CSS (surtout avec flex) est appliqué
+            setTimeout(() => {
+                this.centerMapOnPlayer(true); // true pour instantané
+            }, 0); // Un délai de 0ms pousse l'exécution après le cycle de rendu actuel du navigateur
             this.isFirstExplorationViewUpdate = false;
         }
-        // *** FIN DE LA MODIFICATION ***
     },
 
     updateExplorationMapDisplay: function() {
@@ -104,6 +109,8 @@ var explorationUI = {
 
         if (!Array.isArray(gameState.map.tiles) || gameState.map.tiles.length !== currentZone.mapSize.height) {
             mapGridEl.innerHTML = "<p class='text-yellow-400 italic text-xs'>Initialisation de la carte...</p>";
+            // Il est important que la carte soit centrée une fois que la grille est peuplée
+            // Si c'est la première fois, on le fera via updateFullExplorationView
             return;
         }
 
@@ -135,11 +142,15 @@ var explorationUI = {
             nanobotMapPosEl.textContent = `(${gameState.map.nanobotPos.x}, ${gameState.map.nanobotPos.y}) / ${currentZone.name}`;
         }
         
-        // *** MODIFICATION ICI: S'assurer que le centrage se fait après le rendu de la grille ***
-        // L'appel initial important se fait maintenant dans updateFullExplorationView
-        // Mais on peut aussi le laisser ici pour les mises à jour de la carte elle-même (ex: changement de zone)
-        this.centerMapOnPlayer(true); // true pour un centrage instantané
-        // *** FIN DE LA MODIFICATION ***
+        // Si ce n'est pas le premier affichage complet (géré par updateFullExplorationView),
+        // ou si la carte est explicitement mise à jour (ex: changement de zone), on centre.
+        if (!this.isFirstExplorationViewUpdate) {
+            console.log("updateExplorationMapDisplay: Not first view, attempting center.");
+             setTimeout(() => { // Délai pour assurer que le DOM est prêt
+                this.centerMapOnPlayer(true);
+            }, 0);
+        }
+
 
         const centerBtn = document.getElementById('center-map-btn');
         if (centerBtn && !centerBtn.dataset.listenerAttached) {
@@ -151,20 +162,39 @@ var explorationUI = {
     centerMapOnPlayer: function(instant = false) {
         const mapScrollContainer = document.getElementById('map-scroll-container');
         const mapGrid = document.getElementById('map-grid');
-        if (!mapScrollContainer || !mapGrid || !gameState || !gameState.map.nanobotPos) {
-            // console.warn("centerMapOnPlayer: Eléments manquants ou nanobotPos non défini.");
+
+        console.log("centerMapOnPlayer called. Instant:", instant);
+        if (!mapScrollContainer) { console.error("centerMapOnPlayer: mapScrollContainer NOT FOUND"); return; }
+        if (!mapGrid) { console.error("centerMapOnPlayer: mapGrid NOT FOUND"); return; }
+        if (!gameState || !gameState.map.nanobotPos) {
+            console.warn("centerMapOnPlayer: gameState or nanobotPos missing.");
             return;
         }
+        console.log("centerMapOnPlayer: nanobotPos:", gameState.map.nanobotPos.x, gameState.map.nanobotPos.y);
 
-        // Attendre que le navigateur ait une chance de calculer les dimensions
-        // requestAnimationFrame est une bonne pratique pour les manipulations DOM qui dépendent des dimensions calculées
+        // Utiliser requestAnimationFrame pour s'assurer que les dimensions sont calculées
         requestAnimationFrame(() => {
+            console.log("centerMapOnPlayer (RAF): ScrollContainer Dims:", mapScrollContainer.clientWidth, "x", mapScrollContainer.clientHeight);
+            console.log("centerMapOnPlayer (RAF): MapGrid Dims:", mapGrid.offsetWidth, "x", mapGrid.offsetHeight);
+            
             if (!mapScrollContainer.clientWidth || !mapScrollContainer.clientHeight) {
-                // console.warn("centerMapOnPlayer (in RAF): mapScrollContainer n'a pas de dimensions. Peut-être caché.");
-                // On peut réessayer un peu plus tard si c'est juste un problème de timing de rendu initial
-                // setTimeout(() => this.centerMapOnPlayer(instant), 50); // Optionnel: un petit délai et réessayer
+                console.warn("centerMapOnPlayer (in RAF): mapScrollContainer n'a pas de dimensions significatives. Peut-être caché ou layout non final.");
+                // Si c'est un centrage instantané (souvent le premier), on peut essayer de le refaire après un court délai
+                if (instant && !this.centerRetryTimeoutId) { // Vérifier si un timeout n'est pas déjà en cours
+                    this.centerRetryTimeoutId = setTimeout(() => {
+                        console.log("centerMapOnPlayer: Retrying after 100ms timeout...");
+                        this.centerRetryTimeoutId = null; // Réinitialiser l'ID du timeout
+                        this.centerMapOnPlayer(instant); // Réessayer
+                    }, 100);
+                }
                 return;
             }
+            // Si on arrive ici et qu'on avait un timeout de retry, on l'annule
+            if (this.centerRetryTimeoutId) {
+                clearTimeout(this.centerRetryTimeoutId);
+                this.centerRetryTimeoutId = null;
+            }
+
 
             const tileSizeString = getComputedStyle(document.documentElement).getPropertyValue('--map-tile-effective-size');
             const tileSize = parseFloat(tileSizeString) || 22;
@@ -173,24 +203,22 @@ var explorationUI = {
             const playerTileX = gameState.map.nanobotPos.x;
             const playerTileY = gameState.map.nanobotPos.y;
 
-            // Position en pixels du coin supérieur gauche de la tuile du joueur
             const playerPixelX = playerTileX * (tileSize + gap);
             const playerPixelY = playerTileY * (tileSize + gap);
 
-            // Position en pixels du centre de la tuile du joueur
             const playerCenterX = playerPixelX + tileSize / 2;
             const playerCenterY = playerPixelY + tileSize / 2;
 
-            // Calculer le défilement nécessaire pour amener le centre de la tuile du joueur au centre du conteneur
             const targetScrollLeft = playerCenterX - mapScrollContainer.clientWidth / 2;
             const targetScrollTop = playerCenterY - mapScrollContainer.clientHeight / 2;
             
+            console.log(`centerMapOnPlayer (RAF): tileSize: ${tileSize}, playerTile: (${playerTileX},${playerTileY}), playerCenterPx: (${playerCenterX},${playerCenterY}), targetScroll: (${targetScrollLeft.toFixed(1)},${targetScrollTop.toFixed(1)})`);
+
             mapScrollContainer.scrollTo({
                 top: targetScrollTop,
                 left: targetScrollLeft,
                 behavior: instant ? 'auto' : 'smooth'
             });
-            // console.log(`centerMapOnPlayer: Centrage ${instant ? 'instantané' : 'doux'} vers (${targetScrollLeft}, ${targetScrollTop})`);
         });
     },
 

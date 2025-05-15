@@ -133,7 +133,6 @@ var explorationController = {
         if (typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateResourceDisplay === 'function') uiUpdates.updateResourceDisplay();
         else if (typeof updateResourceDisplay === 'function') updateResourceDisplay(); 
 
-        // MODIFICATION ICI: Vérifier si le sous-onglet d'exploration est actif
         const explorationSubTab = document.getElementById('exploration-subtab');
         const explorationSubTabActive = explorationSubTab ? explorationSubTab.classList.contains('active') : false;
 
@@ -146,7 +145,6 @@ var explorationController = {
     },
 
     updateExpiredScans: function() {
-        // ... (Logique inchangée) ...
         if (!gameState || !gameState.map || !gameState.map.tiles || typeof ZONE_DATA === 'undefined' || !ZONE_DATA[gameState.currentZoneId]) return false;
         let tilesChanged = false; const currentZoneMap = ZONE_DATA[gameState.currentZoneId]; if (!currentZoneMap || !Array.isArray(gameState.map.tiles)) return false;
         for (let y = 0; y < currentZoneMap.mapSize.height; y++) { if (!gameState.map.tiles[y]) continue; for (let x = 0; x < currentZoneMap.mapSize.width; x++) { const tile = gameState.map.tiles[y][x]; if (tile && tile.isScanned && gameState.gameTime > tile.scannedRevealTime) { tile.isScanned = false; tile.scannedActualType = null; tilesChanged = true;}}}
@@ -154,21 +152,30 @@ var explorationController = {
     },
 
     attemptTravelToZone: function(newZoneId) {
-        // ... (Logique inchangée) ...
         console.log(`explorationController: attemptTravelToZone vers ${newZoneId}`);
         if (!gameState || typeof ZONE_DATA === 'undefined' || !ZONE_DATA[newZoneId] || typeof mapManager === 'undefined') { console.error("attemptTravelToZone: Dépendances manquantes ou zone invalide."); if(typeof addLogEntry === 'function') addLogEntry("Erreur système lors de la tentative de voyage.", "error", explorationLogEl, gameState.explorationLog); return;}
         if (gameState.currentZoneId === newZoneId) { if(typeof addLogEntry === 'function') addLogEntry(`Déjà dans la zone: ${ZONE_DATA[newZoneId].name}.`, "info", explorationLogEl, gameState.explorationLog); return;}
         if (!gameState.unlockedZones.includes(newZoneId)) { if(typeof addLogEntry === 'function') addLogEntry(`Zone ${ZONE_DATA[newZoneId].name} est verrouillée.`, "warning", explorationLogEl, gameState.explorationLog); return;}
         const targetZone = ZONE_DATA[newZoneId];
         if (targetZone.travelCost) { for (const resource in targetZone.travelCost) { if ((gameState.resources[resource] || 0) < targetZone.travelCost[resource]) { if(typeof addLogEntry === 'function') addLogEntry(`Ressources insuffisantes pour voyager vers ${targetZone.name}. Requis: ${targetZone.travelCost[resource]} ${resource}.`, "error", explorationLogEl, gameState.explorationLog); return;}} for (const resource_1 in targetZone.travelCost) gameState.resources[resource_1] -= targetZone.travelCost[resource_1]; if(typeof addLogEntry === 'function') addLogEntry(`Coût du voyage vers ${targetZone.name} payé.`, "info", explorationLogEl, gameState.explorationLog); if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateResourceDisplay === 'function') uiUpdates.updateResourceDisplay();}
-        gameState.currentZoneId = newZoneId; gameState.map.zoneId = newZoneId; mapManager.generateMap(newZoneId); 
+        
+        gameState.currentZoneId = newZoneId; 
+        gameState.map.zoneId = newZoneId; 
+        mapManager.generateMap(newZoneId); 
+        
         if(typeof addLogEntry === 'function') addLogEntry(`Voyage vers ${targetZone.name} réussi.`, "success", explorationLogEl, gameState.explorationLog);
-        if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function') explorationUI.updateFullExplorationView();
-        if (typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateDisplays === 'function') uiUpdates.updateDisplays(); 
+        
+        // Forcer la mise à jour et le centrage de la carte
+        if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function') {
+            explorationUI.isFirstExplorationViewUpdate = true; // Pour forcer le recentrage après changement de zone
+            explorationUI.updateFullExplorationView();
+        }
+        if (typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateDisplays === 'function') {
+             uiUpdates.updateDisplays(); 
+        }
     },
 
     attemptAttackEnemyBase: async function(x,y) {
-        // ... (Logique inchangée) ...
         console.log(`explorationController: attemptAttackEnemyBase sur (${x},${y})`);
         if (typeof gameState === 'undefined' || !gameState.map || !mapManager.getTile(x,y) || typeof explorationEnemyData === 'undefined' || typeof itemsData === 'undefined' || typeof TILE_TYPES === 'undefined' || typeof simulateCombat !== 'function' || typeof addToInventory !== 'function' || typeof gainXP !== 'function') { console.error("attemptAttackEnemyBase: Dépendances manquantes."); if(typeof addLogEntry === 'function') addLogEntry("Erreur système lors de la tentative d'attaque.", "error", explorationLogEl, gameState.explorationLog); return;}
         const tile = mapManager.getTile(x,y); if (!tile || !tile.content || tile.content.type !== 'enemy_base' || tile.content.currentHealth <= 0) { if(typeof addLogEntry === 'function') addLogEntry("Impossible d'attaquer: base ennemie non valide ou déjà détruite.", "warning", explorationLogEl, gameState.explorationLog); if (typeof explorationUI !== 'undefined' && typeof explorationUI.updateTileInteractionPanel === 'function') explorationUI.updateTileInteractionPanel(x,y); return;}
