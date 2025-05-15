@@ -305,7 +305,9 @@ function init() {
             baseStats: { currentHealth: BASE_INITIAL_HEALTH, maxHealth: BASE_INITIAL_HEALTH, defensePower: 0 },
             defenses: {},
             nightAssault: { isActive: false, wave: 0, enemies: [], lastAttackTime: 0, log: ["Journal d'assaut initialisé."], currentEvent: null, globalModifiers: {} },
-            activeCombatSkills: {}, activeResearch: null
+            activeCombatSkills: {}, 
+            activeResearch: null,
+            tutorialCompleted: false // *** MODIFICATION ICI ***
         };
         console.log("main.js: init() - gameState initialisé.");
 
@@ -322,6 +324,19 @@ function init() {
         console.log("main.js: init() - Appel de loadGame()...");
         if(typeof loadGame === 'function') loadGame(); else { console.error("ERREUR: loadGame n'est pas défini !"); }
         console.log("main.js: init() - gameState après loadGame().");
+
+
+        // *** MODIFICATION ICI : Appel au tutorialController ***
+        if (typeof tutorialController !== 'undefined' && typeof tutorialController.checkAndOfferTutorial === 'function') {
+            // Mettre un petit délai pour s'assurer que le reste de l'UI est un peu stable
+            setTimeout(() => {
+                tutorialController.checkAndOfferTutorial();
+            }, 500); 
+        } else {
+            console.warn("tutorialController.checkAndOfferTutorial non défini.");
+        }
+        // *** FIN DE LA MODIFICATION ***
+
 
         if (typeof mapManager !== 'undefined' && typeof mapManager.generateMap === 'function') {
             console.log("main.js: init() - Génération de la carte pour la zone:", gameState.currentZoneId);
@@ -395,13 +410,137 @@ function init() {
     }
 }
 
-const SAVE_KEY = 'nexus7GameState_v1.1.2';
-function saveGame() { /* ... (inchangé) ... */
-    try { if (typeof gameState === 'undefined') { console.warn("saveGame: gameState non défini."); return; } localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));} catch (e) { console.error("Erreur lors de la sauvegarde:", e); if(typeof addLogEntry === 'function' && eventLogEl && gameState?.eventLog) addLogEntry("Erreur sauvegarde.", "error", eventLogEl, gameState.eventLog); }
+const SAVE_KEY = 'nexus7GameState_v1.1.2'; // Adaptez la version si la structure de sauvegarde change
+function saveGame() { 
+    try { 
+        if (typeof gameState === 'undefined') { console.warn("saveGame: gameState non défini."); return; } 
+        // Avant de sauvegarder, s'assurer que les objets complexes comme la carte sont "propres"
+        // Par exemple, si `map.tiles` contient des références circulaires ou des fonctions, les nettoyer
+        // Pour ce projet, la structure de `map.tiles` semble être des données JSON-friendly.
+        localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
+        // console.log("Partie sauvegardée."); // Moins de logs en production
+    } catch (e) { 
+        console.error("Erreur lors de la sauvegarde:", e); 
+        if(typeof addLogEntry === 'function' && eventLogEl && gameState?.eventLog) {
+            addLogEntry("Erreur lors de la sauvegarde de la progression.", "error", eventLogEl, gameState.eventLog);
+        }
+    }
 }
-function loadGame() { /* ... (inchangé) ... */
-    const savedGame = localStorage.getItem(SAVE_KEY); if (savedGame) { console.log("loadGame: Sauvegarde (" + SAVE_KEY + ") trouvée..."); try { const loadedState = JSON.parse(savedGame); for (const key in gameState) { if (loadedState.hasOwnProperty(key)) { if (typeof gameState[key] === 'object' && gameState[key] !== null && !Array.isArray(gameState[key]) && typeof loadedState[key] === 'object' && loadedState[key] !== null && !Array.isArray(loadedState[key])) { if (key === 'map' && loadedState.map && typeof TILE_TYPES !== 'undefined' && typeof ZONE_DATA !== 'undefined' && typeof BASE_COORDINATES !== 'undefined' && typeof DEFAULT_MAP_SIZE !== 'undefined') { gameState.map.tiles = loadedState.map.tiles || []; const zoneForPos = loadedState.currentZoneId || gameState.currentZoneId || 'verdant_archipelago'; const defaultPos = (ZONE_DATA[zoneForPos]?.entryPoint) ? {...ZONE_DATA[zoneForPos].entryPoint} : ({...BASE_COORDINATES}); gameState.map.nanobotPos = loadedState.map.nanobotPos || defaultPos; gameState.map.zoneId = loadedState.map.zoneId || zoneForPos; gameState.map.selectedTile = loadedState.map.selectedTile || null; gameState.map.currentEnemyEncounter = loadedState.map.currentEnemyEncounter || null; if(Array.isArray(gameState.map.tiles)){ const zoneMapSize = ZONE_DATA[gameState.map.zoneId]?.mapSize || DEFAULT_MAP_SIZE; const expectedHeight = zoneMapSize.height; const expectedWidth = zoneMapSize.width; let newTiles = []; for(let y=0; y < expectedHeight; y++){ newTiles[y] = []; for(let x=0; x < expectedWidth; x++){ const defaultTileProps = { actualType: TILE_TYPES.EMPTY_GRASSLAND, baseType: TILE_TYPES.PRE_EMPTY, structureType: null, isExplored: false, content: null, isScanned: false, scannedRevealTime: 0, scannedActualType: null }; const loadedTileData = loadedState.map.tiles?.[y]?.[x]; newTiles[y][x] = {...defaultTileProps, ...(loadedTileData || {})};}} gameState.map.tiles = newTiles; } else { gameState.map.tiles = [];}} else if (key === 'nanobotStats' && loadedState.nanobotStats) gameState.nanobotStats = { ...gameState.nanobotStats, ...loadedState.nanobotStats }; else if (key === 'resources' && loadedState.resources) gameState.resources = { ...gameState.resources, ...loadedState.resources }; else if (key === 'baseStats' && loadedState.baseStats) gameState.baseStats = { ...gameState.baseStats, ...loadedState.baseStats }; else if (key === 'nightAssault' && loadedState.nightAssault) { gameState.nightAssault = { ...gameState.nightAssault, ...loadedState.nightAssault }; if (!Array.isArray(gameState.nightAssault.log)) gameState.nightAssault.log = ["Journal d'assaut initialisé."];} else if (key === 'quests' && loadedState.quests && typeof QUEST_DATA !== 'undefined' && typeof QUEST_STATUS !== 'undefined') { gameState.quests = {}; for(const qId in loadedState.quests) { if (QUEST_DATA[qId]) { gameState.quests[qId] = { id: qId, status: loadedState.quests[qId].status !== undefined ? loadedState.quests[qId].status : QUEST_STATUS.LOCKED, progress: loadedState.quests[qId].progress || {}, objectivesCompleted: loadedState.quests[qId].objectivesCompleted || QUEST_DATA[qId].objectives.map(() => false) }; if (gameState.quests[qId].objectivesCompleted.length !== QUEST_DATA[qId].objectives.length) gameState.quests[qId].objectivesCompleted = QUEST_DATA[qId].objectives.map(() => false);}}} else gameState[key] = { ...gameState[key], ...loadedState[key] }; } else gameState[key] = loadedState[key];}} if (gameState.resources.totalEnergyConsumed === undefined) gameState.resources.totalEnergyConsumed = 0; if (gameState.resources.energyConsumedByDefenses === undefined) gameState.resources.energyConsumedByDefenses = 0; if (gameState.capacity.energy === undefined) gameState.capacity.energy = 50; if (gameState.nanobotStats.lastScanTime === undefined) gameState.nanobotStats.lastScanTime = 0; if(typeof addLogEntry === 'function' && eventLogEl && gameState.eventLog) addLogEntry(`Partie chargée (${SAVE_KEY}).`, "info", eventLogEl, gameState.eventLog); console.log("loadGame: Partie chargée avec succès."); } catch(e) { console.error("Erreur chargement sauvegarde:", e); localStorage.removeItem(SAVE_KEY); if(typeof addLogEntry === 'function' && eventLogEl && gameState?.eventLog) addLogEntry("Erreur chargement sauvegarde. Réinitialisation.", "error", eventLogEl, gameState.eventLog); }} else console.log("loadGame: Aucune sauvegarde (" + SAVE_KEY + ")."); if (!Array.isArray(gameState.eventLog)) gameState.eventLog = ["Journal événements initialisé."]; if (!Array.isArray(gameState.explorationLog)) gameState.explorationLog = ["Journal exploration initialisé."]; if (!Array.isArray(gameState.combatLogSummary)) gameState.combatLogSummary = ["Journal combat initialisé."]; if (gameState.nightAssault && !Array.isArray(gameState.nightAssault.log)) gameState.nightAssault.log = ["Journal assaut initialisé."]; if (!gameState.quests || typeof gameState.quests !== 'object') gameState.quests = {}; if (gameState.map && gameState.map.selectedTile === undefined) gameState.map.selectedTile = null;
+function loadGame() { 
+    const savedGame = localStorage.getItem(SAVE_KEY); 
+    if (savedGame) { 
+        console.log("loadGame: Sauvegarde (" + SAVE_KEY + ") trouvée..."); 
+        try { 
+            const loadedState = JSON.parse(savedGame); 
+            // Fusionner l'état chargé avec l'état par défaut pour gérer les nouvelles propriétés
+            for (const key in gameState) {
+                if (loadedState.hasOwnProperty(key)) {
+                    // Pour les objets imbriqués, une fusion plus profonde pourrait être nécessaire
+                    // si vous voulez conserver des sous-propriétés par défaut si elles manquent dans la sauvegarde.
+                    // Pour l'instant, une fusion de premier niveau, avec gestion spéciale pour certains.
+                    if (typeof gameState[key] === 'object' && gameState[key] !== null && !Array.isArray(gameState[key]) &&
+                        typeof loadedState[key] === 'object' && loadedState[key] !== null && !Array.isArray(loadedState[key])) {
+                        
+                        if (key === 'map' && loadedState.map && typeof TILE_TYPES !== 'undefined' && typeof ZONE_DATA !== 'undefined' && typeof BASE_COORDINATES !== 'undefined' && typeof DEFAULT_MAP_SIZE !== 'undefined') {
+                            // Gestion spécifique de la carte pour s'assurer qu'elle est correctement structurée
+                            gameState.map.tiles = loadedState.map.tiles || [];
+                            const zoneForPos = loadedState.currentZoneId || gameState.currentZoneId || 'verdant_archipelago';
+                            const defaultPos = (ZONE_DATA[zoneForPos]?.entryPoint) ? 
+                                               {...ZONE_DATA[zoneForPos].entryPoint} : 
+                                               ({...BASE_COORDINATES});
+                            gameState.map.nanobotPos = loadedState.map.nanobotPos || defaultPos;
+                            gameState.map.zoneId = loadedState.map.zoneId || zoneForPos;
+                            gameState.map.selectedTile = loadedState.map.selectedTile || null;
+                            gameState.map.currentEnemyEncounter = loadedState.map.currentEnemyEncounter || null;
+
+                            // Valider et reconstruire `map.tiles` si nécessaire pour correspondre à la taille de la zone
+                            if(Array.isArray(gameState.map.tiles)){
+                                const zoneMapSize = ZONE_DATA[gameState.map.zoneId]?.mapSize || DEFAULT_MAP_SIZE;
+                                const expectedHeight = zoneMapSize.height;
+                                const expectedWidth = zoneMapSize.width;
+                                let newTiles = [];
+                                for(let y=0; y < expectedHeight; y++){
+                                    newTiles[y] = [];
+                                    for(let x=0; x < expectedWidth; x++){
+                                        const defaultTileProps = {
+                                            actualType: TILE_TYPES.EMPTY_GRASSLAND,
+                                            baseType: TILE_TYPES.PRE_EMPTY,
+                                            structureType: null,
+                                            isExplored: false,
+                                            content: null,
+                                            isScanned: false,
+                                            scannedRevealTime: 0,
+                                            scannedActualType: null
+                                        };
+                                        const loadedTileData = loadedState.map.tiles?.[y]?.[x];
+                                        newTiles[y][x] = {...defaultTileProps, ...(loadedTileData || {})};
+                                    }
+                                }
+                                gameState.map.tiles = newTiles;
+                            } else {
+                                gameState.map.tiles = []; // Fallback si non array
+                            }
+
+                        } else if (key === 'nanobotStats' && loadedState.nanobotStats) {
+                             gameState.nanobotStats = { ...gameState.nanobotStats, ...loadedState.nanobotStats };
+                        } else if (key === 'resources' && loadedState.resources) {
+                             gameState.resources = { ...gameState.resources, ...loadedState.resources };
+                        } else if (key === 'baseStats' && loadedState.baseStats) {
+                             gameState.baseStats = { ...gameState.baseStats, ...loadedState.baseStats };
+                        } else if (key === 'nightAssault' && loadedState.nightAssault) {
+                            gameState.nightAssault = { ...gameState.nightAssault, ...loadedState.nightAssault };
+                            if (!Array.isArray(gameState.nightAssault.log)) gameState.nightAssault.log = ["Journal d'assaut initialisé."];
+                        } else if (key === 'quests' && loadedState.quests && typeof QUEST_DATA !== 'undefined' && typeof QUEST_STATUS !== 'undefined') {
+                            // Valider les quêtes chargées par rapport à QUEST_DATA
+                            gameState.quests = {}; // Réinitialiser pour éviter les anciennes données non valides
+                            for(const qId in loadedState.quests) {
+                                if (QUEST_DATA[qId]) { // S'assurer que la quête existe toujours dans la définition
+                                    gameState.quests[qId] = {
+                                        id: qId,
+                                        status: loadedState.quests[qId].status !== undefined ? loadedState.quests[qId].status : QUEST_STATUS.LOCKED,
+                                        progress: loadedState.quests[qId].progress || {},
+                                        objectivesCompleted: loadedState.quests[qId].objectivesCompleted || QUEST_DATA[qId].objectives.map(() => false)
+                                    };
+                                    // S'assurer que objectivesCompleted a la bonne longueur
+                                    if (gameState.quests[qId].objectivesCompleted.length !== QUEST_DATA[qId].objectives.length) {
+                                        gameState.quests[qId].objectivesCompleted = QUEST_DATA[qId].objectives.map(() => false);
+                                    }
+                                }
+                            }
+                        } else {
+                            gameState[key] = { ...gameState[key], ...loadedState[key] }; // Fusion simple pour les autres objets
+                        }
+                    } else {
+                        gameState[key] = loadedState[key]; // Remplacement direct pour les types primitifs ou les tableaux
+                    }
+                }
+            }
+             // Assurer que les nouvelles propriétés (non présentes dans la sauvegarde) ont leurs valeurs par défaut
+            if (gameState.resources.totalEnergyConsumed === undefined) gameState.resources.totalEnergyConsumed = 0;
+            if (gameState.resources.energyConsumedByDefenses === undefined) gameState.resources.energyConsumedByDefenses = 0;
+            if (gameState.capacity.energy === undefined) gameState.capacity.energy = 50; // Valeur par défaut de powerPlant niveau 0 ou 1
+            if (gameState.nanobotStats.lastScanTime === undefined) gameState.nanobotStats.lastScanTime = 0;
+            if (gameState.tutorialCompleted === undefined) gameState.tutorialCompleted = false; // Assurer que cette propriété existe
+
+            if(typeof addLogEntry === 'function' && eventLogEl && gameState.eventLog) addLogEntry(`Partie chargée (${SAVE_KEY}).`, "info", eventLogEl, gameState.eventLog);
+            console.log("loadGame: Partie chargée avec succès.");
+        } catch(e) { 
+            console.error("Erreur chargement sauvegarde:", e); 
+            localStorage.removeItem(SAVE_KEY); 
+            if(typeof addLogEntry === 'function' && eventLogEl && gameState?.eventLog) addLogEntry("Erreur chargement sauvegarde. Réinitialisation.", "error", eventLogEl, gameState.eventLog);
+        } 
+    } else {
+        console.log("loadGame: Aucune sauvegarde (" + SAVE_KEY + ").");
+    }
+    // Assurer que les logs sont des tableaux même si la sauvegarde est corrompue ou absente
+    if (!Array.isArray(gameState.eventLog)) gameState.eventLog = ["Journal événements initialisé."];
+    if (!Array.isArray(gameState.explorationLog)) gameState.explorationLog = ["Journal exploration initialisé."];
+    if (!Array.isArray(gameState.combatLogSummary)) gameState.combatLogSummary = ["Journal combat initialisé."];
+    if (gameState.nightAssault && !Array.isArray(gameState.nightAssault.log)) gameState.nightAssault.log = ["Journal assaut initialisé."];
+    if (!gameState.quests || typeof gameState.quests !== 'object') gameState.quests = {};
+    if (gameState.map && gameState.map.selectedTile === undefined) gameState.map.selectedTile = null; // Assurer que selectedTile est au moins null
 }
+
 
 window.onload = init;
 console.log("main.js - Fin du fichier, 'window.onload = init' configuré.");
