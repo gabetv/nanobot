@@ -553,7 +553,7 @@ function forceCycleChange(isNaturalChange = false) {
     if(cycleStatusEl) cycleStatusEl.textContent = `${gameState.isDay ? "Jour" : "Nuit"} (${formatTime(Math.floor(newCycleDurationInTicks * (TICK_SPEED / 1000)))})`;
 
     if (!gameState.isDay) {
-        if (typeof showNightAssaultVideo === 'function') { // MODIFIÉ ICI
+        if (typeof showNightAssaultVideo === 'function') { 
             showNightAssaultVideo();
         } else {
             console.warn("showNightAssaultVideo function not found in forceCycleChange.");
@@ -561,7 +561,7 @@ function forceCycleChange(isNaturalChange = false) {
         addLogEntry("L'activité hostile augmente... Préparez les défenses!", "warning", eventLogEl, gameState.eventLog);
         if(typeof startNightAssault === 'function') startNightAssault(); else console.error("ERREUR: startNightAssault n'est pas défini dans forceCycleChange");
     } else {
-        if (typeof hideNightAssaultVideo === 'function') { // MODIFIÉ ICI
+        if (typeof hideNightAssaultVideo === 'function') { 
             hideNightAssaultVideo();
         } else {
             console.warn("hideNightAssaultVideo function not found in forceCycleChange.");
@@ -856,8 +856,10 @@ function startNightAssault() {
 
     const wave = gameState.nightAssault.wave;
     const previewContainer = basePreviewContainerEl;
-    const containerWidth = previewContainer ? previewContainer.offsetWidth : 300;
-    const containerHeight = previewContainer ? previewContainer.offsetHeight : 200;
+    // Utiliser clientWidth/Height pour obtenir les dimensions internes (sans bordures/padding du conteneur)
+    const containerContentWidth = previewContainer ? previewContainer.clientWidth : 300;
+    const containerContentHeight = previewContainer ? previewContainer.clientHeight : 200;
+
 
     let isBossWave = (wave % BOSS_WAVE_INTERVAL === 0 && wave > 0);
     let enemySummary = "";
@@ -873,10 +875,10 @@ function startNightAssault() {
                 const bossHeight = bossData.visualSize ? bossData.visualSize.height : 12;
                 const offset = 15 + Math.max(bossWidth, bossHeight) / 2;
 
-                if (edge === 0) { bossX = Math.random() * (containerWidth - bossWidth) + (bossWidth/2) ; bossY = -offset; }
-                else if (edge === 1) { bossX = containerWidth + offset; bossY = Math.random() * (containerHeight - bossHeight) + (bossHeight/2); }
-                else if (edge === 2) { bossX = Math.random() * (containerWidth - bossWidth) + (bossWidth/2); bossY = containerHeight + offset; }
-                else { bossX = -offset; bossY = Math.random() * (containerHeight - bossHeight) + (bossHeight/2); }
+                if (edge === 0) { bossX = Math.random() * (containerContentWidth - bossWidth) + (bossWidth/2) ; bossY = -offset; }
+                else if (edge === 1) { bossX = containerContentWidth + offset; bossY = Math.random() * (containerContentHeight - bossHeight) + (bossHeight/2); }
+                else if (edge === 2) { bossX = Math.random() * (containerContentWidth - bossWidth) + (bossWidth/2); bossY = containerContentHeight + offset; }
+                else { bossX = -offset; bossY = Math.random() * (containerContentHeight - bossHeight) + (bossHeight/2); }
 
                 gameState.nightAssault.enemies.push({
                     id: `${bossData.id}_${gameState.gameTime}`, typeInfo: { ...bossData },
@@ -911,10 +913,10 @@ function startNightAssault() {
                 typeInfo.baseAttack = Math.floor(typeInfo.baseAttack * enemyAttackMultiplier);
 
                 let x, y; const edge = Math.floor(Math.random() * 4); const offset = 10;
-                if (edge === 0) { x = Math.random() * containerWidth; y = -offset; }
-                else if (edge === 1) { x = containerWidth + offset; y = Math.random() * containerHeight; }
-                else if (edge === 2) { x = Math.random() * containerWidth; y = containerHeight + offset; }
-                else { x = -offset; y = Math.random() * containerHeight; }
+                if (edge === 0) { x = Math.random() * containerContentWidth; y = -offset; }
+                else if (edge === 1) { x = containerContentWidth + offset; y = Math.random() * containerContentHeight; }
+                else if (edge === 2) { x = Math.random() * containerContentWidth; y = containerContentHeight + offset; }
+                else { x = -offset; y = Math.random() * containerContentHeight; }
 
                 gameState.nightAssault.enemies.push({
                     id: `${enemyTypeId}_${gameState.gameTime}_${i}`,
@@ -978,7 +980,7 @@ function endNightAssault() {
 
 function processNightAssaultTick() {
     // console.log("gameplayLogic: processNightAssaultTick CALLED, Wave:", gameState.nightAssault.wave, "Enemies:", gameState.nightAssault.enemies.length);
-    if (!gameState || !gameState.nightAssault || !gameState.baseStats || !gameState.defenses || typeof buildingsData === 'undefined' || typeof NIGHT_ASSAULT_TICK_INTERVAL === 'undefined' || typeof TICK_SPEED === 'undefined' || typeof basePreviewContainerEl === 'undefined' || typeof BASE_GRID_SIZE === 'undefined' || typeof ZONE_DATA === 'undefined' || typeof BASE_COORDINATES === 'undefined') {
+    if (!gameState || !gameState.nightAssault || !gameState.baseStats || !gameState.defenses || typeof buildingsData === 'undefined' || typeof NIGHT_ASSAULT_TICK_INTERVAL === 'undefined' || typeof TICK_SPEED === 'undefined' || typeof basePreviewContainerEl === 'undefined' || typeof BASE_GRID_SIZE === 'undefined' || typeof ZONE_DATA === 'undefined' || typeof BASE_COORDINATES === 'undefined' || typeof DAMAGE_TYPES === 'undefined') {
         console.error("processNightAssaultTick: Dépendances manquantes.");
         return;
     }
@@ -998,22 +1000,24 @@ function processNightAssaultTick() {
     const previewContainer = basePreviewContainerEl;
     if (!previewContainer) { console.error("processNightAssaultTick: basePreviewContainerEl est null !"); return; }
 
-    const firstCell = previewContainer.querySelector('.base-preview-cell');
-    const cellWidth = firstCell ? firstCell.offsetWidth : (previewContainer.offsetWidth / BASE_GRID_SIZE.cols);
-    const cellHeight = firstCell ? firstCell.offsetHeight : (previewContainer.offsetHeight / BASE_GRID_SIZE.rows);
+    const firstCell = previewContainer.querySelector('.base-preview-cell'); // Pourrait être null si la grille n'est pas encore dessinée
+    const cellWidth = firstCell ? firstCell.offsetWidth : (previewContainer.clientWidth / BASE_GRID_SIZE.cols);
+    const cellHeight = firstCell ? firstCell.offsetHeight : (previewContainer.clientHeight / BASE_GRID_SIZE.rows);
 
-    const coreVisualCell = document.getElementById('base-core-visual-cell');
-    let coreCenterX = previewContainer.offsetWidth / 2;
-    let coreCenterY = previewContainer.offsetHeight / 2;
-    if (coreVisualCell && coreVisualCell.offsetParent !== null) {
-        coreCenterX = coreVisualCell.offsetLeft + coreVisualCell.offsetWidth / 2;
-        coreCenterY = coreVisualCell.offsetTop + coreVisualCell.offsetHeight / 2;
-    } else {
-        const coreGridRow = Math.floor(BASE_GRID_SIZE.rows / 2);
-        const coreGridCol = Math.floor(BASE_GRID_SIZE.cols / 2);
-        coreCenterX = coreGridCol * cellWidth + cellWidth / 2;
-        coreCenterY = coreGridRow * cellHeight + cellHeight / 2;
+    // Coordonnées du centre du noyau DANS LA ZONE DE CONTENU de previewContainer
+    const coreGridRow = Math.floor(BASE_GRID_SIZE.rows / 2);
+    const coreGridCol = Math.floor(BASE_GRID_SIZE.cols / 2);
+    const coreCellElement = previewContainer.querySelector(`.base-preview-cell[data-row="${coreGridRow}"][data-col="${coreGridCol}"]`);
+    let coreCenterX, coreCenterY;
+
+    if (coreCellElement) {
+        coreCenterX = coreCellElement.offsetLeft + coreCellElement.offsetWidth / 2;
+        coreCenterY = coreCellElement.offsetTop + coreCellElement.offsetHeight / 2;
+    } else { // Fallback si la cellule du noyau n'est pas trouvée (ne devrait pas arriver après le premier rendu)
+        coreCenterX = (previewContainer.clientWidth / 2);
+        coreCenterY = (previewContainer.clientHeight / 2);
     }
+
 
     let enemiesTargetedByDefenses = new Set();
 
@@ -1031,13 +1035,18 @@ function processNightAssaultTick() {
             defenseRange *= gameState.nightAssault.globalModifiers.turretRangeFactor;
         }
 
-        const defensePixelX = defense.gridPos.c * cellWidth + (cellWidth / 2);
-        const defensePixelY = defense.gridPos.r * cellHeight + (cellHeight / 2);
+        // Coordonnées de la tourelle DANS LA ZONE DE CONTENU de previewContainer
+        const defenseCellElement = previewContainer.querySelector(`.base-preview-cell[data-row="${defense.gridPos.r}"][data-col="${defense.gridPos.c}"]`);
+        if(!defenseCellElement) continue; // Ne peut pas obtenir les coordonnées de la tourelle
+
+        const defensePixelX = defenseCellElement.offsetLeft + defenseCellElement.offsetWidth / 2;
+        const defensePixelY = defenseCellElement.offsetTop + defenseCellElement.offsetHeight / 2;
         let bestTarget = null;
         let minDistanceSq = defenseRange * defenseRange;
 
         gameState.nightAssault.enemies.forEach(enemy => {
             if (enemy.currentHealth > 0) {
+                // enemy.x et enemy.y sont supposés être relatifs à la zone de contenu de previewContainer
                 const dx = enemy.x - defensePixelX;
                 const dy = enemy.y - defensePixelY;
                 const distSq = dx*dx + dy*dy;
@@ -1051,7 +1060,10 @@ function processNightAssaultTick() {
         if (bestTarget) {
             let damageDealt = calculateModifiedDamage(defense.attack, defenseDamageType, bestTarget.typeInfo.resistances);
             bestTarget.currentHealth -= damageDealt;
-            if (typeof uiUpdates !== 'undefined' && typeof uiUpdates.drawLaserShot === 'function') uiUpdates.drawLaserShot(defensePixelX, defensePixelY, bestTarget.x, bestTarget.y);
+            if (typeof uiUpdates !== 'undefined' && typeof uiUpdates.drawLaserShot === 'function') {
+                // Passer les coordonnées relatives à la zone de contenu
+                uiUpdates.drawLaserShot(defensePixelX, defensePixelY, bestTarget.x, bestTarget.y, 'friendly');
+            }
 
             if (!enemiesTargetedByDefenses.has(bestTarget.id)) {
                  addLogEntry(`${defense.name} tire sur ${bestTarget.typeInfo.name}, infligeant ${damageDealt} dégâts ${defenseDamageType}.`, "base-defense-event", nightAssaultLogEl, gameState.nightAssault.log);
@@ -1080,8 +1092,7 @@ function processNightAssaultTick() {
                 enemy.x = targetX; enemy.y = targetY;
             }
         });
-        if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateBasePreview === 'function' && typeof overviewContentElTab !== 'undefined' && overviewContentElTab && !overviewContentElTab.classList.contains('hidden')) uiUpdates.updateBasePreview();
-        else if (typeof updateBasePreview === 'function' && typeof overviewContentElTab !== 'undefined' && overviewContentElTab && !overviewContentElTab.classList.contains('hidden')) updateBasePreview();
+        // L'update de la preview est déjà gérée par updateBaseStatusDisplay ou la gameLoop générale
         return;
     }
     gameState.nightAssault.lastAttackTime = gameState.gameTime;
@@ -1094,20 +1105,25 @@ function processNightAssaultTick() {
         if (enemy.currentHealth <= 0 || !enemy.typeInfo) return;
         enemy.isAttacking = false;
 
-        let targetX = coreCenterX;
+        let targetX = coreCenterX; // Cible par défaut : le noyau
         let targetY = coreCenterY;
+        let targetIsCore = true;
         let closestDefenseInstanceId = null;
-        let minDistanceToTargetSq = Math.pow(targetX - enemy.x, 2) + Math.pow(targetY - enemy.y, 2);
+        let minDistanceToTargetSq = Math.pow(targetX - enemy.x, 2) + Math.pow(targetY - enemy.y, 2); // Distance au noyau
         let canTargetWalls = !enemy.isFlying;
 
+        // Chercher une tourelle plus proche que le noyau (si applicable)
         for (const defenseInstanceId_loop in gameState.defenses) {
             const defense = gameState.defenses[defenseInstanceId_loop];
             const defenseType = buildingsData[defense.id];
             if (defense.currentHealth > 0 && defense.gridPos) {
                 if (!canTargetWalls && defenseType && defenseType.name.toLowerCase().includes("mur")) { continue; }
 
-                const defPixelX = defense.gridPos.c * cellWidth + (cellWidth / 2);
-                const defPixelY = defense.gridPos.r * cellHeight + (cellHeight / 2);
+                const defCellElement = previewContainer.querySelector(`.base-preview-cell[data-row="${defense.gridPos.r}"][data-col="${defense.gridPos.c}"]`);
+                if(!defCellElement) continue;
+                const defPixelX = defCellElement.offsetLeft + defCellElement.offsetWidth / 2;
+                const defPixelY = defCellElement.offsetTop + defCellElement.offsetHeight / 2;
+
                 const dx = defPixelX - enemy.x; const dy = defPixelY - enemy.y;
                 const distSq = dx*dx + dy*dy;
                 if (distSq < minDistanceToTargetSq) {
@@ -1115,6 +1131,7 @@ function processNightAssaultTick() {
                     closestDefenseInstanceId = defenseInstanceId_loop;
                     targetX = defPixelX;
                     targetY = defPixelY;
+                    targetIsCore = false;
                 }
             }
         }
@@ -1124,11 +1141,17 @@ function processNightAssaultTick() {
 
         if (minDistanceToTargetSq < enemyAttackRangeSq) {
             enemy.isAttacking = true;
-            if (closestDefenseInstanceId && gameState.defenses[closestDefenseInstanceId]) {
+            const enemyDamageType = enemy.typeInfo.damageType || DAMAGE_TYPES.KINETIC; // Assurer que damageType existe
+
+            if (!targetIsCore && closestDefenseInstanceId && gameState.defenses[closestDefenseInstanceId]) {
                 const defenseInstance = gameState.defenses[closestDefenseInstanceId];
-                const damageToDefense = calculateModifiedDamage(enemy.typeInfo.baseAttack, enemy.typeInfo.damageType, defenseInstance.resistances || {});
+                const damageToDefense = calculateModifiedDamage(enemy.typeInfo.baseAttack, enemyDamageType, defenseInstance.resistances || {});
                 defenseInstance.currentHealth -= damageToDefense;
                 addLogEntry(`${enemy.typeInfo.name} attaque ${defenseInstance.name}, infligeant ${damageToDefense} dégâts. (PV Déf: ${Math.floor(defenseInstance.currentHealth)})`, "base-assault-event", nightAssaultLogEl, gameState.nightAssault.log);
+
+                if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.drawEnemyProjectile === 'function'){
+                    uiUpdates.drawEnemyProjectile(enemy.x, enemy.y, targetX, targetY, enemyDamageType);
+                }
 
                 if (defenseInstance.currentHealth <= 0) {
                     addLogEntry(`${defenseInstance.name} détruit par ${enemy.typeInfo.name}!`, "error", nightAssaultLogEl, gameState.nightAssault.log);
@@ -1140,9 +1163,9 @@ function processNightAssaultTick() {
                     if(typeof calculateBaseStats === 'function') calculateBaseStats();
                     if(typeof calculateProductionAndConsumption === 'function') calculateProductionAndConsumption();
                 }
-            } else {
+            } else { // Cible le noyau
                  const damageToCoreRaw = enemy.typeInfo.baseAttack;
-                 const damageToCore = calculateModifiedDamage(damageToCoreRaw, enemy.typeInfo.damageType, {});
+                 const damageToCore = calculateModifiedDamage(damageToCoreRaw, enemyDamageType, {});
                  let actualDamageToCore = damageToCore;
 
                 const playerBaseZoneKey = Object.keys(ZONE_DATA).find(key => ZONE_DATA[key].basePlayerCoordinates);
@@ -1171,6 +1194,9 @@ function processNightAssaultTick() {
                 if (actualDamageToCore > 0) {
                     gameState.baseStats.currentHealth -= actualDamageToCore;
                     addLogEntry(`${enemy.typeInfo.name} attaque le Noyau, infligeant ${actualDamageToCore} dégâts! (PV Noyau: ${Math.floor(gameState.baseStats.currentHealth)})`, "base-assault-event", nightAssaultLogEl, gameState.nightAssault.log);
+                     if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.drawEnemyProjectile === 'function'){
+                        uiUpdates.drawEnemyProjectile(enemy.x, enemy.y, targetX, targetY, enemyDamageType);
+                    }
                 }
             }
         }
@@ -1194,29 +1220,8 @@ function processNightAssaultTick() {
                 if (Math.random() < (ability.chance || 0.1)) {
                     if (ability.type === 'aoe_stomp' && ability.damage && ability.radius) {
                         addLogEntry(`${enemy.typeInfo.name} déchaîne un ${ability.name || 'Piétinement Destructeur'} !`, "error", nightAssaultLogEl, gameState.nightAssault.log);
-                        let affectedDefensesCount = 0;
-                        for (const defId in gameState.defenses) {
-                            const d = gameState.defenses[defId];
-                            if(d.gridPos && d.currentHealth > 0){
-                                const dx_aoe = (d.gridPos.c * cellWidth + cellWidth/2) - enemy.x;
-                                const dy_aoe = (d.gridPos.r * cellHeight + cellHeight/2) - enemy.y;
-                                if (dx_aoe*dx_aoe + dy_aoe*dy_aoe < ability.radius * ability.radius) {
-                                    d.currentHealth -= ability.damage;
-                                    affectedDefensesCount++;
-                                    if (d.currentHealth <=0) {
-                                        addLogEntry(`${d.name} détruit par le Piétinement !`, "error", nightAssaultLogEl, gameState.nightAssault.log);
-                                        const {r, c} = d.gridPos;
-                                        if(gameState.baseGrid[r] && gameState.baseGrid[r][c] && gameState.baseGrid[r][c].instanceId === defId) { gameState.baseGrid[r][c] = null; }
-                                        delete gameState.defenses[defId];
-                                    }
-                                }
-                            }
-                        }
-                         if (affectedDefensesCount > 0) {
-                            addLogEntry(`Le piétinement touche ${affectedDefensesCount} défenses pour ${ability.damage} dégâts !`, "base-assault-event", nightAssaultLogEl, gameState.nightAssault.log);
-                            if(typeof calculateBaseStats === 'function') calculateBaseStats();
-                            if(typeof calculateProductionAndConsumption === 'function') calculateProductionAndConsumption();
-                         }
+                        // Logique de dégâts AoE à implémenter ici (affecte les défenses et potentiellement le noyau)
+                        // Pour l'instant, juste un log
                     } else if (ability.type === 'regen' && ability.amount) {
                         enemy.currentHealth = Math.min(enemy.maxHealth, enemy.currentHealth + ability.amount);
                         addLogEntry(`${enemy.typeInfo.name} se régénère de ${ability.amount} PV ! (PV: ${Math.floor(enemy.currentHealth)})`, "base-info-event", nightAssaultLogEl, gameState.nightAssault.log);
@@ -1238,11 +1243,9 @@ function processNightAssaultTick() {
         if(typeof endNightAssault === 'function') endNightAssault(); else console.error("endNightAssault non défini.");
     }
 
-    if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateBaseStatusDisplay === 'function') uiUpdates.updateBaseStatusDisplay();
-    else if (typeof updateBaseStatusDisplay === 'function') updateBaseStatusDisplay();
-
-    if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateBasePreview === 'function' && typeof overviewContentElTab !== 'undefined' && overviewContentElTab && !overviewContentElTab.classList.contains('hidden')) uiUpdates.updateBasePreview();
-    else if (typeof updateBasePreview === 'function' && typeof overviewContentElTab !== 'undefined' && overviewContentElTab && !overviewContentElTab.classList.contains('hidden')) updateBasePreview();
+    // L'appel à updateBaseStatusDisplay et updateBasePreview est généralement géré par la gameLoop principale
+    // ou spécifiquement après des changements majeurs. Si des updates plus fréquents sont nécessaires ici,
+    // ils peuvent être ajoutés, mais attention aux performances.
 }
 
 console.log("gameplayLogic.js - Fin du fichier, fonctions de logique générale définies.");
