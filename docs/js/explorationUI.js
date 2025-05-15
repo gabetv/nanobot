@@ -2,6 +2,7 @@
 console.log("explorationUI.js - Fichier chargé et en cours d'analyse...");
 
 var explorationUI = {
+    isFirstExplorationViewUpdate: true, // Pour forcer le centrage la première fois
 
     updateFullExplorationView: function() {
         // console.log("explorationUI: updateFullExplorationView CALLED");
@@ -28,6 +29,13 @@ var explorationUI = {
                 this.updateTileInteractionPanel();
             }
         }
+
+        // *** MODIFICATION ICI: Forcer le centrage la première fois que cet onglet est affiché ***
+        if (this.isFirstExplorationViewUpdate) {
+            this.centerMapOnPlayer(true); // true pour instantané
+            this.isFirstExplorationViewUpdate = false;
+        }
+        // *** FIN DE LA MODIFICATION ***
     },
 
     updateExplorationMapDisplay: function() {
@@ -53,12 +61,12 @@ var explorationUI = {
         if(mapGridEl && mapScrollContainer) {
             mapGridEl.innerHTML = '';
             
-            const fixedTileSize = 22; // Taille fixe pour les tuiles (en px)
+            const fixedTileSize = 22; 
             document.documentElement.style.setProperty('--map-tile-effective-size', `${fixedTileSize}px`);
 
             mapGridEl.style.gridTemplateRows = `repeat(${currentZone.mapSize.height}, ${fixedTileSize}px)`;
             mapGridEl.style.gridTemplateColumns = `repeat(${currentZone.mapSize.width}, ${fixedTileSize}px)`;
-            mapGridEl.style.width = `${currentZone.mapSize.width * (fixedTileSize + 1) -1}px`; // +1 pour le gap de 1px, -1 pour la dernière ligne de gap
+            mapGridEl.style.width = `${currentZone.mapSize.width * (fixedTileSize + 1) -1}px`;
             mapGridEl.style.height = `${currentZone.mapSize.height * (fixedTileSize + 1) -1}px`;
 
         } else {
@@ -75,10 +83,24 @@ var explorationUI = {
             const canAffordScan = gameState.resources.energy >= scanCost;
             scanButton.disabled = onCooldown || !canAffordScan;
             scanButton.classList.toggle('btn-disabled', onCooldown || !canAffordScan);
+            scanButton.classList.toggle('btn-info', !onCooldown && canAffordScan); 
+
             if (onCooldown) scanButton.textContent = `Scan (CD: ${formatTime(Math.ceil(((stats.lastScanTime || 0) + scanCooldownTimeInTicks - gameState.gameTime) * (TICK_SPEED/1000))) })`;
             else if (!canAffordScan) scanButton.textContent = `Scan (${scanCost} NRG) - Insuff.`;
             else scanButton.textContent = `Scanner (${scanCost} NRG)`;
+
+            if (!scanButton.dataset.listenerAttached) { 
+                scanButton.addEventListener('click', () => {
+                    if (typeof explorationController !== 'undefined' && typeof explorationController.performScan === 'function') {
+                        explorationController.performScan();
+                    } else {
+                        console.error("La fonction explorationController.performScan n'est pas définie.");
+                    }
+                });
+                scanButton.dataset.listenerAttached = 'true';
+            }
         }
+
 
         if (!Array.isArray(gameState.map.tiles) || gameState.map.tiles.length !== currentZone.mapSize.height) {
             mapGridEl.innerHTML = "<p class='text-yellow-400 italic text-xs'>Initialisation de la carte...</p>";
@@ -92,7 +114,6 @@ var explorationUI = {
                 const tileData = this.getTile(x,y);
                 const tileClassesString = tileData ? this.getTileDisplayClass(x, y) : 'unexplored unexplored-flat';
                 tileDiv.className = `map-tile ${tileClassesString}`;
-                // La taille de police pour ::before/::after est maintenant gérée par CSS via var(--map-tile-effective-size)
 
                 tileDiv.dataset.x = x; tileDiv.dataset.y = y;
                 tileDiv.addEventListener('click', () => {
@@ -114,48 +135,62 @@ var explorationUI = {
             nanobotMapPosEl.textContent = `(${gameState.map.nanobotPos.x}, ${gameState.map.nanobotPos.y}) / ${currentZone.name}`;
         }
         
-        this.centerMapOnPlayer(true); // Centrage instantané après le redessin
+        // *** MODIFICATION ICI: S'assurer que le centrage se fait après le rendu de la grille ***
+        // L'appel initial important se fait maintenant dans updateFullExplorationView
+        // Mais on peut aussi le laisser ici pour les mises à jour de la carte elle-même (ex: changement de zone)
+        this.centerMapOnPlayer(true); // true pour un centrage instantané
+        // *** FIN DE LA MODIFICATION ***
 
         const centerBtn = document.getElementById('center-map-btn');
         if (centerBtn && !centerBtn.dataset.listenerAttached) {
-            centerBtn.addEventListener('click', () => this.centerMapOnPlayer(false)); // false pour défilement doux
+            centerBtn.addEventListener('click', () => this.centerMapOnPlayer(false)); // false pour smooth
             centerBtn.dataset.listenerAttached = 'true';
         }
     },
 
     centerMapOnPlayer: function(instant = false) {
         const mapScrollContainer = document.getElementById('map-scroll-container');
-        const mapGrid = document.getElementById('map-grid'); // On en aura peut-être besoin pour la taille totale
+        const mapGrid = document.getElementById('map-grid');
         if (!mapScrollContainer || !mapGrid || !gameState || !gameState.map.nanobotPos) {
-            // console.warn("centerMapOnPlayer: Element manquant ou gameState non prêt.");
+            // console.warn("centerMapOnPlayer: Eléments manquants ou nanobotPos non défini.");
             return;
         }
 
-        const tileSizeString = getComputedStyle(document.documentElement).getPropertyValue('--map-tile-effective-size');
-        const tileSize = parseFloat(tileSizeString) || 22; // Fallback
-        const gap = 1; // Correspond au 'gap' CSS de #map-grid
+        // Attendre que le navigateur ait une chance de calculer les dimensions
+        // requestAnimationFrame est une bonne pratique pour les manipulations DOM qui dépendent des dimensions calculées
+        requestAnimationFrame(() => {
+            if (!mapScrollContainer.clientWidth || !mapScrollContainer.clientHeight) {
+                // console.warn("centerMapOnPlayer (in RAF): mapScrollContainer n'a pas de dimensions. Peut-être caché.");
+                // On peut réessayer un peu plus tard si c'est juste un problème de timing de rendu initial
+                // setTimeout(() => this.centerMapOnPlayer(instant), 50); // Optionnel: un petit délai et réessayer
+                return;
+            }
 
-        const playerTileX = gameState.map.nanobotPos.x;
-        const playerTileY = gameState.map.nanobotPos.y;
+            const tileSizeString = getComputedStyle(document.documentElement).getPropertyValue('--map-tile-effective-size');
+            const tileSize = parseFloat(tileSizeString) || 22;
+            const gap = 1; 
 
-        // Position en pixels du coin supérieur gauche de la tuile du joueur DANS la grille
-        const playerPixelX = playerTileX * (tileSize + gap);
-        const playerPixelY = playerTileY * (tileSize + gap);
+            const playerTileX = gameState.map.nanobotPos.x;
+            const playerTileY = gameState.map.nanobotPos.y;
 
-        // Centre de la tuile du joueur
-        const playerCenterX = playerPixelX + tileSize / 2;
-        const playerCenterY = playerPixelY + tileSize / 2;
+            // Position en pixels du coin supérieur gauche de la tuile du joueur
+            const playerPixelX = playerTileX * (tileSize + gap);
+            const playerPixelY = playerTileY * (tileSize + gap);
 
-        // Nouvelles valeurs de scroll pour centrer la tuile du joueur
-        const targetScrollLeft = playerCenterX - mapScrollContainer.clientWidth / 2;
-        const targetScrollTop = playerCenterY - mapScrollContainer.clientHeight / 2;
-        
-        // console.log(`Centering map. TileSize: ${tileSize}, Player: (${playerTileX},${playerTileY}), PlayerCenter: (${playerCenterX.toFixed(1)},${playerCenterY.toFixed(1)}), TargetScroll: (${targetScrollLeft.toFixed(1)},${targetScrollTop.toFixed(1)})`);
+            // Position en pixels du centre de la tuile du joueur
+            const playerCenterX = playerPixelX + tileSize / 2;
+            const playerCenterY = playerPixelY + tileSize / 2;
 
-        mapScrollContainer.scrollTo({
-            top: targetScrollTop,
-            left: targetScrollLeft,
-            behavior: instant ? 'auto' : 'smooth'
+            // Calculer le défilement nécessaire pour amener le centre de la tuile du joueur au centre du conteneur
+            const targetScrollLeft = playerCenterX - mapScrollContainer.clientWidth / 2;
+            const targetScrollTop = playerCenterY - mapScrollContainer.clientHeight / 2;
+            
+            mapScrollContainer.scrollTo({
+                top: targetScrollTop,
+                left: targetScrollLeft,
+                behavior: instant ? 'auto' : 'smooth'
+            });
+            // console.log(`centerMapOnPlayer: Centrage ${instant ? 'instantané' : 'doux'} vers (${targetScrollLeft}, ${targetScrollTop})`);
         });
     },
 

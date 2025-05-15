@@ -122,8 +122,8 @@
             background-color: var(--bg-tertiary);
             padding:0.5rem;
             border-radius: 0.25rem;
-            overflow: hidden; /* Scroll géré par #map-scroll-container */
-            position: relative; /* Pour le bouton de centrage */
+            overflow: hidden;
+            position: relative;
         }
         #exploration-actions-bar {
             padding-bottom: 0.5rem;
@@ -142,23 +142,22 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            position:relative; /* Pour que le bouton de centrage puisse aussi s'y référer si besoin */
+            position:relative;
         }
         #map-grid {
             display: grid;
-            background-color: var(--bg-secondary); /* Couleur des "lignes" de la grille */
-            gap: 1px; /* Crée les lignes de la grille */
-            margin: auto; /* Centrer la grille */
+            background-color: var(--bg-secondary); 
+            gap: 1px; 
+            margin: auto;
         }
         .map-tile {
-            background-color: var(--bg-primary); /* Fond de base des tuiles */
+            background-color: var(--bg-primary);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: calc(var(--map-tile-effective-size, 22px) * 0.7);
             line-height: 1;
             user-select: none;
-            /* width & height via gridTemplateColumns/Rows sur #map-grid */
         }
         .map-tile:hover { background-color: #4a5568 !important; }
         .map-tile.unexplored { background-color: var(--bg-tertiary); filter: brightness(0.6); }
@@ -176,72 +175,6 @@
         .map-tile.forest { background-color: #166534; } .map-tile.forest::before {content:"🌳"; color: #86efac;}
         .map-tile.mountain { background-color: #6b7280; } .map-tile.mountain::before {content:"⛰️"; color: #d1d5db;}
         .map-tile.ruins { background-color: #4b5563; } .map-tile.ruins::before {content:"🏛️"; color:#9ca3af;}
-
-        #map-info { text-align: center; font-size: 0.7rem; margin-top: 0.25rem; color: var(--text-secondary); flex-shrink:0; }
-        #exploration-details-panels { display: flex; flex-direction: column; gap: 0.75rem; flex-shrink: 0; }
-        @media (min-width: 1024px) {
-            #exploration-layout { flex-direction: row; }
-            #exploration-map-container { width: 65%; }
-            #exploration-details-panels { width: 35%; max-height: calc(100vh - 200px); overflow-y:auto; }
-        }
-        #exploration-log, #tile-interaction-panel { background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 0.25rem; padding: 0.5rem; font-size: 0.75rem; color: var(--text-primary); }
-        #exploration-log { height: 120px; overflow-y: auto; }
-        #tile-interaction-panel { flex-grow: 1; }
-        #tile-interaction-panel h4 {font-size: 0.875rem;}
-        #center-map-btn {
-            position: absolute;
-            bottom: 8px; /* Ajusté pour être à l'intérieur de map-scroll-container avec padding */
-            right: 8px;
-            z-index: 20;
-        }
-        /* ... (Autres styles : .btn, .modal, .nanobot-display, .combat-*, etc.) ... */
-        .btn { transition: all 0.3s ease; border-radius: 0.375rem; padding: 0.5rem 1rem; font-weight: 600; cursor: pointer; text-align: center; }
-        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
-        .btn-xs { padding: 0.125rem 0.3rem; font-size: 0.75rem; }
-        .btn-primary { background-color: var(--accent-blue); color: white; } .btn-primary:hover { background-color: #3182ce; }
-        .btn-secondary { background-color: var(--border-color); color: var(--text-primary); } .btn-secondary:hover { background-color: #2d3748; }
-        .btn-danger { background-color: var(--accent-red); color: white; } .btn-danger:hover { background-color: #c53030; }
-        .btn-success { background-color: var(--accent-green); color: white; } .btn-success:hover { background-color: #38a169; }
-        .btn-warning { background-color: var(--accent-yellow); color: var(--bg-primary); } .btn-warning:hover { background-color: #d69e2e; }
-        .btn-info { background-color: #63b3ed; color: white; } .btn-info:hover { background-color: var(--accent-blue);}
-        .btn-disabled { background-color: #718096 !important; color: #a0aec0 !important; cursor: not-allowed !important; opacity: 0.7; }
-
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 0.5rem; }
-        .modal-content { background-color: var(--bg-secondary); padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); min-width: 280px; max-width: 95%; width: auto; max-height: 90vh; overflow-y: auto; }
-        .modal-content h2, .modal-content h3 { margin-bottom: 0.5rem; }
-        .modal-content p { margin-bottom: 0.75rem; }
-        
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg-secondary); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #718096; }
-
-        #night-assault-video-container { z-index: 1005; }
-        #night-assault-video { max-width: 90vw; max-height: 80vh; border: 3px solid var(--accent-red); box-shadow: 0 0 25px #c53030; }
-        #close-night-assault-video-btn { position: absolute; top: 10px; right: 10px; z-index: 1010; }
-
-
-        .nanobot-display { width: 100px; height: 130px; margin: 5px auto; position: relative; border: 2px solid var(--border-color); background-color: var(--bg-primary); display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .nanobot-core { width: 30px; height: 30px; background-color: var(--accent-blue); border: 2px solid #2c5282; box-shadow: 0 0 5px var(--accent-blue); position: relative; }
-        .nanobot-module, .nanobot-item-visual { position: absolute; background-color: var(--text-secondary); border: 1px solid #718096; }
-        .module-arm-blade { width: 40px; height: 6px; background-color: var(--accent-red); top: 12px; left: -45px; transform: rotate(-30deg); }
-        .module-legs-antigrav { width: 12px; height: 20px; background-color: var(--accent-green); bottom: -25px; }
-        .module-legs-antigrav.left { left: -2px; } .module-legs-antigrav.right { right: -2px; }
-        .module-shield { position: absolute; top: -8px; left: -8px; right: -8px; bottom: -8px; border: 2px dashed var(--accent-blue); border-radius: 5px; animation: pulse-shield 2s infinite; }
-        .item-weapon-laser { width: 50px; height: 5px; background: linear-gradient(to right, red, orange); top: 15px; right: -55px; transform: rotate(20deg); }
-        .item-armor-plating { width: 35px; height: 35px; border: 2px solid #90cdf4; border-radius: 5px; top: -3px; left: -3px; opacity:0.7; }
-
-        #combat-modal-content { min-width: 90vw; md:min-w-[500px]; min-height: 50vh; }
-        .combat-arena { display: flex; justify-content: space-around; align-items: flex-end; height: 180px; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 0.25rem; padding: 8px; margin-bottom: 0.5rem; /* Moins de marge */ position: relative; overflow: hidden;}
-        .combatant { position: relative; text-align: center; transition: transform 0.3s ease-out; }
-        .combatant-sprite { width: 60px; height: 80px; border: 2px solid var(--border-color); margin: 0 auto; position: relative; background-size: contain; background-repeat: no-repeat; background-position: center; }
-        #combat-nanobot-sprite { background-color: var(--accent-blue); } #combat-enemy-sprite { background-color: var(--accent-red); }
-        .combatant-name { font-weight: bold; margin-bottom: 3px; font-size: 0.7rem; }
-        .health-bar-container { width: 60px; height: 7px; background-color: #718096; border-radius: 3px; margin: 3px auto 0; overflow: hidden; border: 1px solid var(--border-color);}
-        .health-bar { height: 100%; background-color: var(--accent-green); width: 100%; transition: width 0.5s ease; }
-        .health-bar.low { background-color: #f56565; } .health-bar.medium { background-color: #faf089; }
-        .damage-float { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 0.9rem; font-weight: bold; color: var(--accent-red); animation: floatUp 1s ease-out forwards; opacity: 0; white-space: nowrap; }
-        
         .map-tile.unexplored-impassable { background-color: var(--border-color); }
         .map-tile.unexplored-flat { background-color: #222938; }
         .map-tile.unexplored-water { background-color: #1c3d52; }
@@ -268,7 +201,72 @@
         .map-tile.enemy-base::before { content: "🏰"; color: var(--accent-red); font-size: 1.1rem; }
         .map-tile.has-active-resource { animation: pulse-resource-highlight 1.5s infinite alternate; z-index: 2; }
         .map-tile.resource-biomass::before, .map-tile.resource-nanites::before, .map-tile.resource-crystal::before { z-index: 3; position: relative; }
+        #map-info { text-align: center; font-size: 0.7rem; margin-top: 0.25rem; color: var(--text-secondary); flex-shrink:0; }
+        #exploration-details-panels { display: flex; flex-direction: column; gap: 0.75rem; flex-shrink: 0; }
+        #exploration-details-panels > .panel { display: flex; flex-direction: column; min-height: 0; }
+        #exploration-log, #zone-list, #tile-interaction-panel { background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 0.25rem; padding: 0.5rem; font-size: 0.75rem; color: var(--text-primary); overflow-y: auto; }
+        #exploration-log { height: 120px; }
+        #zone-list { max-height: 100px; }
+        #tile-interaction-panel { flex-grow: 1; display: flex; flex-direction: column; } /* Ajout de display flex */
+        #tile-interaction-panel h4 {font-size: 0.875rem;}
+        #tile-interaction-details { margin-bottom: 0.5rem; word-break: break-word; overflow-wrap: break-word; min-height: 0; flex-shrink: 1; overflow-y: auto; /* Permet le scroll si le contenu est trop grand */}
+        #tile-interaction-details p { margin-bottom: 0.2rem; line-height: 1.3; }
+        #tile-interaction-actions { margin-top: auto; flex-shrink: 0; }
+        @media (min-width: 1024px) {
+            #exploration-layout { flex-direction: row; }
+            #exploration-map-container { width: 65%; }
+            #exploration-details-panels { width: 35%; max-height: calc(100vh - 220px); /* Ajusté */ overflow-y:hidden; }
+        }
+        #center-map-btn { position: absolute; bottom: 8px; right: 8px; z-index: 20; }
 
+        /* ... (le reste de vos styles CSS pour .btn, .modal, .nanobot-display, .combat-*, .base-preview-*, etc.) ... */
+        /* ... Ces styles restent les mêmes que dans la réponse précédente ... */
+        .btn { transition: all 0.3s ease; border-radius: 0.375rem; padding: 0.5rem 1rem; font-weight: 600; cursor: pointer; text-align: center; }
+        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
+        .btn-xs { padding: 0.125rem 0.3rem; font-size: 0.75rem; }
+        .btn-primary { background-color: var(--accent-blue); color: white; } .btn-primary:hover { background-color: #3182ce; }
+        .btn-secondary { background-color: var(--border-color); color: var(--text-primary); } .btn-secondary:hover { background-color: #2d3748; }
+        .btn-danger { background-color: var(--accent-red); color: white; } .btn-danger:hover { background-color: #c53030; }
+        .btn-success { background-color: var(--accent-green); color: white; } .btn-success:hover { background-color: #38a169; }
+        .btn-warning { background-color: var(--accent-yellow); color: var(--bg-primary); } .btn-warning:hover { background-color: #d69e2e; }
+        .btn-info { background-color: #63b3ed; color: white; } .btn-info:hover { background-color: var(--accent-blue);}
+        .btn-disabled { background-color: #718096 !important; color: #a0aec0 !important; cursor: not-allowed !important; opacity: 0.7; }
+
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 0.5rem; }
+        .modal-content { background-color: var(--bg-secondary); padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); min-width: 280px; max-width: 95%; width: auto; max-height: 90vh; overflow-y: auto; }
+        .modal-content h2, .modal-content h3 { margin-bottom: 0.5rem; }
+        .modal-content p { margin-bottom: 0.75rem; }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #718096; }
+
+        #night-assault-video-container { z-index: 1005; }
+        #night-assault-video { max-width: 90vw; max-height: 80vh; border: 3px solid var(--accent-red); box-shadow: 0 0 25px #c53030; }
+        #close-night-assault-video-btn { position: absolute; top: 10px; right: 10px; z-index: 1010; }
+
+        .nanobot-display { width: 100px; height: 130px; margin: 5px auto; position: relative; border: 2px solid var(--border-color); background-color: var(--bg-primary); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .nanobot-core { width: 30px; height: 30px; background-color: var(--accent-blue); border: 2px solid #2c5282; box-shadow: 0 0 5px var(--accent-blue); position: relative; }
+        .nanobot-module, .nanobot-item-visual { position: absolute; background-color: var(--text-secondary); border: 1px solid #718096; }
+        .module-arm-blade { width: 40px; height: 6px; background-color: var(--accent-red); top: 12px; left: -45px; transform: rotate(-30deg); }
+        .module-legs-antigrav { width: 12px; height: 20px; background-color: var(--accent-green); bottom: -25px; }
+        .module-legs-antigrav.left { left: -2px; } .module-legs-antigrav.right { right: -2px; }
+        .module-shield { position: absolute; top: -8px; left: -8px; right: -8px; bottom: -8px; border: 2px dashed var(--accent-blue); border-radius: 5px; animation: pulse-shield 2s infinite; }
+        .item-weapon-laser { width: 50px; height: 5px; background: linear-gradient(to right, red, orange); top: 15px; right: -55px; transform: rotate(20deg); }
+        .item-armor-plating { width: 35px; height: 35px; border: 2px solid #90cdf4; border-radius: 5px; top: -3px; left: -3px; opacity:0.7; }
+
+        #combat-modal-content { min-width: 90vw; md:min-w-[500px]; min-height: 50vh; }
+        .combat-arena { display: flex; justify-content: space-around; align-items: flex-end; height: 180px; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 0.25rem; padding: 8px; margin-bottom: 0.5rem; position: relative; overflow: hidden;}
+        .combatant { position: relative; text-align: center; transition: transform 0.3s ease-out; }
+        .combatant-sprite { width: 60px; height: 80px; border: 2px solid var(--border-color); margin: 0 auto; position: relative; background-size: contain; background-repeat: no-repeat; background-position: center; }
+        #combat-nanobot-sprite { background-color: var(--accent-blue); } #combat-enemy-sprite { background-color: var(--accent-red); }
+        .combatant-name { font-weight: bold; margin-bottom: 3px; font-size: 0.7rem; }
+        .health-bar-container { width: 60px; height: 7px; background-color: #718096; border-radius: 3px; margin: 3px auto 0; overflow: hidden; border: 1px solid var(--border-color);}
+        .health-bar { height: 100%; background-color: var(--accent-green); width: 100%; transition: width 0.5s ease; }
+        .health-bar.low { background-color: #f56565; } .health-bar.medium { background-color: #faf089; }
+        .damage-float { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 0.9rem; font-weight: bold; color: var(--accent-red); animation: floatUp 1s ease-out forwards; opacity: 0; white-space: nowrap; }
+        
         .quest-item { background-color: var(--bg-secondary); padding: 0.5rem; border-radius: 0.25rem; margin-bottom: 0.5rem; border-left: 4px solid transparent; }
         .quest-item h4 { font-size: 0.875rem; margin-bottom: 0.1rem;}
         .quest-item p { font-size: 0.75em; }
@@ -306,70 +304,28 @@
         .skill-activation { color: var(--accent-yellow); font-weight: bold;}
         .skill-effect { color: var(--text-secondary); font-style: italic;}
 
-
-        #base-preview-container {
-            max-width: 100%;
-            aspect-ratio: calc(var(--base-grid-cols, 13) / var(--base-grid-rows, 9));
-            background-color: var(--bg-secondary);
-            display: grid;
-            gap: 1px;
-            border: 1px solid var(--border-color);
-            position: relative;
-            overflow: hidden;
-        }
-        .base-preview-cell {
-            background-color: var(--bg-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-sizing: border-box;
-            font-size: 0.5rem;
-        }
+        #base-preview-container { max-width: 100%; aspect-ratio: calc(var(--base-grid-cols, 13) / var(--base-grid-rows, 9)); background-color: var(--bg-secondary); display: grid; gap: 1px; border: 1px solid var(--border-color); position: relative; overflow: hidden; }
+        .base-preview-cell { background-color: var(--bg-primary); display: flex; align-items: center; justify-content: center; box-sizing: border-box; font-size: 0.5rem; }
         .base-preview-cell.core .base-core-visual { width: 60%; height: 60%; background-color: var(--accent-green); border: 1px solid #38a169; border-radius: 2px; color: var(--bg-primary); font-weight: bold; display: flex; align-items: center; justify-content: center; }
         .base-preview-cell.occupied { background-color: var(--bg-tertiary); }
         .base-preview-cell.placement-blocked { cursor: not-allowed; background-color: rgba(255,0,0,0.2) !important; }
         .base-preview-cell.placement-active { cursor: copy; background-color: rgba(60,179,113,0.4) !important; }
         .base-preview-cell.placement-active:hover { background-color: rgba(60,179,113,0.6) !important; }
 
-        .defense-visual-on-grid {
-            text-align: center; font-weight: bold;
-            transition: background-color 0.3s ease, border-color 0.3s ease;
-            z-index: 2; box-sizing: border-box; overflow:hidden;
-            text-overflow:ellipsis; white-space:nowrap; padding: 1px;
-        }
+        .defense-visual-on-grid { text-align: center; font-weight: bold; transition: background-color 0.3s ease, border-color 0.3s ease; z-index: 2; box-sizing: border-box; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding: 1px; }
         .defense-visual-on-grid.laserTurret { background-color: rgba(230, 160, 40, 0.7); border-color: #F6E05E; color: black; }
         .defense-visual-on-grid.gatlingTurret { background-color: rgba(160, 174, 192, 0.7); border-color: #A0AEC0; color: black; }
         .defense-visual-on-grid.reinforcedWall { background-color: rgba(113, 128, 150, 0.7); border-color: #718096; font-size: 0.5rem !important; writing-mode: vertical-rl; text-orientation: mixed; color: white; }
 
-        .base-enemy-visual {
-            width: 10px; height: 10px;
-            background-color: var(--accent-red);
-            border: 1px solid white;
-            border-radius: 50%; position: absolute;
-            transition: transform 0.5s ease-out, left 0.5s linear, top 0.5s linear;
-            box-shadow: 0 0 4px var(--accent-red);
-            z-index: 5;
-            background-size: contain; background-repeat: no-repeat; background-position: center;
-        }
+        .base-enemy-visual { width: 10px; height: 10px; background-color: var(--accent-red); border: 1px solid white; border-radius: 50%; position: absolute; transition: transform 0.5s ease-out, left 0.5s linear, top 0.5s linear; box-shadow: 0 0 4px var(--accent-red); z-index: 5; background-size: contain; background-repeat: no-repeat; background-position: center; }
         .base-enemy-visual.drone { background-color: #e53e3e; }
         .base-enemy-visual.bot { background-color: #dd6b20; }
         .base-enemy-visual.crawler { background-color: #d69e2e; }
-
-        .boss-visual-dynamic {
-            width: 26px; height: 26px;
-            background-color: #7f1d1d;
-            border: 2px solid gold;
-            border-radius: 3px;
-            box-shadow: 0 0 8px gold;
-            z-index: 6;
-            background-size: contain; background-repeat: no-repeat; background-position: center;
-        }
-        
+        .boss-visual-dynamic { width: 26px; height: 26px; background-color: #7f1d1d; border: 2px solid gold; border-radius: 3px; box-shadow: 0 0 8px gold; z-index: 6; background-size: contain; background-repeat: no-repeat; background-position: center; }
         .projectile-visual { position: absolute; transform-origin: 0 50%; z-index: 10; pointer-events: none; box-shadow: 0 0 5px currentColor; }
         .laser-beam { background-color: var(--accent-blue); height: 1px; box-shadow: 0 0 4px var(--accent-blue), 0 0 7px #4299e1; }
         .enemy-bullet { background-color: #f9a825; height: 2px; border-radius: 1px; }
         .enemy-laser-beam { background-color: #ef4444; height: 1px; box-shadow: 0 0 4px #ef4444, 0 0 7px #dc2626; }
-
         .enemy-health-bar-on-grid-container { background-color: #555; border: 1px solid #333; border-radius: 1px; overflow: hidden; box-sizing: border-box; z-index: 7; position: absolute; }
         .enemy-health-bar-on-grid-fill { background-color: var(--accent-red); height: 100%; transition: width 0.3s ease-out; }
 
@@ -723,7 +679,7 @@
             }
 
             function triggerUIUpdateForSubTab(subTabId, parentSectionId) {
-                if (typeof gameState === 'undefined' || gameState === null) return;
+                if (typeof gameState === 'undefined' || gameState === null) { return; }
                 if (parentSectionId === 'base-section') {
                     if (subTabId === 'engineering-subtab' && typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateBuildingDisplay === 'function') uiUpdates.updateBuildingDisplay();
                     else if (subTabId === 'research-subtab' && typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateResearchDisplay === 'function') uiUpdates.updateResearchDisplay();
