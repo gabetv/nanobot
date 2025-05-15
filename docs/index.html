@@ -25,26 +25,96 @@
         .font-orbitron { font-family: 'Orbitron', sans-serif; }
 
         #game-container { display: flex; flex-direction: column; height: 100vh; }
+        
+        /* Header Styles */
         #persistent-header {
             position: sticky; top: 0; z-index: 50;
             background-color: var(--bg-secondary);
             border-bottom: 1px solid var(--border-color);
-            padding: 0.5rem 1rem;
+            padding: 0.5rem 0.75rem;
             display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
+            flex-direction: column; 
+            align-items: center; 
+        }
+        #persistent-header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.25rem; /* text-xl */
+            margin-bottom: 0.5rem; /* mb-2 */
+            width: 100%;
+            text-align: center;
+        }
+        #header-info-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column; /* Empiler les groupes sur mobile */
+            gap: 0.25rem; /* Espace entre les groupes empilés */
+            font-size: 0.75rem; /* text-xs */
+        }
+        .resource-group {
+            display: flex;
+            justify-content: space-around; /* Espacer équitablement les items dans un groupe sur mobile */
             align-items: center;
+            gap: 0.5rem; /* Espace entre les items d'un même groupe */
         }
-        .resource-item { display: flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; margin-top: 0.25rem;}
-        .resource-item i { font-size: 1rem; color: var(--accent-yellow); }
-        #persistent-header > h1 { margin-bottom: 0.25rem; width: 100%; text-align: center; font-size: 1.25rem;}
-         @media (min-width: 640px) { /* sm */
-            #persistent-header > h1 { width: auto; text-align: left; margin-bottom:0; font-size: 1.5rem;}
-            .resource-item {font-size: 0.8rem; margin-top: 0;}
+        .resource-item {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            color: var(--text-primary);
+            white-space: nowrap;
         }
-        /* Styles pour la nouvelle ressource mobilité */
-        #mobility { color: var(--accent-blue); /* Ou une autre couleur si vous préférez */ }
+        .resource-item i {
+            font-size: 1rem; /* Taille des icônes principales */
+        }
+        .resource-item .rate-text, 
+        #mobility span:not(:first-child),
+        .btn .text-xs { /* Pour les coûts sur les boutons */
+            font-size: 0.65rem; /* Encore plus petit pour les détails */
+            color: var(--text-secondary);
+            margin-left: 0.1rem;
+        }
+        .btn .text-xs i { /* Pour les icônes de ressources dans les boutons */
+             font-size: 0.7rem !important; /* Ajuster la taille des petites icônes */
+             vertical-align: middle;
+        }
 
+        #mobility { display: contents; }
+        #mobility span:first-child { margin-right: 0.2rem; }
+
+        @media (min-width: 640px) { /* sm */
+            #persistent-header h1 {
+                font-size: 1.5rem; /* text-2xl */
+            }
+            #header-info-container {
+                font-size: 0.875rem; /* text-sm */
+            }
+            .resource-item i { font-size: 1.1rem; }
+            .resource-item .rate-text, #mobility span:not(:first-child), .btn .text-xs { font-size: 0.75rem; }
+            .btn .text-xs i { font-size: 0.8rem !important; }
+        }
+        @media (min-width: 768px) { /* md */
+            #persistent-header {
+                flex-direction: row;
+                justify-content: space-between;
+                padding: 0.5rem 1rem;
+            }
+            #persistent-header h1 {
+                width: auto;
+                text-align: left;
+                margin-bottom: 0;
+            }
+            #header-info-container {
+                flex-direction: row;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 1rem; /* Espace entre les groupes sur desktop */
+            }
+            .resource-group {
+                justify-content: flex-start; /* Aligner à gauche sur desktop */
+                gap: 0.75rem;
+            }
+        }
+        /* Fin Header Styles */
 
         #main-layout-container { display: flex; flex-grow: 1; overflow: hidden; }
         #main-navigation { /* Mobile: Bottom Nav */
@@ -165,7 +235,7 @@
         }
         #center-map-btn { position: absolute; bottom: 8px; right: 8px; z-index: 20; }
 
-        .btn { transition: all 0.3s ease; border-radius: 0.375rem; padding: 0.5rem 1rem; font-weight: 600; cursor: pointer; text-align: center; }
+        .btn { transition: all 0.3s ease; border-radius: 0.375rem; padding: 0.5rem 1rem; font-weight: 600; cursor: pointer; text-align: center; display: inline-flex; align-items: center; justify-content: center; }
         .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
         .btn-xs { padding: 0.125rem 0.3rem; font-size: 0.75rem; }
         .btn-primary { background-color: var(--accent-blue); color: white; } .btn-primary:hover { background-color: #3182ce; }
@@ -229,7 +299,6 @@
             background-size: cover; background-position: center;
             transition: background-image 0.5s ease-in-out, background-color 0.5s ease-in-out;
         }
-        /* REMPLACEZ LES URLS PAR VOS IMAGES */
         .combat-arena-verdant { background-image: url('img/bg_verdant_combat.png'); background-color: #284c37; } 
         .combat-arena-caves { background-image: url('img/bg_caves_combat.png'); background-color: #3a3a52; } 
         .combat-arena-default { background-color: var(--bg-primary); }
@@ -372,17 +441,44 @@
 
     <div id="game-container">
         <header id="persistent-header">
-            <h1>Nexus-7</h1>
-            <div class="flex space-x-2 md:space-x-3 items-center mt-1 sm:mt-0 flex-wrap justify-center sm:justify-start">
-                <div class="resource-item" title="Biomasse"><i class="ti ti-leaf"></i>&nbsp;<span id="biomass">0</span>(<span id="biomassRate">0</span>/s)</div>
-                <div class="resource-item" title="Nanites"><i class="ti ti-settings-2"></i>&nbsp;<span id="nanites">0</span>(<span id="nanitesRate">0</span>/s)</div>
-                <div id="crystal-shards-display-container" class="resource-item hidden" title="Cristaux"><i class="ti ti-diamond"></i>&nbsp;<span id="crystal_shards">0</span></div>
-                <div class="resource-item" title="Énergie (Consommée/Max)"><i class="ti ti-bolt"></i>&nbsp;<span id="energy">0</span></div>
-                <div class="resource-item" title="Points de Mobilité"><i class="ti ti-shoe"></i>&nbsp;<span id="mobility">0</span></div> 
-            </div>
-            <div class="flex items-center space-x-2 md:space-x-3 text-xs mt-1 sm:mt-0 justify-center sm:justify-start">
-                <div id="base-health-display" title="Santé du Noyau"><i class="ti ti-shield-heart"></i>&nbsp;<span id="base-health-value">0</span>/<span id="base-max-health-value">0</span></div>
-                <div title="Cycle Actuel (Temps restant)"><i class="ti ti-clock"></i>&nbsp;<span id="cycleStatus">Jour</span> (<span id="gameTime">00:00</span>)</div>
+            <h1 class="font-orbitron text-xl md:text-2xl w-full md:w-auto text-center md:text-left mb-2 md:mb-0">Nexus-7</h1>
+            <div id="header-info-container" class="w-full flex flex-col md:flex-row md:items-center md:justify-end gap-y-1 md:gap-y-0 md:gap-x-4 text-xs sm:text-sm">
+                <div class="resource-group flex justify-around md:justify-start items-center gap-x-2 md:gap-x-3">
+                    <div class="resource-item" title="Biomasse">
+                        <i class="ti ti-leaf text-green-400"></i>
+                        <div><span id="biomass">0</span><span class="rate-text">(<span id="biomassRate">0</span>/s)</span></div>
+                    </div>
+                    <div class="resource-item" title="Nanites">
+                        <i class="ti ti-settings-2 text-blue-400"></i>
+                        <div><span id="nanites">0</span><span class="rate-text">(<span id="nanitesRate">0</span>/s)</span></div>
+                    </div>
+                    <div id="crystal-shards-display-container" class="resource-item hidden" title="Cristaux">
+                        <i class="ti ti-diamond text-cyan-400"></i>
+                        <span id="crystal_shards">0</span>
+                    </div>
+                </div>
+                <div class="hidden md:block border-l border-gray-600 h-6 mx-1"></div>
+                <div class="resource-group flex justify-around md:justify-start items-center gap-x-2 md:gap-x-3">
+                    <div class="resource-item" title="Énergie (Consommée/Max)">
+                        <i class="ti ti-bolt text-yellow-400"></i>
+                        <span id="energy">0/0</span>
+                    </div>
+                    <div class="resource-item" title="Points de Mobilité">
+                        <i class="ti ti-shoe text-purple-400"></i>
+                        <span id="mobility">0/0</span>
+                    </div>
+                </div>
+                <div class="hidden md:block border-l border-gray-600 h-6 mx-1"></div>
+                <div class="resource-group flex justify-around md:justify-start items-center gap-x-2 md:gap-x-3">
+                    <div id="base-health-display" class="resource-item" title="Santé du Noyau">
+                        <i class="ti ti-shield-heart text-red-400"></i>
+                        <div><span id="base-health-value">0</span>/<span id="base-max-health-value">0</span></div>
+                    </div>
+                    <div class="resource-item" title="Cycle Actuel (Temps restant)">
+                        <i class="ti ti-clock text-gray-400"></i>
+                        <div><span id="cycleStatus">Jour</span><span id="gameTime" class="rate-text">(00:00)</span></div>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -415,10 +511,10 @@
                                          <p class="text-gray-500 italic text-xs">Aucune menace.</p>
                                     </div>
                                     <div class="mt-2 grid grid-cols-2 gap-1">
-                                        <button id="repair-base-btn" class="btn btn-success btn-xs">Réparer Noyau</button>
-                                        <button id="repair-defenses-btn" class="btn btn-info btn-xs">Réparer Déf.</button>
+                                        <button id="repair-base-btn" class="btn btn-success btn-xs"><i class="ti ti-tool mr-1"></i>Réparer Noyau</button>
+                                        <button id="repair-defenses-btn" class="btn btn-info btn-xs"><i class="ti ti-recycle mr-1"></i>Réparer Déf.</button>
                                     </div>
-                                    <button id="force-cycle-change-btn" class="btn btn-warning btn-xs w-full mt-1">Forcer Cycle</button>
+                                    <button id="force-cycle-change-btn" class="btn btn-warning btn-xs w-full mt-1"><i class="ti ti-refresh-alert mr-1"></i>Forcer Cycle</button>
                                 </div>
                             </div>
                             <div class="panel">

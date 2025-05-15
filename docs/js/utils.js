@@ -6,13 +6,16 @@ function sleep(ms) {
 }
 
 function formatTime(seconds) {
-    const flooredSeconds = Math.floor(seconds);
-    return `${Math.floor(flooredSeconds / 60).toString().padStart(2, '0')}:${(flooredSeconds % 60).toString().padStart(2, '0')}`;
+    const flooredSeconds = Math.floor(seconds); // S'assurer que nous travaillons avec un entier pour les secondes
+    const minutes = Math.floor(flooredSeconds / 60);
+    const remainingSeconds = flooredSeconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
 var modalConfirmCallback = null;
+var modalCancelCallback = null; // Ajout pour gérer l'annulation du tutoriel par exemple
 
-function showModal(title, message, onConfirm, showCancel = true) {
+function showModal(title, message, onConfirm, showCancel = true, onCancel = null) { // Ajout de onCancel
     // console.log("utils.js: showModal appelée avec titre:", title);
     if (typeof modalTitle !== 'undefined' && modalTitle) modalTitle.textContent = title;
     else console.warn("utils.js: showModal - modalTitle non trouvé.");
@@ -21,6 +24,7 @@ function showModal(title, message, onConfirm, showCancel = true) {
     else console.warn("utils.js: showModal - modalMessage non trouvé.");
 
     modalConfirmCallback = onConfirm;
+    modalCancelCallback = onCancel; // Stocker le callback d'annulation
 
     if (typeof modalConfirm !== 'undefined' && modalConfirm) {
         modalConfirm.style.display = onConfirm ? 'inline-block' : 'none';
@@ -30,6 +34,12 @@ function showModal(title, message, onConfirm, showCancel = true) {
     if (typeof modalCancel !== 'undefined' && modalCancel) {
          modalCancel.style.display = showCancel ? 'inline-block' : 'none';
          modalCancel.classList.toggle('hidden', !showCancel);
+         // Modifier l'event listener pour qu'il puisse aussi appeler onCancel
+         modalCancel.onclick = () => { // Remplacer l'event listener existant si besoin
+            if (modalCancelCallback) modalCancelCallback();
+            hideModal();
+         };
+
     } else console.warn("utils.js: showModal - modalCancel non trouvé.");
 
     if (typeof modal !== 'undefined' && modal) modal.classList.remove('hidden');
@@ -41,6 +51,7 @@ function hideModal() {
     if (typeof modal !== 'undefined' && modal) modal.classList.add('hidden');
     else console.warn("utils.js: hideModal - modal non trouvé.");
     modalConfirmCallback = null;
+    modalCancelCallback = null; // Réinitialiser aussi le callback d'annulation
 }
 
 function addLogEntry(message, type = "info", logElement = null, logArray = null) {
@@ -70,14 +81,14 @@ function addLogEntry(message, type = "info", logElement = null, logArray = null)
                     ? `[${formatTime(Math.floor(currentGameTime * (currentTickSpeed/1000)))}] `
                     : "";
     const entry = document.createElement('p');
-    entry.className = 'text-xs'; // Classe de base pour la taille
+    entry.className = 'text-xs'; 
 
     if (logElement === nightAssaultLogEl) {
         if (type === "base-assault-event" || type === "error") entry.classList.add("text-red-400");
         else if (type === "base-defense-event") entry.classList.add("text-teal-300");
         else if (type === "success") entry.classList.add("text-green-400");
-        else if (type === "base-info-event") entry.classList.add("text-gray-400"); // Plus neutre pour les infos de routine
-        else entry.classList.add("text-orange-300"); // Pour les événements/alertes de vague
+        else if (type === "base-info-event") entry.classList.add("text-gray-400"); 
+        else entry.classList.add("text-orange-300"); 
     } else if (logElement === explorationLogEl) {
         if (type === "error") entry.classList.add("text-red-400");
         else if (type === "success") entry.classList.add("text-green-400");
@@ -94,8 +105,8 @@ function addLogEntry(message, type = "info", logElement = null, logArray = null)
          if (type === "error") entry.classList.add("text-red-400");
         else if (type === "success") entry.classList.add("text-green-400");
         else if (type === "warning") entry.classList.add("text-yellow-400");
-        else entry.classList.add("text-orange-300"); // Par défaut pour les logs de combat
-    } else { // Fallback pour les logs non assignés à un élément spécifique
+        else entry.classList.add("text-orange-300"); 
+    } else { 
         if (type === "error") entry.classList.add("text-red-400");
         else if (type === "success") entry.classList.add("text-green-400");
     }
@@ -112,7 +123,7 @@ function addLogEntry(message, type = "info", logElement = null, logArray = null)
         const placeholderP = logElement.querySelector('p.text-gray-500.italic');
 
         if (placeholderP && initialMessages.some(msg => placeholderP.textContent.trim().toLowerCase().includes(msg.toLowerCase().replace("...", "")))) {
-             logElement.innerHTML = titleHTML; // Réinsérer le titre si on efface le placeholder
+             logElement.innerHTML = titleHTML; 
         }
         logElement.appendChild(entry);
         logElement.scrollTop = logElement.scrollHeight;
@@ -153,54 +164,45 @@ function showNightAssaultVideo(videoSrc = "videos/night_assault_alert.mp4") {
         console.warn("Éléments de la vidéo d'assaut nocturne non trouvés.");
         return;
     }
-    console.log("showNightAssaultVideo: Affichage de la vidéo", videoSrc);
+    // console.log("showNightAssaultVideo: Affichage de la vidéo", videoSrc);
 
-    // Vérifier si la source doit être mise à jour
-    // Utiliser videoElement.getAttribute('src') pour obtenir la valeur définie dans HTML/JS
-    // et la comparer à videoSrc avant de faire new URL().
     const currentVideoFile = videoElement.getAttribute('src');
     if (currentVideoFile !== videoSrc) {
          videoElement.src = videoSrc;
-         videoElement.load(); // Important pour que le navigateur prenne la nouvelle source
-         console.log("showNightAssaultVideo: Source vidéo mise à jour et chargée :", videoSrc);
+         videoElement.load(); 
+         // console.log("showNightAssaultVideo: Source vidéo mise à jour et chargée :", videoSrc);
     } else {
-        console.log("showNightAssaultVideo: Source vidéo déjà correcte.");
+        // console.log("showNightAssaultVideo: Source vidéo déjà correcte.");
     }
-
 
     videoContainer.classList.remove('hidden');
     videoElement.currentTime = 0;
-    // Laisser muted à true pour l'autoplay, l'utilisateur pourra démuter si le navigateur le permet
-    videoElement.muted = true; // Essayez avec true pour maximiser les chances d'autoplay
+    videoElement.muted = true; 
 
     videoElement.play().then(() => {
-        console.log("showNightAssaultVideo: Lecture vidéo démarrée.");
-        // Si la lecture démarre, on peut tenter de démuter après un court instant
-        // Mais cela peut aussi être bloqué par le navigateur.
-        // setTimeout(() => { videoElement.muted = false; }, 100);
+        // console.log("showNightAssaultVideo: Lecture vidéo démarrée.");
     }).catch(error => {
         console.warn("showNightAssaultVideo: Lecture automatique de la vidéo bloquée :", error);
-        // Même si la lecture est bloquée, on affiche la modale.
-        // L'utilisateur devra cliquer sur le bouton de fermeture ou la vidéo se fermera à la fin si elle se lance quand même.
-        // On pourrait ajouter un message "Cliquez pour démarrer" si l'autoplay est critique
-        // Ou simplement fermer la modale après un court délai si l'autoplay est essentiel ET échoue.
-        // Pour l'instant, on se fie à onended et au bouton de fermeture.
+        if(typeof addLogEntry === 'function' && typeof eventLogEl !== 'undefined' && typeof gameState !== 'undefined' && gameState.eventLog){
+            addLogEntry("Animation d'alerte: lecture auto bloquée.", "warning", eventLogEl, gameState.eventLog);
+        }
+        // On pourrait fermer la modale si l'autoplay échoue et est critique.
+        // setTimeout(hideNightAssaultVideo, 2000); // Ferme après 2s si pas d'autoplay
     });
 
     videoElement.onended = function() {
-        console.log("showNightAssaultVideo: Vidéo terminée (onended).");
+        // console.log("showNightAssaultVideo: Vidéo terminée (onended).");
         hideNightAssaultVideo();
-        videoElement.onended = null; // Bonne pratique pour nettoyer l'écouteur
+        videoElement.onended = null; 
     };
 
     videoElement.onerror = function(e) {
         console.error("showNightAssaultVideo: Erreur de chargement/lecture vidéo.", videoElement.error);
-        // Tenter d'ajouter au log du jeu si possible
         if(typeof addLogEntry === 'function' && typeof eventLogEl !== 'undefined' && typeof gameState !== 'undefined' && gameState.eventLog){
             addLogEntry("Erreur lors du chargement de l'animation d'alerte.", "error", eventLogEl, gameState.eventLog);
         }
-        hideNightAssaultVideo(); // Masquer la modale même en cas d'erreur vidéo
-        videoElement.onerror = null; // Nettoyer l'écouteur
+        hideNightAssaultVideo();
+        videoElement.onerror = null; 
     };
 }
 
@@ -211,12 +213,11 @@ function hideNightAssaultVideo() {
         console.warn("Éléments de la vidéo d'assaut nocturne non trouvés pour masquer.");
         return;
     }
-    console.log("hideNightAssaultVideo: Masquage de la vidéo.");
+    // console.log("hideNightAssaultVideo: Masquage de la vidéo.");
     videoContainer.classList.add('hidden');
-    if (!videoElement.paused) { // Ne mettre en pause que si elle est en train de jouer
+    if (!videoElement.paused) { 
         videoElement.pause();
     }
-    // On ne remet pas currentTime à 0 ici, car si on la remontre, on veut qu'elle redémarre de 0 (géré dans showNightAssaultVideo)
 }
 
 console.log("utils.js - Fin du fichier, fonctions définies.");

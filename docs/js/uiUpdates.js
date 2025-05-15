@@ -5,20 +5,34 @@ var uiUpdates = {
     updateResourceDisplay: function() {
         // console.log("UI: updateResourceDisplay CALLED");
         if (!gameState) { console.warn("UI: updateResourceDisplay - gameState non défini."); return; }
-        if (!gameState.resources || !gameState.productionRates || !gameState.capacity) {
-            console.warn("UI: updateResourceDisplay - gameState.resources, productionRates ou capacity non défini.");
+        if (!gameState.resources || !gameState.productionRates || !gameState.capacity || 
+            typeof gameState.mobilityRechargeTimer === 'undefined') { // Vérifier aussi mobilityRechargeTimer
+            console.warn("UI: updateResourceDisplay - gameState.resources, productionRates, capacity ou mobilityRechargeTimer non défini.");
             return;
         }
 
         if(biomassEl) biomassEl.textContent = Math.floor(gameState.resources.biomass);
         if(nanitesEl) nanitesEl.textContent = Math.floor(gameState.resources.nanites);
         
-        // AFFICHAGE MOBILITÉ
-        if(mobilityEl && typeof gameState.resources.mobility !== 'undefined' && typeof MAX_MOBILITY_POINTS !== 'undefined') {
-            mobilityEl.textContent = `${Math.floor(gameState.resources.mobility)} / ${MAX_MOBILITY_POINTS}`;
+        // AFFICHAGE MOBILITÉ ET TIMER
+        if(mobilityEl && typeof gameState.resources.mobility !== 'undefined' && typeof MAX_MOBILITY_POINTS !== 'undefined' && typeof MOBILITY_RECHARGE_TICKS !== 'undefined' && typeof TICK_SPEED !== 'undefined' && typeof formatTime === 'function') {
+            let mobilityText = `${Math.floor(gameState.resources.mobility)} / ${MAX_MOBILITY_POINTS}`;
+            if (gameState.resources.mobility < MAX_MOBILITY_POINTS && MOBILITY_RECHARGE_TICKS > 0) { // S'assurer que MOBILITY_RECHARGE_TICKS n'est pas 0 pour éviter NaN
+                const ticksRemaining = MOBILITY_RECHARGE_TICKS - gameState.mobilityRechargeTimer;
+                // S'assurer que ticksRemaining est positif avant de calculer secondsRemaining
+                const secondsRemaining = ticksRemaining > 0 ? Math.ceil(ticksRemaining * (TICK_SPEED / 1000)) : 0;
+                if (secondsRemaining > 0) {
+                    mobilityText += ` (+1 dans ${formatTime(secondsRemaining)})`;
+                } else if (gameState.resources.mobility < MAX_MOBILITY_POINTS) {
+                    // Si secondsRemaining est 0 mais pas encore rechargé (peut arriver avec des timers très courts)
+                    mobilityText += ` (Recharge...)`;
+                }
+            }
+            mobilityEl.textContent = mobilityText;
         } else if (mobilityEl) {
             mobilityEl.textContent = '? / ?';
         }
+        // FIN AFFICHAGE MOBILITÉ ET TIMER
         
         if(typeof gameState.resources.crystal_shards !== 'undefined'){
             if(crystalShardsDisplayContainer) crystalShardsDisplayContainer.classList.toggle('hidden', gameState.resources.crystal_shards <= 0 && !crystalShardsDisplayContainer.classList.contains('always-visible'));
@@ -689,7 +703,7 @@ var uiUpdates = {
             if (typeof updateShopDisplay === 'function') updateShopDisplay();
         }
     }
-}; // FIN DE L'OBJET uiUpdates
+};
 
 window.handleDefenseAction = function(instanceId, action, row, col) {
     if (action === 'upgrade') {
