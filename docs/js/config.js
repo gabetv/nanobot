@@ -5,15 +5,15 @@ var TICK_SPEED = 1000;
 var DAY_DURATION = 5 * 60 * (1000 / TICK_SPEED);
 var NIGHT_DURATION = 3 * 60 * (1000 / TICK_SPEED);
 var COMBAT_ANIMATION_DELAY_BASE = 700;
-// var EXPLORATION_COST_ENERGY = 5; // Ancienne constante, peut être supprimée ou commentée
-var EXPLORATION_COST_MOBILITY = 1; // Coût d'un déplacement en points de mobilité
-var MAX_MOBILITY_POINTS = 10; // Maximum de points de mobilité
-var MOBILITY_RECHARGE_RATE_PER_MINUTE = 1; // Combien de points sont rechargés par minute
-var MOBILITY_RECHARGE_TICKS = Math.floor(60 / MOBILITY_RECHARGE_RATE_PER_MINUTE * (1000 / TICK_SPEED)); // Ticks nécessaires pour recharger 1 point
+// var EXPLORATION_COST_ENERGY = 5; // Ancienne constante
+var EXPLORATION_COST_MOBILITY = 1;
+var MAX_MOBILITY_POINTS = 10;
+var MOBILITY_RECHARGE_RATE_PER_MINUTE = 1;
+var MOBILITY_RECHARGE_TICKS = Math.floor(60 / MOBILITY_RECHARGE_RATE_PER_MINUTE * (1000 / TICK_SPEED));
 
 var DEFAULT_MAP_SIZE = { width: 25, height: 20 };
 var BASE_GRID_SIZE = { rows: 9, cols: 13 };
-var SCAN_ENERGY_COST = 15; // Le scan continue d'utiliser de l'énergie
+var SCAN_ENERGY_COST = 15;
 var SCAN_COOLDOWN_DURATION_SECONDS = 10;
 var SCAN_REVEAL_DURATION_SECONDS = 20;
 var SCAN_COOLDOWN_DURATION = SCAN_COOLDOWN_DURATION_SECONDS; 
@@ -194,7 +194,18 @@ var nightAssaultEnemies = [
     { id: 'heavy_crawler', name: "Rampant Lourd", baseHealth: 80, baseAttack: 3, speed: 1.5, attackRange: 15, damageType: DAMAGE_TYPES.KINETIC, resistances: { kinetic: 0.25, energy: 0.1 }, reward: { biomass: 8, nanites: 2 }, spritePath: 'https://placehold.co/12x12/d69e2e/1a202c?text=C', visualClass: 'crawler' }
 ];
 var bossDefinitions = {
-    'siegeBreaker': { id: 'siegeBreaker', name: "Briseur de Siège Alpha", baseHealth: 500, baseAttack: 25, defense: 5, speed: 0.8, attackRange: 25, damageType: DAMAGE_TYPES.KINETIC, resistances: { kinetic: 0.3, energy: 0.1 }, reward: { biomass: 150, nanites: 75, xp: 200, loot: ['arte_rare', 'mod_proto'] }, spritePath: 'https://placehold.co/100x120/7f1d1d/fef2f2?text=BOSS', abilities: [ { type: 'aoe_stomp', name: "Piétinement Destructeur", chance: 0.2, damage: 15, radius: 60, cooldown: 3, lastUsed: 0 }, { type: 'regen', name: "Régénération d'Urgence", chance: 0.1, amount: 25, healthThreshold: 0.4, cooldown: 5, lastUsed: 0 } ], visualSize: { width: 30, height: 30 } }
+    'siege_breaker_alpha': { // ID unique pour ce boss
+        id: 'siege_breaker_alpha', name: "Briseur de Siège Alpha",
+        baseHealth: 500, baseAttack: 25, defense: 5, speed: 0.8, attackRange: 25,
+        damageType: DAMAGE_TYPES.KINETIC, resistances: { kinetic: 0.3, energy: 0.1 },
+        reward: { biomass: 150, nanites: 75, xp: 200, loot: ['arte_rare', 'mod_proto'] },
+        spritePath: 'https://placehold.co/30x30/7f1d1d/fef2f2?text=BS',
+        visualSize: { width: 24, height: 24 },
+        abilities: [
+            { type: 'aoe_stomp', name: "Piétinement Destructeur", chance: 0.2, damage: 15, radius: 60, cooldown: 3, lastUsed: 0 },
+            { type: 'regen', name: "Régénération d'Urgence", chance: 0.1, amount: 25, healthThreshold: 0.4, cooldown: 5, lastUsed: 0 }
+        ]
+    }
 };
 var nightEvents = [
     { id: 'flying_swarm', name: "Vol Nuptial Agressif", description: "Une nuée d'unités volantes ignore vos défenses au sol et cible directement le noyau !",
@@ -205,13 +216,85 @@ var nightEvents = [
       effect: (nightAssaultState) => { if(typeof addLogEntry === 'function' && typeof nightAssaultLogEl !== 'undefined' && nightAssaultState?.log) addLogEntry("Brouillard étrange réduisant la visibilité...", "warning", nightAssaultLogEl, nightAssaultState.log); if(nightAssaultState) { nightAssaultState.globalModifiers = nightAssaultState.globalModifiers || {}; nightAssaultState.globalModifiers.turretRangeFactor = 0.7; } },
       revertEffect: (nightAssaultState) => { if (nightAssaultState && nightAssaultState.globalModifiers) delete nightAssaultState.globalModifiers.turretRangeFactor; if(typeof addLogEntry === 'function' && typeof nightAssaultLogEl !== 'undefined' && nightAssaultState?.log) addLogEntry("Le brouillard se dissipe.", "info", nightAssaultLogEl, nightAssaultState.log); },
       duration: NIGHT_DURATION * TICK_SPEED
+    },
+    {
+        id: 'reinforcements_delayed', name: "Interférences de Communication",
+        description: "Des interférences empêchent l'arrivée de la prochaine vague d'ennemis pour un temps.",
+        effect: (nightAssaultState) => {
+            if(typeof addLogEntry === 'function' && typeof nightAssaultLogEl !== 'undefined' && nightAssaultState?.log) addLogEntry("Interférences détectées... Arrivée des renforts ennemis retardée !", "info", nightAssaultLogEl, nightAssaultState.log);
+            if(nightAssaultState) {
+                const delayInSeconds = 30;
+                gameState.nightAssault.lastAttackTime += delayInSeconds * (1000 / TICK_SPEED);
+            }
+        },
+        duration: 10 * TICK_SPEED
     }
 ];
+
+// --- NANOBOT SKILLS - MODIFIED FOR ACTIVE SKILLS ---
 var nanobotSkills = {
-    'powerStrike': { id: 'powerStrike', name: "Frappe Puissante", description: "Attaque concentrée à 150% dégâts.", type: "attack_boost", cost: { rage: 30 }, effect: { damageMultiplier: 1.5 }, cooldown: 0, activationMessage: "Nexus-7 concentre son énergie pour une Frappe Puissante !", effectMessage: (damage) => `L'attaque inflige ${damage} dégâts critiques !` },
-    'emergencyShield': { id: 'emergencyShield', name: "Bouclier d'Urgence", description: "Bouclier temporaire absorbant 20 dégâts.", type: "defensive_buff", trigger: { healthPercentBelow: 30 }, effect: { damageAbsorption: 20, duration: 1 }, cooldown: 10 , activationMessage: "Systèmes d'urgence ! Bouclier temporaire activé !", effectMessage: "Le bouclier absorbe les prochains dégâts." },
-    'adaptiveFocus': { id: 'adaptiveFocus', name: "Concentration Adaptative", description: "Chaque attaque réussie augmente les dégâts.", type: "passive_buff_stack", trigger: { onNanobotAttackHit: true }, effect: { damageBonusPerStack: 2, maxStacks: 3 }, resetCondition: { onNanobotHit: true }, cooldown: 0, activationMessage: (stacks) => `Concentration accrue (x${stacks}) !` }
+    'powerStrike': {
+        id: 'powerStrike',
+        name: "Frappe Puissante",
+        description: "Une attaque concentrée qui inflige 150% des dégâts normaux.",
+        type: "active_attack_boost", // Indique une compétence active
+        target: "enemy", // Cible l'ennemi
+        cost: { rage: 30 },
+        effect: { damageMultiplier: 1.5 },
+        cooldown: 2, // Cooldown en tours de combat
+        // lastUsedRound sera géré dans nanobotCombatStats
+        activationMessage: "Nexus-7 concentre son énergie pour une Frappe Puissante !",
+        effectMessage: (damage) => `L'attaque inflige ${damage} dégâts critiques !`
+    },
+    'repairNanites': {
+        id: 'repairNanites',
+        name: "Nanites Réparateurs",
+        description: "Restaure une petite quantité de PV.",
+        type: "active_heal",
+        target: "self", // Cible le Nanobot lui-même
+        cost: { energy: 10 }, // Coûte de l'énergie globale du joueur
+        effect: { healAmount: 20 }, 
+        cooldown: 3,
+        activationMessage: "Nexus-7 active ses nanites réparateurs !",
+        effectMessage: (healedAmount) => `Nexus-7 se répare de ${healedAmount} PV.`
+    },
+    'overchargeShot': {
+        id: 'overchargeShot',
+        name: "Tir Surchargé",
+        description: "Prochaine attaque ignore 25% de la défense ennemie.",
+        type: "active_buff_self_next_attack", 
+        target: "self",
+        cost: { rage: 15, energy: 5 }, 
+        effect: { defensePiercing: 0.25, duration: 1 }, 
+        cooldown: 4,
+        activationMessage: "Nexus-7 surcharge ses systèmes d'armes !",
+        effectMessage: () => `La prochaine attaque du Nexus-7 perforera mieux les blindages !`
+    },
+    'emergencyShield': { 
+        id: 'emergencyShield', 
+        name: "Bouclier d'Urgence", 
+        description: "Bouclier temporaire absorbant 20 dégâts.", 
+        type: "passive_defensive_buff", // Changé pour clarifier
+        trigger: { healthPercentBelow: 30 }, 
+        effect: { damageAbsorption: 20, duration: 1 }, // Duration 1 = 1 instance de dégât ou 1 tour
+        cooldown: 5, // Cooldown en tours de combat (était 10 ticks globaux avant)
+        activationMessage: "Systèmes d'urgence ! Bouclier temporaire activé !", 
+        effectMessage: "Le bouclier absorbe les prochains dégâts." 
+    },
+    'adaptiveFocus': { 
+        id: 'adaptiveFocus', 
+        name: "Concentration Adaptative", 
+        description: "Chaque attaque réussie augmente les dégâts.", 
+        type: "passive_buff_stack", 
+        trigger: { onNanobotAttackHit: true }, 
+        effect: { damageBonusPerStack: 2, maxStacks: 3 }, 
+        resetCondition: { onNanobotHit: true }, 
+        cooldown: 0, 
+        activationMessage: (stacks) => `Concentration accrue (x${stacks}) !` 
+    }
 };
+// --- FIN NANOBOT SKILLS ---
+
 
 var QUEST_DATA = {
     'main_01_survival_basics': {

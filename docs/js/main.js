@@ -3,7 +3,7 @@ console.log("main.js - Fichier chargé et en cours d'analyse...");
 
 // --- Références DOM ---
 let biomassEl, nanitesEl, energyEl, biomassRateEl, nanitesRateEl, crystalShardsEl;
-let mobilityEl; // Pour la nouvelle jauge de mobilité
+let mobilityEl;
 let eventLogEl, gameTimeEl, cycleStatusEl;
 let modal, modalTitle, modalMessage, modalConfirm, modalCancel;
 let nanobotHealthEl, nanobotAttackEl, nanobotDefenseEl, nanobotSpeedEl;
@@ -34,7 +34,7 @@ function initDOMReferences() {
         biomassEl=document.getElementById('biomass');
         nanitesEl=document.getElementById('nanites');
         energyEl=document.getElementById('energy');
-        mobilityEl=document.getElementById('mobility'); // Récupération du nouvel élément
+        mobilityEl=document.getElementById('mobility');
         biomassRateEl=document.getElementById('biomassRate');
         nanitesRateEl=document.getElementById('nanitesRate');
         crystalShardsDisplayContainer=document.getElementById('crystal-shards-display-container');
@@ -116,7 +116,8 @@ function setupEventListeners() {
     console.log("main.js: setupEventListeners - Début");
     try {
         if (modalConfirm) modalConfirm.addEventListener('click', () => { if (modalConfirmCallback) modalConfirmCallback(); hideModal(); });
-        if (modalCancel) modalCancel.addEventListener('click', hideModal);
+        if (modalCancel) modalCancel.addEventListener('click', () => { if(modalCancelCallback) modalCancelCallback(); hideModal(); }); // Modifié pour appeler modalCancelCallback
+
 
         if(simulateCombatBtn && typeof simulateCombat === 'function') {
             simulateCombatBtn.addEventListener('click', () => { const testEnemy = { name: "Drone d'Entraînement", health: 40, maxHealth:40, attack: 10, defense: 3, color: '#4299e1', spritePath: 'https://placehold.co/80x100/4299e1/e2e8f0?text=TRAIN' }; simulateCombat(testEnemy); });
@@ -179,7 +180,6 @@ function gameLoop() {
             }
         }
         
-        // RECHARGE DE LA MOBILITÉ
         if (typeof MAX_MOBILITY_POINTS !== 'undefined' && typeof MOBILITY_RECHARGE_TICKS !== 'undefined') {
             if (gameState.resources.mobility < MAX_MOBILITY_POINTS) {
                 gameState.mobilityRechargeTimer = (gameState.mobilityRechargeTimer || 0) + 1; 
@@ -191,7 +191,6 @@ function gameLoop() {
                 gameState.mobilityRechargeTimer = 0; 
             }
         }
-
 
         if (gameState.activeResearch && typeof researchData !== 'undefined' && researchData[gameState.activeResearch.id] && typeof buildingsData !== 'undefined' && typeof TICK_SPEED !== 'undefined') {
             const research = researchData[gameState.activeResearch.id];
@@ -275,7 +274,7 @@ function init() {
     console.log(`main.js: init() - Tentative ${initAttempts + 1}`);
     initAttempts++;
 
-    if (typeof ZONE_DATA === 'undefined' || typeof BASE_COORDINATES === 'undefined' || typeof BASE_INITIAL_HEALTH === 'undefined' || typeof TICK_SPEED === 'undefined' || typeof buildingsData === 'undefined' || typeof QUEST_STATUS === 'undefined' || typeof QUEST_DATA === 'undefined' || typeof itemsData === 'undefined' || typeof nanobotModulesData === 'undefined' || typeof researchData === 'undefined' || typeof nightAssaultEnemies === 'undefined' || typeof bossDefinitions === 'undefined' || typeof nightEvents === 'undefined' || typeof nanobotSkills === 'undefined' || typeof explorationEnemyData === 'undefined' || typeof enemyBaseDefinitions === 'undefined' || typeof MAP_FEATURE_DATA === 'undefined' || typeof DAMAGE_TYPES === 'undefined' || typeof TILE_TYPES === 'undefined' || typeof TILE_TYPES_TO_RESOURCE_KEY === 'undefined' || typeof MAX_MOBILITY_POINTS === 'undefined' || typeof MOBILITY_RECHARGE_TICKS === 'undefined') { // Ajout des nouvelles constantes
+    if (typeof ZONE_DATA === 'undefined' || typeof BASE_COORDINATES === 'undefined' || typeof BASE_INITIAL_HEALTH === 'undefined' || typeof TICK_SPEED === 'undefined' || typeof buildingsData === 'undefined' || typeof QUEST_STATUS === 'undefined' || typeof QUEST_DATA === 'undefined' || typeof itemsData === 'undefined' || typeof nanobotModulesData === 'undefined' || typeof researchData === 'undefined' || typeof nightAssaultEnemies === 'undefined' || typeof bossDefinitions === 'undefined' || typeof nightEvents === 'undefined' || typeof nanobotSkills === 'undefined' || typeof explorationEnemyData === 'undefined' || typeof enemyBaseDefinitions === 'undefined' || typeof MAP_FEATURE_DATA === 'undefined' || typeof DAMAGE_TYPES === 'undefined' || typeof TILE_TYPES === 'undefined' || typeof TILE_TYPES_TO_RESOURCE_KEY === 'undefined' || typeof MAX_MOBILITY_POINTS === 'undefined' || typeof MOBILITY_RECHARGE_TICKS === 'undefined') {
         if (initAttempts < MAX_INIT_ATTEMPTS) {
             console.warn(`main.js: init() - Constantes de config.js non prêtes. Tentative ${initAttempts}/${MAX_INIT_ATTEMPTS}. Nouvel essai dans 250ms...`);
             setTimeout(init, 250);
@@ -291,14 +290,22 @@ function init() {
     try {
         initDOMReferences();
 
+        // Initialisation du système de tooltip
+        if (typeof initializeTooltipSystem === 'function') {
+            initializeTooltipSystem();
+            console.log("main.js: init() - Système de Tooltip initialisé.");
+        } else {
+            console.warn("main.js: init() - initializeTooltipSystem non trouvée.");
+        }
+
         console.log("main.js: init() - Initialisation de gameState...");
         gameState = {
             resources: { 
                 biomass: 250, nanites: 100, energy: 0, crystal_shards: 0, 
                 totalEnergyConsumed: 0, energyConsumedByDefenses: 0,
-                mobility: MAX_MOBILITY_POINTS // Initialiser la mobilité au maximum
+                mobility: MAX_MOBILITY_POINTS
             },
-            mobilityRechargeTimer: 0, // Timer pour la recharge de mobilité
+            mobilityRechargeTimer: 0,
             productionRates: { biomass: 0, nanites: 0 },
             capacity: { energy: 50 },
             buildings: {}, research: {}, gameTime: 0, isDay: true, currentCycleTime: 0, deficitWarningLogged: 0,
@@ -427,7 +434,7 @@ function init() {
     }
 }
 
-const SAVE_KEY = 'nexus7GameState_v1.1.2';
+const SAVE_KEY = 'nexus7GameState_v1.1.2'; // J'ai gardé la même clé, pensez à l'incrémenter si les changements sont majeurs et non rétrocompatibles
 function saveGame() { 
     try { 
         if (typeof gameState === 'undefined') { console.warn("saveGame: gameState non défini."); return; } 
@@ -525,10 +532,8 @@ function loadGame() {
             if (gameState.capacity.energy === undefined) gameState.capacity.energy = 50; 
             if (gameState.nanobotStats.lastScanTime === undefined) gameState.nanobotStats.lastScanTime = 0;
             if (gameState.tutorialCompleted === undefined) gameState.tutorialCompleted = false;
-            // Assurer que la mobilité et son timer sont présents si la sauvegarde est ancienne
             if (gameState.resources.mobility === undefined) gameState.resources.mobility = MAX_MOBILITY_POINTS;
             if (gameState.mobilityRechargeTimer === undefined) gameState.mobilityRechargeTimer = 0;
-
 
             if(typeof addLogEntry === 'function' && eventLogEl && gameState.eventLog) addLogEntry(`Partie chargée (${SAVE_KEY}).`, "info", eventLogEl, gameState.eventLog);
             console.log("loadGame: Partie chargée avec succès.");

@@ -20,9 +20,9 @@ var uiUpdates = {
                 const ticksRemaining = MOBILITY_RECHARGE_TICKS - gameState.mobilityRechargeTimer;
                 const secondsRemaining = ticksRemaining > 0 ? Math.ceil(ticksRemaining * (TICK_SPEED / 1000)) : 0;
                 if (secondsRemaining > 0) {
-                    mobilityText += ` (+1 dans ${formatTime(secondsRemaining)})`;
+                    // mobilityText += ` (+1 dans ${formatTime(secondsRemaining)})`; // Tooltip gèrera ça
                 } else if (gameState.resources.mobility < MAX_MOBILITY_POINTS) {
-                    mobilityText += ` (Recharge...)`;
+                    // mobilityText += ` (Recharge...)`;
                 }
             }
             mobilityEl.textContent = mobilityText;
@@ -38,9 +38,9 @@ var uiUpdates = {
         }
 
         if(energyEl && typeof gameState.resources.totalEnergyConsumed !== 'undefined' && typeof gameState.capacity.energy !== 'undefined') {
-             energyEl.textContent = `${Math.floor(gameState.resources.totalEnergyConsumed)} / ${gameState.capacity.energy}`;
+             energyEl.textContent = `${Math.floor(gameState.resources.totalEnergyConsumed)} / ${(gameState.capacity.energy + Math.floor(gameState.resources.totalEnergyConsumed || 0))}`;
         } else if (energyEl && typeof gameState.capacity.energy !== 'undefined') {
-             energyEl.textContent = `? / ${gameState.capacity.energy}`;
+             energyEl.textContent = `? / ${(gameState.capacity.energy + Math.floor(gameState.resources.totalEnergyConsumed || 0))}`;
         } else if (energyEl) {
             energyEl.textContent = `? / ?`;
         }
@@ -71,7 +71,10 @@ var uiUpdates = {
             const nextLevelDefinition = building.levels && building.levels[level] ? building.levels[level] : null;
 
             const div = document.createElement('div');
-            div.className = 'panel p-2 mb-2'; 
+            div.className = 'panel p-2 mb-2';
+            div.dataset.tooltipType = 'building-card'; // Ajout pour tooltip
+            div.dataset.tooltipId = id;                // Ajout pour tooltip
+
             let content = `<h4 class="text-sm font-semibold ${building.type === 'defense' ? 'text-[var(--accent-yellow)]' : 'text-[var(--accent-blue)]'}">${building.name} (Niv. ${level})</h4>`;
             content += `<p class="text-xs text-gray-400 mb-1">${building.description}</p>`;
 
@@ -89,7 +92,6 @@ var uiUpdates = {
             if (nextLevelDefinition) {
                 const costObject = level === 0 ? nextLevelDefinition.costToUnlockOrUpgrade : nextLevelDefinition.costToUpgrade;
                 if (costObject) {
-                    let costString = Object.entries(costObject).map(([res, val]) => `${val} ${ (typeof itemsData !== 'undefined' && itemsData[res]) ? itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1)}`).join(', ');
                     let canAfford = true;
                     for (const resource in costObject) {
                         if (itemsData && itemsData[resource]) {
@@ -100,9 +102,24 @@ var uiUpdates = {
                     }
                     const button = document.createElement('button');
                     button.className = `btn ${canAfford ? 'btn-primary' : 'btn-disabled'} btn-xs mt-1 w-full`;
-                    button.textContent = level === 0 ? `Débloquer (${costString})` : `Améliorer Niv. ${level + 1} (${costString})`;
+                    
+                    let buttonTextContent = level === 0 ? `Débloquer (` : `Améliorer Niv. ${level + 1} (`;
+                    buttonTextContent += Object.entries(costObject)
+                        .map(([res, val]) => {
+                            const resourceName = (typeof itemsData !== 'undefined' && itemsData[res]) ? itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1);
+                            return `<span class="cost-part" data-resource-id="${res}" data-required-amount="${val}">${val} ${resourceName}</span>`;
+                        })
+                        .join(', ');
+                    buttonTextContent += `)`;
+                    button.innerHTML = buttonTextContent;
+
                     if (!canAfford) button.disabled = true;
                     button.onclick = () => { if(typeof build === 'function') build(id); };
+                    
+                    if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') {
+                        button.addEventListener('mouseover', () => highlightInsufficientCosts(button, costObject));
+                        button.addEventListener('mouseout', () => clearCostHighlights(button));
+                    }
                     div.appendChild(button);
                 }
             } else if (level > 0 && building.type !== 'defense' && building.levels && level >= building.levels.length) {
@@ -154,6 +171,8 @@ var uiUpdates = {
 
             const researchDiv = document.createElement('div');
             researchDiv.className = 'panel p-2 mb-2';
+            researchDiv.dataset.tooltipType = 'research-card'; // Tooltip pour la recherche en cours
+            researchDiv.dataset.tooltipId = gameState.activeResearch.id;
             researchDiv.innerHTML = `
                 <h4 class="text-sm font-semibold text-yellow-400">En cours: ${research.name}</h4>
                 <p class="text-xs text-gray-400 mb-1">${research.description}</p>
@@ -167,9 +186,11 @@ var uiUpdates = {
 
         for (const id in researchData) {
             const research = researchData[id];
-            if (gameState.research[id]) {
+            if (gameState.research[id]) { // Si recherche complétée
                 const div = document.createElement('div');
                 div.className = 'panel p-2 mb-2 opacity-60';
+                div.dataset.tooltipType = 'research-card';
+                div.dataset.tooltipId = id;
                 div.innerHTML = `
                     <h4 class="text-sm font-semibold text-green-400">${research.name} (Acquis)</h4>
                     <p class="text-xs text-gray-500">${research.description}</p>`;
@@ -177,28 +198,53 @@ var uiUpdates = {
                 researchAvailableCount++;
                 continue;
             }
-            if (gameState.activeResearch && gameState.activeResearch.id === id) continue;
+            if (gameState.activeResearch && gameState.activeResearch.id === id) continue; // Déjà affiché
 
             let canResearch = true; let requirementText = "";
             if (research.requirements) {
                 if (research.requirements.buildings) { for (const buildingId in research.requirements.buildings) { if ((gameState.buildings[buildingId] || 0) < research.requirements.buildings[buildingId]) { canResearch = false; requirementText += `<span class="text-red-400">${buildingsData[buildingId]?.name || buildingId} Niv. ${research.requirements.buildings[buildingId]} requis.</span><br>`;}}}
                 if (research.requirements.research) { research.requirements.research.forEach(reqResearchId => { if (!gameState.research[reqResearchId]) { canResearch = false; requirementText += `<span class="text-red-400">Recherche "${researchData[reqResearchId]?.name || reqResearchId}" requise.</span><br>`;}});}}
 
-            const div = document.createElement('div'); div.className = 'panel p-2 mb-2';
-            let costString = Object.entries(research.cost).map(([res, val]) => `${val} ${res.charAt(0).toUpperCase() + res.slice(1)}`).join(', ');
+            const div = document.createElement('div');
+            div.className = 'panel p-2 mb-2';
+            div.dataset.tooltipType = 'research-card';
+            div.dataset.tooltipId = id;
+
             let effectsText = "";
             if(research.grantsStatBoost) effectsText += `Stats: ${Object.entries(research.grantsStatBoost).map(([s,v])=>`${s}:+${v}`).join(', ')}. `;
             if(research.grantsModule && typeof nanobotModulesData !== 'undefined' && nanobotModulesData[research.grantsModule]) effectsText += `Module: ${nanobotModulesData[research.grantsModule].name}. `;
-            let content = `<h4 class="text-sm font-semibold text-blue-300">${research.name}</h4> <p class="text-xs text-gray-400 mb-0.5">${research.description}</p> <p class="text-xs text-yellow-500">Coût: ${costString}</p> <p class="text-xs text-gray-300">Temps Base: ${formatTime(research.time)}</p>`;
+
+            let content = `<h4 class="text-sm font-semibold text-blue-300">${research.name}</h4> <p class="text-xs text-gray-400 mb-0.5">${research.description}</p>`;
+            // Coût et temps ne seront plus directement dans le content, mais dans le tooltip. Le bouton les affichera.
             if (effectsText) content += `<p class="text-xs text-green-300">Effets: ${effectsText}</p>`;
             if (requirementText) content += `<div class="text-xs mt-0.5">${requirementText}</div>`;
             div.innerHTML = content;
-            const button = document.createElement('button'); let canAfford = true;
+            
+            const button = document.createElement('button');
+            let canAfford = true;
             for (const resource_1 in research.cost) { if ((gameState.resources[resource_1]||0) < research.cost[resource_1]) { canAfford = false; break; }}
             button.className = `btn ${(canResearch && canAfford && !gameState.activeResearch) ? 'btn-success' : 'btn-disabled'} btn-xs mt-1 w-full`;
-            button.textContent = "Lancer Recherche"; if (!canResearch || !canAfford || gameState.activeResearch) button.disabled = true;
+            
+            let buttonTextContent = `Lancer Recherche (`;
+            buttonTextContent += Object.entries(research.cost)
+                .map(([res, val]) => {
+                    const resourceName = (typeof itemsData !== 'undefined' && itemsData[res]) ? itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1);
+                    return `<span class="cost-part" data-resource-id="${res}" data-required-amount="${val}">${val} ${resourceName}</span>`;
+                })
+                .join(', ');
+            buttonTextContent += ` - ${formatTime(research.time)})`;
+            button.innerHTML = buttonTextContent;
+            
+            if (!canResearch || !canAfford || gameState.activeResearch) button.disabled = true;
             button.onclick = () => { if(typeof startResearch === 'function') startResearch(id); };
-            div.appendChild(button); researchContainer.appendChild(div); researchAvailableCount++;
+
+            if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') {
+                button.addEventListener('mouseover', () => highlightInsufficientCosts(button, research.cost));
+                button.addEventListener('mouseout', () => clearCostHighlights(button));
+            }
+            div.appendChild(button);
+            researchContainer.appendChild(div);
+            researchAvailableCount++;
         }
         if (researchAvailableCount === 0) { researchContainer.innerHTML += "<p class='text-gray-500 italic text-sm'>Aucune recherche disponible ou en cours.</p>"; }
     },
@@ -240,6 +286,8 @@ var uiUpdates = {
                 hasModules = true;
                 const moduleDiv = document.createElement('div');
                 moduleDiv.className = 'module-card bg-gray-700 bg-opacity-70 p-2.5 rounded-md shadow border border-gray-600';
+                moduleDiv.dataset.tooltipType = 'module-card'; // Tooltip pour la carte de module
+                moduleDiv.dataset.tooltipId = moduleId;
 
                 let content = `<div class="flex justify-between items-baseline mb-1">
                                   <h4 class="font-semibold text-sm text-lime-400">${moduleData.name}</h4>
@@ -264,11 +312,6 @@ var uiUpdates = {
                 const costDataForNextLevel = currentLevel === 0 ? moduleData.levels[0].costToUnlockOrUpgrade : (nextLevelData ? nextLevelData.costToUpgrade : null) ;
 
                 if (costDataForNextLevel && (currentLevel < moduleData.levels.length) && !isReplacedByActiveHigherTier) {
-                    let costHtml = "";
-                    let costString = Object.entries(costDataForNextLevel)
-                        .map(([res, val]) => `${val} ${ (typeof itemsData !== 'undefined' && itemsData[res]) ? itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1)}`)
-                        .join(', ');
-                    
                     let canAfford = true;
                     for(const res_1 in costDataForNextLevel) {
                         if (typeof itemsData !== 'undefined' && itemsData[res_1]) { 
@@ -280,18 +323,26 @@ var uiUpdates = {
                     }
 
                     const buttonText = currentLevel === 0 ? "Activer" : "Améliorer";
-                    
-                    if (nextLevelData && nextLevelData.statBoost) {
-                        costHtml += `<div class="text-xs text-gray-400 mt-1"><strong>Prochain Niv (${nextLevelData.level}):</strong> ${Object.entries(nextLevelData.statBoost).map(([s,v]) => `${s.charAt(0).toUpperCase() + s.slice(1)}:+${v}`).join(', ')}</div>`;
-                    }
-                    costHtml += `<div class="text-xs text-amber-400 mt-1"><strong>Coût ${buttonText}:</strong> ${costString}</div>`;
-                    moduleDiv.innerHTML += costHtml;
-
                     const upgradeButton = document.createElement('button');
                     upgradeButton.className = `btn ${canAfford ? 'btn-primary' : 'btn-disabled'} btn-xs mt-2 w-full`;
-                    upgradeButton.textContent = buttonText;
+                    
+                    let buttonHtmlContent = `${buttonText} (`;
+                    buttonHtmlContent += Object.entries(costDataForNextLevel)
+                        .map(([res, val]) => {
+                            const resourceName = (typeof itemsData !== 'undefined' && itemsData[res]) ? itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1);
+                            return `<span class="cost-part" data-resource-id="${res}" data-required-amount="${val}">${val} ${resourceName}</span>`;
+                        })
+                        .join(', ');
+                    buttonHtmlContent += `)`;
+                    upgradeButton.innerHTML = buttonHtmlContent;
+
                     if(!canAfford) upgradeButton.disabled = true;
                     upgradeButton.onclick = () => { if(typeof upgradeNanobotModule === 'function') upgradeNanobotModule(moduleId);};
+
+                    if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') {
+                        upgradeButton.addEventListener('mouseover', () => highlightInsufficientCosts(upgradeButton, costDataForNextLevel));
+                        upgradeButton.addEventListener('mouseout', () => clearCostHighlights(upgradeButton));
+                    }
                     moduleDiv.appendChild(upgradeButton);
                 } else if (currentLevel > 0 && !isReplacedByActiveHigherTier) {
                     moduleDiv.innerHTML += `<p class="text-xs text-green-400 mt-1.5">Niveau Max de Technologie Atteint</p>`;
@@ -312,12 +363,10 @@ var uiUpdates = {
         if(nanobotDefenseEl) nanobotDefenseEl.textContent = gameState.nanobotStats.defense;
         if(nanobotSpeedEl) nanobotSpeedEl.textContent = gameState.nanobotStats.speed;
 
-        if(nanobotVisualBody) { // nanobotVisualBody est document.getElementById('nanobot-body')
+        if(nanobotVisualBody) {
             nanobotVisualBody.innerHTML = ''; 
-            
             const nanobotBaseImagePath = 'images/nanobot_base_body.png'; 
             nanobotVisualBody.style.backgroundImage = `url('${nanobotBaseImagePath}')`;
-            // Les styles CSS pour #nanobot-body (background-size, position, repeat) gèrent l'affichage.
         }
         
         if (gameState.nanobotModuleLevels && typeof nanobotModulesData !== 'undefined' && nanobotVisualBody) {
@@ -327,21 +376,14 @@ var uiUpdates = {
                     const moduleData = nanobotModulesData[moduleId];
                     if (moduleData) { 
                         const imagePath = `images/module_visual_${moduleId}.png`;
-
                         const createAndAppendVisual = (baseClass, specificClassFromData) => {
                             const visualEl = document.createElement('div');
                             visualEl.className = `${baseClass} ${specificClassFromData || ''}`;
                             visualEl.style.backgroundImage = `url('${imagePath}')`;
                             nanobotVisualBody.appendChild(visualEl); 
                         };
-
-                        if (moduleData.visualClass) {
-                            createAndAppendVisual('nanobot-module', moduleData.visualClass);
-                        } else if (moduleData.visualClasses) {
-                            moduleData.visualClasses.forEach(className => {
-                                createAndAppendVisual('nanobot-module', className);
-                            });
-                        }
+                        if (moduleData.visualClass) createAndAppendVisual('nanobot-module', moduleData.visualClass);
+                        else if (moduleData.visualClasses) moduleData.visualClasses.forEach(className => createAndAppendVisual('nanobot-module', className));
                     }
                 }
             }
@@ -356,7 +398,6 @@ var uiUpdates = {
                     equippedItemsNames.push(item.name); 
                     if (item.visualClass) { 
                         const imagePath = `images/item_visual_${itemId}.png`;
-
                         const visualEl = document.createElement('div');
                         visualEl.className = `nanobot-item-visual ${item.visualClass}`;
                         visualEl.style.backgroundImage = `url('${imagePath}')`;
@@ -383,13 +424,15 @@ var uiUpdates = {
             container.innerHTML = "<p class='text-xs text-gray-500 italic'>Données d'équipement non disponibles.</p>";
             return;
         }
-        for (const slotId in EQUIPMENT_SLOTS) { // Utiliser EQUIPMENT_SLOTS pour l'ordre
+        for (const slotId in EQUIPMENT_SLOTS) {
             const slotName = EQUIPMENT_SLOTS[slotId];
             const itemId = gameState.nanobotEquipment[slotId];
             const item = itemId ? itemsData[itemId] : null;
 
             const slotDiv = document.createElement('div');
             slotDiv.className = 'equipment-slot bg-gray-700 bg-opacity-70 p-2.5 rounded-md shadow border border-gray-600';
+            slotDiv.dataset.tooltipType = 'equipment-slot'; // Tooltip pour le slot
+            slotDiv.dataset.tooltipId = slotId;
             
             let contentHtml = `<div class="flex justify-between items-center mb-1">
                                   <span class="slot-name text-sm font-semibold text-fuchsia-400">${slotName}:</span>`;
@@ -421,7 +464,6 @@ var uiUpdates = {
             container.appendChild(slotDiv);
         }
     },
-
 
     updateXpBar: function() {
         if(!xpBarEl || !gameState || !gameState.nanobotStats || gameState.nanobotStats.level === undefined) return;
@@ -462,6 +504,11 @@ var uiUpdates = {
                 const cell = document.createElement('div'); cell.className = 'base-preview-cell'; 
                 cell.style.gridRowStart = r + 1; cell.style.gridColumnStart = c + 1;
                 cell.dataset.row = r; cell.dataset.col = c;
+                // Tooltip pour les cases de la grille de base
+                // cell.dataset.tooltipType = 'base-grid-cell';
+                // cell.dataset.tooltipId = `${r}-${c}`; 
+                // cell.dataset.tooltipExtra = gameState.baseGrid[r]?.[c]?.instanceId || '';
+
                 const coreRow = Math.floor(BASE_GRID_SIZE.rows / 2); const coreCol = Math.floor(BASE_GRID_SIZE.cols / 2);
                 if (r === coreRow && c === coreCol) {
                     cell.classList.add('core'); const coreVisual = document.createElement('div'); coreVisual.className = 'base-core-visual'; coreVisual.textContent = 'N'; cell.appendChild(coreVisual); cell.id = 'base-core-visual-cell';
@@ -484,12 +531,9 @@ var uiUpdates = {
             const cells = previewContainer.querySelectorAll('.base-preview-cell'); 
             if (cells.length === 0) return;
             const firstCell = cells[0]; 
-            if (!firstCell.offsetWidth && previewContainer.clientWidth === 0) { 
-                return; 
-            }
+            if (!firstCell.offsetWidth && previewContainer.clientWidth === 0) return; 
             const cellClientWidth = firstCell.offsetWidth || (previewContainer.clientWidth / BASE_GRID_SIZE.cols);
             const cellClientHeight = firstCell.offsetHeight || (previewContainer.clientHeight / BASE_GRID_SIZE.rows);
-
             const containerStyle = getComputedStyle(previewContainer); 
             const containerPaddingLeft = parseFloat(containerStyle.paddingLeft) || 0; 
             const containerPaddingTop = parseFloat(containerStyle.paddingTop) || 0; 
@@ -508,7 +552,10 @@ var uiUpdates = {
                     const defenseVisual = document.createElement('div'); 
                     defenseVisual.classList.add('defense-visual-on-grid', defenseState.id); 
                     defenseVisual.textContent = `${buildingDef.name.substring(0,1).toUpperCase()}${defenseState.level}`; 
-                    defenseVisual.title = `${defenseState.name} L${defenseState.level} (PV:${Math.floor(defenseState.currentHealth)}/${defenseState.maxHealth})`;
+                    // Tooltip pour la défense placée
+                    // defenseVisual.dataset.tooltipType = 'base-defense-grid';
+                    // defenseVisual.dataset.tooltipId = defenseState.id;
+                    // defenseVisual.dataset.tooltipExtra = instanceId; // Pour récupérer les stats de l'instance
                     
                     defenseVisual.style.position = 'absolute'; 
                     defenseVisual.style.width = `${cellClientWidth - 2}px`;
@@ -530,17 +577,14 @@ var uiUpdates = {
                     }
                     
                     const healthPercentage = (defenseState.maxHealth > 0 ? (defenseState.currentHealth / defenseState.maxHealth) : 0) * 100;
-                    
                     const tempStyleEl = document.createElement('div'); tempStyleEl.className = `defense-visual-on-grid ${defenseState.id}`; 
                     document.body.appendChild(tempStyleEl); const computedStyleForType = getComputedStyle(tempStyleEl);
                     let bgColor = computedStyleForType.backgroundColor && computedStyleForType.backgroundColor !== "rgba(0, 0, 0, 0)" ? computedStyleForType.backgroundColor : 'rgba(100, 116, 139, 0.7)';
                     let borderColor = computedStyleForType.borderColor && computedStyleForType.borderColor !== "rgba(0, 0, 0, 0)" ? computedStyleForType.borderColor : 'var(--border-color)';
                     let textColor = computedStyleForType.color || 'white';
                     document.body.removeChild(tempStyleEl);
-
                     if (healthPercentage < 30) { bgColor = 'rgba(229, 62, 62, 0.8)'; borderColor = '#c53030'; textColor = 'white'; } 
                     else if (healthPercentage < 60) { bgColor = 'rgba(236, 201, 75, 0.8)'; borderColor = '#d69e2e'; textColor = 'black'; }
-                    
                     defenseVisual.style.backgroundColor = bgColor;
                     defenseVisual.style.border = `1px solid ${borderColor}`;
                     defenseVisual.style.color = textColor;
@@ -558,15 +602,11 @@ var uiUpdates = {
                         enemyVisual.style.position = 'absolute';
                         const visualWidth = parseInt(enemyVisual.style.width) || (isBoss ? (enemy.typeInfo.visualSize?.width || 18) : 10);
                         const visualHeight = parseInt(enemyVisual.style.height) || (isBoss ? (enemy.typeInfo.visualSize?.height || 18) : 10);
-                        
                         let clampedX = Math.max(visualWidth / 2, Math.min(enemy.x, previewContainer.clientWidth - visualWidth / 2));
                         let clampedY = Math.max(visualHeight / 2, Math.min(enemy.y, previewContainer.clientHeight - visualHeight / 2));
-
                         const enemyLeft = (clampedX - (visualWidth / 2)) + offsetX;
                         const enemyTop = (clampedY - (visualHeight / 2)) + offsetY;
-                        
                         enemyVisual.style.left = `${enemyLeft}px`; enemyVisual.style.top = `${enemyTop}px`; enemyVisual.title = `${enemy.typeInfo.name} (PV:${Math.ceil(enemy.currentHealth)})`; previewContainer.appendChild(enemyVisual);
-                        
                         const healthBarContainer = document.createElement('div'); healthBarContainer.className = 'enemy-health-bar-on-grid-container'; healthBarContainer.style.position = 'absolute'; const healthBarWidth = Math.max(10, visualWidth * 0.8); healthBarContainer.style.width = `${healthBarWidth}px`; healthBarContainer.style.height = '3px'; healthBarContainer.style.left = `${enemyLeft + (visualWidth / 2) - (healthBarWidth / 2)}px`; healthBarContainer.style.top = `${enemyTop - 5}px`;
                         const healthBarFill = document.createElement('div'); healthBarFill.className = 'enemy-health-bar-on-grid-fill'; const healthPercent = (enemy.maxHealth > 0 ? (enemy.currentHealth / enemy.maxHealth) : 0) * 100; healthBarFill.style.width = `${Math.max(0, healthPercent)}%`;
                         healthBarContainer.appendChild(healthBarFill); previewContainer.appendChild(healthBarContainer);
@@ -583,104 +623,77 @@ var uiUpdates = {
 
     drawLaserShot: function(startX, startY, endX, endY, type = 'friendly') {
         const container = basePreviewContainerEl;
-        if (!container) {
-            return;
-        }
-
+        if (!container) return;
         const projectile = document.createElement('div');
         projectile.className = 'projectile-visual';
-
         let projectileHeightString = '3px'; 
         let projectileHeightNumeric = parseFloat(projectileHeightString);
         let projectileShadow;
-
-        if (type === 'friendly') {
-            projectile.style.backgroundColor = 'var(--accent-green)';
-            projectileShadow = '0 0 5px var(--accent-green), 0 0 8px #90ee90';
-        } else { 
-            projectile.style.backgroundColor = 'var(--accent-red)';
-            projectileShadow = '0 0 5px var(--accent-red), 0 0 8px #ff7f7f';
-        }
-        projectile.style.height = projectileHeightString;
-        projectile.style.boxShadow = projectileShadow;
-        projectile.style.borderRadius = '1px';
-
-
-        const dx = endX - startX;
-        const dy = endY - startY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-
-        if (distance < 1.5) { 
-            projectile.style.width = projectileHeightString; 
-            projectile.style.left = `${startX - projectileHeightNumeric / 2}px`;
-            projectile.style.top = `${startY - projectileHeightNumeric / 2}px`;
-        } else {
-            projectile.style.width = `${distance}px`;
-            projectile.style.left = `${startX}px`;
-            projectile.style.top = `${startY - projectileHeightNumeric / 2}px`; 
-            projectile.style.transform = `rotate(${angle}deg)`;
-        }
-
-        container.appendChild(projectile);
-        setTimeout(() => {
-            if (projectile.parentElement) {
-                projectile.remove();
-            }
-        }, 200); 
+        if (type === 'friendly') { projectile.style.backgroundColor = 'var(--accent-green)'; projectileShadow = '0 0 5px var(--accent-green), 0 0 8px #90ee90';} 
+        else { projectile.style.backgroundColor = 'var(--accent-red)'; projectileShadow = '0 0 5px var(--accent-red), 0 0 8px #ff7f7f';}
+        projectile.style.height = projectileHeightString; projectile.style.boxShadow = projectileShadow; projectile.style.borderRadius = '1px';
+        const dx = endX - startX; const dy = endY - startY; const distance = Math.sqrt(dx * dx + dy * dy); const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        if (distance < 1.5) { projectile.style.width = projectileHeightString; projectile.style.left = `${startX - projectileHeightNumeric / 2}px`; projectile.style.top = `${startY - projectileHeightNumeric / 2}px`;} 
+        else { projectile.style.width = `${distance}px`; projectile.style.left = `${startX}px`; projectile.style.top = `${startY - projectileHeightNumeric / 2}px`; projectile.style.transform = `rotate(${angle}deg)`;}
+        container.appendChild(projectile); setTimeout(() => { if (projectile.parentElement) projectile.remove();}, 200); 
     },
-
-    drawEnemyProjectile: function(startX, startY, endX, endY, damageType) {
-        this.drawLaserShot(startX, startY, endX, endY, 'enemy');
-    },
+    drawEnemyProjectile: function(startX, startY, endX, endY, damageType) { this.drawLaserShot(startX, startY, endX, endY, 'enemy');},
     
     managePlacedDefense: function(instanceId, row, col) {
         if (!gameState || !gameState.defenses || !gameState.defenses[instanceId] || !buildingsData || !buildingsData[gameState.defenses[instanceId].id]) {
-            showModal("Erreur", "Impossible de gérer cette défense, données manquantes.");
-            return;
+            showModal("Erreur", "Impossible de gérer cette défense, données manquantes."); return;
         }
-        const defenseInstance = gameState.defenses[instanceId];
-        const defenseTypeData = buildingsData[defenseInstance.id];
-        const currentTechLevel = gameState.buildings[defenseInstance.id] || 0;
-
+        const defenseInstance = gameState.defenses[instanceId]; const defenseTypeData = buildingsData[defenseInstance.id]; const currentTechLevel = gameState.buildings[defenseInstance.id] || 0;
         let modalContent = `<h4 class="font-orbitron text-md mb-1">${defenseInstance.name} (Niv. ${defenseInstance.level})</h4>`;
         modalContent += `<p class="text-xs">PV: ${Math.floor(defenseInstance.currentHealth)} / ${defenseInstance.maxHealth}</p>`;
         if (defenseInstance.attack !== undefined) modalContent += `<p class="text-xs">Attaque: ${defenseInstance.attack}</p>`;
         if (defenseInstance.range !== undefined) modalContent += `<p class="text-xs">Portée: ${defenseInstance.range}</p>`;
         modalContent += `<hr class="my-2 border-gray-600">`;
-
         let actionsHtml = `<div class="flex flex-col space-y-1">`;
-        
         const canUpgradeInstance = defenseInstance.level < currentTechLevel && defenseInstance.level < defenseTypeData.levels.length;
         if (canUpgradeInstance) {
             const nextLevelData = defenseTypeData.levels.find(l => l.level === defenseInstance.level + 1);
             if (nextLevelData && nextLevelData.costToUpgrade) {
-                let costString = Object.entries(nextLevelData.costToUpgrade)
-                    .map(([res, val]) => `${val} ${ (typeof itemsData !== 'undefined' && itemsData[res]) ? itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1)}`)
-                    .join(', ');
-                actionsHtml += `<button class="btn btn-primary btn-sm" onclick="handleDefenseAction('${instanceId}', 'upgrade')">Améliorer (Coût: ${costString})</button>`;
+                // Utiliser la fonction getCostString pour générer le coût avec feedback visuel
+                let costStringForButton = getCostString(nextLevelData.costToUpgrade, true); // true pour activer le check
+                const upgradeButton = document.createElement('button');
+                upgradeButton.className = 'btn btn-primary btn-sm'; // La classe btn-disabled sera gérée par la vérification d'affordability
+                upgradeButton.innerHTML = `Améliorer (<span class="upgrade-cost-wrapper">${costStringForButton}</span>)`; // Wrapper pour le coût
+
+                // Vérifier si on peut se permettre l'amélioration
+                let canAffordUpgrade = true;
+                for(const res in nextLevelData.costToUpgrade) {
+                    if (itemsData[res]) { if ((gameState.inventory.filter(id => id === res).length || 0) < nextLevelData.costToUpgrade[res]) {canAffordUpgrade=false; break;} }
+                    else { if ((gameState.resources[res] || 0) < nextLevelData.costToUpgrade[res]) {canAffordUpgrade=false; break;} }
+                }
+                if (!canAffordUpgrade) {
+                    upgradeButton.classList.add('btn-disabled');
+                    upgradeButton.disabled = true;
+                }
+                
+                upgradeButton.onclick = () => handleDefenseAction(instanceId, 'upgrade');
+                if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') {
+                     upgradeButton.addEventListener('mouseover', () => highlightInsufficientCosts(upgradeButton.querySelector('.upgrade-cost-wrapper'), nextLevelData.costToUpgrade));
+                     upgradeButton.addEventListener('mouseout', () => clearCostHighlights(upgradeButton.querySelector('.upgrade-cost-wrapper')));
+                }
+                actionsHtml += upgradeButton.outerHTML;
             }
         } else if (defenseInstance.level >= currentTechLevel && defenseInstance.level < defenseTypeData.levels.length) {
-             actionsHtml += `<p class="text-xs text-yellow-400 italic">Améliorez d'abord la technologie de ${defenseTypeData.name} (via l'onglet Ingénierie) pour améliorer cette instance.</p>`;
+             actionsHtml += `<p class="text-xs text-yellow-400 italic">Améliorez d'abord la technologie de ${defenseTypeData.name}.</p>`;
         } else if (defenseInstance.level >= defenseTypeData.levels.length) {
              actionsHtml += `<p class="text-xs text-green-400 italic">Niveau d'instance maximum atteint.</p>`;
         }
-
         actionsHtml += `<button class="btn btn-danger btn-sm" onclick="handleDefenseAction('${instanceId}', 'sell', ${row}, ${col})">Vendre</button>`;
-        actionsHtml += `</div>`;
-        modalContent += actionsHtml;
-
+        actionsHtml += `</div>`; modalContent += actionsHtml;
         showModal("Gérer Défense", modalContent, null, true);
     },
 
     updateDisplays: function() {
         if (!gameState) { console.warn("UI: updateDisplays - gameState non défini, arrêt."); return; }
-
         if(typeof this.updateResourceDisplay === 'function') this.updateResourceDisplay();
         if(typeof this.updateXpBar === 'function') this.updateXpBar();
-
         const activeMainSectionButton = document.querySelector('#main-navigation .nav-button.active');
-        if (!activeMainSectionButton) { return; }
+        if (!activeMainSectionButton) return; 
         const activeMainSectionId = activeMainSectionButton.dataset.section;
 
         if (activeMainSectionId === 'base-section') {
@@ -695,9 +708,7 @@ var uiUpdates = {
             const activeSubTabButton = document.querySelector('#nexus-section .sub-nav-button.active');
             if (activeSubTabButton) {
                 const activeSubTabId = activeSubTabButton.dataset.subtab;
-                if (activeSubTabId === 'nanobot-config-subtab' && typeof this.updateNanobotDisplay === 'function') {
-                    this.updateNanobotDisplay();
-                }
+                if (activeSubTabId === 'nanobot-config-subtab' && typeof this.updateNanobotDisplay === 'function') this.updateNanobotDisplay();
                 else if (activeSubTabId === 'inventory-subtab' && typeof updateInventoryDisplay === 'function') updateInventoryDisplay();
             }
         } else if (activeMainSectionId === 'world-section') {
@@ -715,17 +726,11 @@ var uiUpdates = {
 
 window.handleDefenseAction = function(instanceId, action, row, col) {
     if (action === 'upgrade') {
-        if (typeof executeUpgradePlacedDefense === 'function') {
-            executeUpgradePlacedDefense(instanceId);
-        } else {
-            console.error("La fonction executeUpgradePlacedDefense n'est pas définie.");
-        }
+        if (typeof executeUpgradePlacedDefense === 'function') executeUpgradePlacedDefense(instanceId);
+        else console.error("La fonction executeUpgradePlacedDefense n'est pas définie.");
     } else if (action === 'sell') {
-        if (typeof sellPlacedDefense === 'function') {
-            sellPlacedDefense(instanceId, row, col);
-        } else {
-            console.error("La fonction sellPlacedDefense n'est pas définie.");
-        }
+        if (typeof sellPlacedDefense === 'function') sellPlacedDefense(instanceId, row, col);
+        else console.error("La fonction sellPlacedDefense n'est pas définie.");
     }
     hideModal();
 };
