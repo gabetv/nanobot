@@ -13,9 +13,10 @@ let simulateCombatBtn, combatLogSummaryEl;
 let combatModalEl;
 let combatNanobotSprite, combatEnemySprite;
 let combatNanobotHealthbar, combatEnemyHealthbar;
-let combatEnemyNameEl, combatLogVisualEl, closeCombatModalBtn;
+let combatEnemyNameEl, combatLogVisualEl;
+let combatTurnIndicatorEl; 
 let mapGridEl, nanobotMapPosEl, tileInfoDisplayEl, explorationTitleEl, zoneListContainerEl;
-let combatEndModalEl, combatEndTitleEl, combatEndRewardsEl, xpGainEl, xpBarEl, lootListEl, closeEndModalBtn, toggleSpeedBtn;
+let combatEndModalEl, combatEndTitleEl, combatEndRewardsEl, xpGainEl, xpBarEl, lootListEl, closeEndModalBtn;
 let inventoryListEl, shopItemsListEl;
 let baseHealthDisplayEl, baseHealthValueEl, baseMaxHealthValueEl;
 let overviewBaseHealthEl, baseHealthBarContainerEl, baseHealthBarEl, basePreviewContainerEl, placementInfoDivEl, selectedDefenseForPlacementSpanEl, cancelPlacementBtnEl;
@@ -26,6 +27,7 @@ let crystalShardsDisplayContainer;
 let explorationLogEl, tileInteractionPanelEl, tileInteractionDetailsEl, tileInteractionActionsEl;
 let activeQuestsListEl, completedQuestsListEl;
 let nightAssaultVideoContainerEl, nightAssaultVideoEl, closeNightAssaultVideoBtnEl;
+let combatCloseAftermathBtnEl;
 
 
 function initDOMReferences() {
@@ -34,7 +36,7 @@ function initDOMReferences() {
         biomassEl=document.getElementById('biomass');
         nanitesEl=document.getElementById('nanites');
         energyEl=document.getElementById('energy');
-        mobilityEl=document.getElementById('mobility');
+        mobilityEl=document.getElementById('mobility'); 
         biomassRateEl=document.getElementById('biomassRate');
         nanitesRateEl=document.getElementById('nanitesRate');
         crystalShardsDisplayContainer=document.getElementById('crystal-shards-display-container');
@@ -64,7 +66,8 @@ function initDOMReferences() {
         combatEnemyHealthbar=document.getElementById('combat-enemy-healthbar');
         combatEnemyNameEl=document.getElementById('combat-enemy-name');
         combatLogVisualEl=document.getElementById('combat-log-visual');
-        closeCombatModalBtn=document.getElementById('close-combat-modal-btn');
+        combatTurnIndicatorEl = document.getElementById('combat-turn-indicator'); 
+        combatCloseAftermathBtnEl = document.getElementById('combat-close-aftermath-btn');
         mapGridEl = document.getElementById('map-grid');
         nanobotMapPosEl = document.getElementById('nanobot-map-pos');
         tileInfoDisplayEl = document.getElementById('tile-info-display');
@@ -83,7 +86,6 @@ function initDOMReferences() {
         xpBarEl = document.getElementById('xp-bar');
         lootListEl = document.getElementById('loot-list');
         closeEndModalBtn = document.getElementById('close-end-modal');
-        toggleSpeedBtn = document.getElementById('toggle-speed-btn');
         inventoryListEl = document.getElementById("inventory-list");
         shopItemsListEl = document.getElementById("shop-items-list");
         baseHealthDisplayEl = document.getElementById('base-health-display');
@@ -116,36 +118,13 @@ function setupEventListeners() {
     console.log("main.js: setupEventListeners - Début");
     try {
         if (modalConfirm) modalConfirm.addEventListener('click', () => { if (modalConfirmCallback) modalConfirmCallback(); hideModal(); });
-        if (modalCancel) modalCancel.addEventListener('click', () => { if(modalCancelCallback) modalCancelCallback(); hideModal(); }); // Modifié pour appeler modalCancelCallback
-
+        if (modalCancel) modalCancel.addEventListener('click', () => { if(modalCancelCallback) modalCancelCallback(); hideModal(); });
 
         if(simulateCombatBtn && typeof simulateCombat === 'function') {
             simulateCombatBtn.addEventListener('click', () => { const testEnemy = { name: "Drone d'Entraînement", health: 40, maxHealth:40, attack: 10, defense: 3, color: '#4299e1', spritePath: 'https://placehold.co/80x100/4299e1/e2e8f0?text=TRAIN' }; simulateCombat(testEnemy); });
         } else if (!simulateCombatBtn) console.warn("main.js: setupEventListeners - simulateCombatBtn non trouvé.");
         else if (typeof simulateCombat !== 'function') console.warn("main.js: setupEventListeners - simulateCombat n'est pas une fonction.");
 
-        if(closeCombatModalBtn) closeCombatModalBtn.addEventListener('click', () => {
-            if(combatModalEl) combatModalEl.classList.add('hidden');
-            const explorationTabActive = document.getElementById('exploration-subtab')?.classList.contains('active');
-            if(explorationTabActive && typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function') {
-                explorationUI.updateFullExplorationView();
-            }
-        });
-
-        if(toggleSpeedBtn) {
-            toggleSpeedBtn.addEventListener('click', () => {
-                if (typeof combatSpeedMultiplier === 'undefined') window.combatSpeedMultiplier = 1;
-                combatSpeedMultiplier = (combatSpeedMultiplier === 1) ? 3 : 1;
-                toggleSpeedBtn.textContent = combatSpeedMultiplier === 1 ? "Vitesse x3" : "Vitesse x1";
-                let baseDelay = typeof COMBAT_ANIMATION_DELAY_BASE !== 'undefined' ? COMBAT_ANIMATION_DELAY_BASE : 700;
-                COMBAT_ANIMATION_DELAY = baseDelay / combatSpeedMultiplier;
-            });
-            if (typeof combatSpeedMultiplier !== 'undefined') {
-                 toggleSpeedBtn.textContent = combatSpeedMultiplier === 1 ? "Vitesse x3" : "Vitesse x1";
-            } else {
-                 toggleSpeedBtn.textContent = "Vitesse x3";
-            }
-        }
         if(closeEndModalBtn) closeEndModalBtn.addEventListener('click', () => { if(combatEndModalEl) combatEndModalEl.classList.add('hidden'); });
         if(repairBaseBtn && typeof repairBase === 'function') repairBaseBtn.addEventListener('click', () => repairBase(20));
         if(repairDefensesBtn && typeof repairAllDefenses === 'function') repairDefensesBtn.addEventListener('click', repairAllDefenses);
@@ -174,7 +153,7 @@ function gameLoop() {
         if (!gameState) { return; }
 
         if (gameState.capacity && gameState.resources && gameState.productionRates && typeof TICK_SPEED !== 'undefined') {
-            if (gameState.capacity.energy >= (gameState.resources.totalEnergyConsumed || 0) ) {
+            if ( (gameState.capacity.energy + (gameState.resources.totalEnergyConsumed - gameState.resources.energyConsumedByDefenses) ) >= (gameState.resources.totalEnergyConsumed || 0) ) { // Vérifie si assez d'énergie pour les bâtiments NON défensifs
                 gameState.resources.biomass += gameState.productionRates.biomass * (TICK_SPEED / 1000);
                 gameState.resources.nanites += gameState.productionRates.nanites * (TICK_SPEED / 1000);
             }
@@ -196,12 +175,12 @@ function gameLoop() {
             const research = researchData[gameState.activeResearch.id];
             const labLevel = gameState.buildings['researchLab'] || 0;
             const researchLabData = buildingsData['researchLab'];
-            let researchSpeedFactor = 0.5;
+            let researchSpeedFactor = 0.5; // Facteur de base si le lab n'est pas trouvé ou niveau 0
             if (labLevel > 0 && researchLabData && researchLabData.levels[labLevel-1] && researchLabData.levels[labLevel-1].researchSpeedFactor) {
                 researchSpeedFactor = researchLabData.levels[labLevel - 1].researchSpeedFactor;
             }
-            const researchTimeInTicks = research.time * (1000 / TICK_SPEED);
-            const actualResearchTimeTicks = researchTimeInTicks / researchSpeedFactor;
+            const researchTimeInTicks = research.time * (1000 / TICK_SPEED); // Temps total en ticks nécessaire
+            const actualResearchTimeTicks = researchTimeInTicks / researchSpeedFactor; // Temps ajusté par la vitesse du labo
 
             if (gameState.gameTime >= gameState.activeResearch.startTime + actualResearchTimeTicks) {
                 addLogEntry(`Technologie ${research.name} acquise!`, "success", eventLogEl, gameState.eventLog);
@@ -290,7 +269,6 @@ function init() {
     try {
         initDOMReferences();
 
-        // Initialisation du système de tooltip
         if (typeof initializeTooltipSystem === 'function') {
             initializeTooltipSystem();
             console.log("main.js: init() - Système de Tooltip initialisé.");
@@ -314,7 +292,10 @@ function init() {
                 baseHealth: 100, currentHealth: 100, baseAttack: 10, baseDefense: 5, baseSpeed: 10,
                 health: 100, attack: 10, defense: 5, speed: 10,
                 level: 1, xp: 0, xpToNext: 100,
-                isDefendingBase: false, rage: 0, focusStacks: 0, lastScanTime: 0
+                isDefendingBase: false, rage: 0, focusStacks: 0, lastScanTime: 0,
+                skillLastUsed: {}, 
+                activeBuffs: {},
+                resistances: {} // Assurer que resistances est initialisé
             },
             nanobotModuleLevels: {}, inventory: [],
             nanobotEquipment: { weapon: null, armor: null, utility1: null, utility2: null },
@@ -434,7 +415,7 @@ function init() {
     }
 }
 
-const SAVE_KEY = 'nexus7GameState_v1.1.2'; // J'ai gardé la même clé, pensez à l'incrémenter si les changements sont majeurs et non rétrocompatibles
+const SAVE_KEY = 'nexus7GameState_v1.1.3';
 function saveGame() { 
     try { 
         if (typeof gameState === 'undefined') { console.warn("saveGame: gameState non défini."); return; } 
@@ -456,77 +437,46 @@ function loadGame() {
                 if (loadedState.hasOwnProperty(key)) {
                     if (typeof gameState[key] === 'object' && gameState[key] !== null && !Array.isArray(gameState[key]) &&
                         typeof loadedState[key] === 'object' && loadedState[key] !== null && !Array.isArray(loadedState[key])) {
-                        
+                        gameState[key] = { ...gameState[key], ...loadedState[key] }; 
+                        if (key === 'nanobotStats' && loadedState.nanobotStats) {
+                            gameState.nanobotStats.skillLastUsed = loadedState.nanobotStats.skillLastUsed || {};
+                            gameState.nanobotStats.activeBuffs = {}; 
+                            gameState.nanobotStats.resistances = loadedState.nanobotStats.resistances || {}; // Assurer l'initialisation
+                        }
                         if (key === 'map' && loadedState.map && typeof TILE_TYPES !== 'undefined' && typeof ZONE_DATA !== 'undefined' && typeof BASE_COORDINATES !== 'undefined' && typeof DEFAULT_MAP_SIZE !== 'undefined') {
-                            gameState.map.tiles = loadedState.map.tiles || [];
+                           gameState.map.tiles = loadedState.map.tiles || [];
                             const zoneForPos = loadedState.currentZoneId || gameState.currentZoneId || 'verdant_archipelago';
-                            const defaultPos = (ZONE_DATA[zoneForPos]?.entryPoint) ? 
-                                               {...ZONE_DATA[zoneForPos].entryPoint} : 
-                                               ({...BASE_COORDINATES});
+                            const defaultPos = (ZONE_DATA[zoneForPos]?.entryPoint) ? {...ZONE_DATA[zoneForPos].entryPoint} : ({...BASE_COORDINATES});
                             gameState.map.nanobotPos = loadedState.map.nanobotPos || defaultPos;
                             gameState.map.zoneId = loadedState.map.zoneId || zoneForPos;
                             gameState.map.selectedTile = loadedState.map.selectedTile || null;
                             gameState.map.currentEnemyEncounter = loadedState.map.currentEnemyEncounter || null;
-
                             if(Array.isArray(gameState.map.tiles)){
                                 const zoneMapSize = ZONE_DATA[gameState.map.zoneId]?.mapSize || DEFAULT_MAP_SIZE;
-                                const expectedHeight = zoneMapSize.height;
-                                const expectedWidth = zoneMapSize.width;
+                                const expectedHeight = zoneMapSize.height; const expectedWidth = zoneMapSize.width;
                                 let newTiles = [];
-                                for(let y=0; y < expectedHeight; y++){
-                                    newTiles[y] = [];
-                                    for(let x=0; x < expectedWidth; x++){
-                                        const defaultTileProps = {
-                                            actualType: TILE_TYPES.EMPTY_GRASSLAND,
-                                            baseType: TILE_TYPES.PRE_EMPTY,
-                                            structureType: null,
-                                            isExplored: false,
-                                            content: null,
-                                            isScanned: false,
-                                            scannedRevealTime: 0,
-                                            scannedActualType: null
-                                        };
-                                        const loadedTileData = loadedState.map.tiles?.[y]?.[x];
-                                        newTiles[y][x] = {...defaultTileProps, ...(loadedTileData || {})};
-                                    }
-                                }
+                                for(let y=0; y < expectedHeight; y++){ newTiles[y] = []; for(let x=0; x < expectedWidth; x++){
+                                    const defaultTileProps = { actualType: TILE_TYPES.EMPTY_GRASSLAND, baseType: TILE_TYPES.PRE_EMPTY, structureType: null, isExplored: false, content: null, isScanned: false, scannedRevealTime: 0, scannedActualType: null };
+                                    const loadedTileData = loadedState.map.tiles?.[y]?.[x]; newTiles[y][x] = {...defaultTileProps, ...(loadedTileData || {})};
+                                }}
                                 gameState.map.tiles = newTiles;
-                            } else {
-                                gameState.map.tiles = []; 
-                            }
-
-                        } else if (key === 'nanobotStats' && loadedState.nanobotStats) {
-                             gameState.nanobotStats = { ...gameState.nanobotStats, ...loadedState.nanobotStats };
-                        } else if (key === 'resources' && loadedState.resources) {
-                             gameState.resources = { ...gameState.resources, ...loadedState.resources };
-                        } else if (key === 'baseStats' && loadedState.baseStats) {
-                             gameState.baseStats = { ...gameState.baseStats, ...loadedState.baseStats };
-                        } else if (key === 'nightAssault' && loadedState.nightAssault) {
-                            gameState.nightAssault = { ...gameState.nightAssault, ...loadedState.nightAssault };
-                            if (!Array.isArray(gameState.nightAssault.log)) gameState.nightAssault.log = ["Journal d'assaut initialisé."];
+                            } else { gameState.map.tiles = []; }
                         } else if (key === 'quests' && loadedState.quests && typeof QUEST_DATA !== 'undefined' && typeof QUEST_STATUS !== 'undefined') {
                             gameState.quests = {}; 
-                            for(const qId in loadedState.quests) {
-                                if (QUEST_DATA[qId]) { 
-                                    gameState.quests[qId] = {
-                                        id: qId,
-                                        status: loadedState.quests[qId].status !== undefined ? loadedState.quests[qId].status : QUEST_STATUS.LOCKED,
-                                        progress: loadedState.quests[qId].progress || {},
-                                        objectivesCompleted: loadedState.quests[qId].objectivesCompleted || QUEST_DATA[qId].objectives.map(() => false)
-                                    };
-                                    if (gameState.quests[qId].objectivesCompleted.length !== QUEST_DATA[qId].objectives.length) {
-                                        gameState.quests[qId].objectivesCompleted = QUEST_DATA[qId].objectives.map(() => false);
-                                    }
-                                }
-                            }
-                        } else {
-                            gameState[key] = { ...gameState[key], ...loadedState[key] }; 
+                            for(const qId in loadedState.quests) { if (QUEST_DATA[qId]) { 
+                                gameState.quests[qId] = { id: qId, status: loadedState.quests[qId].status !== undefined ? loadedState.quests[qId].status : QUEST_STATUS.LOCKED, progress: loadedState.quests[qId].progress || {}, objectivesCompleted: loadedState.quests[qId].objectivesCompleted || QUEST_DATA[qId].objectives.map(() => false) };
+                                if (gameState.quests[qId].objectivesCompleted.length !== QUEST_DATA[qId].objectives.length) gameState.quests[qId].objectivesCompleted = QUEST_DATA[qId].objectives.map(() => false);
+                            }}
                         }
                     } else {
                         gameState[key] = loadedState[key]; 
                     }
                 }
             }
+            // Assurer la présence des nouvelles/importantes propriétés si la sauvegarde est ancienne
+            if (gameState.nanobotStats.skillLastUsed === undefined) gameState.nanobotStats.skillLastUsed = {};
+            if (gameState.nanobotStats.activeBuffs === undefined) gameState.nanobotStats.activeBuffs = {};
+            if (gameState.nanobotStats.resistances === undefined) gameState.nanobotStats.resistances = {}; // Ajout crucial
             if (gameState.resources.totalEnergyConsumed === undefined) gameState.resources.totalEnergyConsumed = 0;
             if (gameState.resources.energyConsumedByDefenses === undefined) gameState.resources.energyConsumedByDefenses = 0;
             if (gameState.capacity.energy === undefined) gameState.capacity.energy = 50; 

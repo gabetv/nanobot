@@ -762,11 +762,21 @@
     <div id="combat-modal" class="modal hidden">
         <div id="combat-modal-content" class="modal-content">
             <h2 class="font-orbitron text-xl mb-1 text-center text-[var(--accent-red)]">Affrontement!</h2>
+            
+            <!-- NOUVEAU: Indicateur de Tour -->
+            <div id="combat-turn-indicator" class="text-center font-semibold text-lg mb-2 text-sky-300">
+                Préparation...
+            </div>
+
             <div class="combat-arena">
                 <div id="combat-nanobot" class="combatant">
                     <div class="combatant-name">Nexus-7</div>
                     <div class="combatant-sprite" id="combat-nanobot-sprite"></div>
                     <div class="health-bar-container"><div id="combat-nanobot-healthbar" class="health-bar"></div></div>
+                    <div class="combatant-resources text-xs mt-1">
+                        <span title="Rage">🔥 <span id="combat-nanobot-rage">0</span></span>
+                        <span title="Énergie Globale" class="ml-2">⚡ <span id="combat-nanobot-global-energy">0</span></span>
+                    </div>
                 </div>
                 <div id="combat-enemy" class="combatant">
                     <div class="combatant-name" id="combat-enemy-name">Ennemi</div>
@@ -779,14 +789,13 @@
                 <div id="combat-log-visual" class="mt-1 max-h-24 overflow-y-auto pr-1"><p class="text-gray-500 italic">Début du combat...</p></div>
             </details>
             
-            <!-- BLOC POUR LES ACTIONS DE COMBAT -->
             <div id="combat-actions-container" class="mt-2 flex justify-center items-center gap-2 flex-wrap">
-                <!-- Les boutons d'action (Attaquer, Compétences) seront générés ici par JS -->
+                <!-- Boutons d'action générés par JS -->
             </div>
             
-            <div class="text-center mt-1 flex justify-center gap-2">
-                <button id="close-combat-modal-btn" class="btn btn-secondary btn-xs">Fermer</button>
-                <button id="toggle-speed-btn" class="btn btn-info btn-xs">Vitesse x3</button>
+            <!-- MODIFIÉ: Bouton Fuir uniquement ici, les autres ont été retirés -->
+            <div class="text-center mt-3"> 
+                <button id="combat-action-flee" class="btn btn-warning btn-sm">Fuir (-10 PV)</button>
             </div>
         </div>
     </div>

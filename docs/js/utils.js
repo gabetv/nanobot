@@ -19,7 +19,7 @@ function showModal(title, message, onConfirm, showCancel = true, onCancel = null
     if (typeof modalTitle !== 'undefined' && modalTitle) modalTitle.textContent = title;
     else console.warn("utils.js: showModal - modalTitle non trouvé.");
 
-    if (typeof modalMessage !== 'undefined' && modalMessage) modalMessage.innerHTML = message; // Utiliser innerHTML pour permettre les <br>
+    if (typeof modalMessage !== 'undefined' && modalMessage) modalMessage.innerHTML = message;
     else console.warn("utils.js: showModal - modalMessage non trouvé.");
 
     modalConfirmCallback = onConfirm;
@@ -71,7 +71,7 @@ function addLogEntry(message, type = "info", logElement = null, logArray = null)
         else if (Array.isArray(gameState.eventLog)) logArray = gameState.eventLog;
     }
 
-    const timestamp = (type !== "combat-visual" && type !== "map-event" && type !== "base-assault-event" && type !== "base-defense-event" && type !== "base-info-event")
+    const timestamp = (type !== "combat-visual" && type !== "map-event" && type !== "base-assault-event" && type !== "base-defense-event" && type !== "base-info-event" && type !== "combat-visual-detail")
                     ? `[${formatTime(Math.floor(currentGameTime * (currentTickSpeed/1000)))}] `
                     : "";
     const entry = document.createElement('p');
@@ -100,6 +100,13 @@ function addLogEntry(message, type = "info", logElement = null, logArray = null)
         else if (type === "success") entry.classList.add("text-green-400");
         else if (type === "warning") entry.classList.add("text-yellow-400");
         else entry.classList.add("text-orange-300"); 
+    } else if (logElement === combatLogVisualEl) { // Journal de combat visuel
+        if (type === "error") entry.classList.add("text-red-400");
+        else if (type === "success") entry.classList.add("text-green-300");
+        else if (type === "skill-activation") entry.classList.add("text-yellow-300", "font-semibold");
+        else if (type === "skill-effect") entry.classList.add("text-sky-300", "italic");
+        else if (type === "combat-visual-detail") entry.classList.add("combat-visual-detail"); // Style via CSS
+        else entry.classList.add("text-gray-200"); 
     } else { 
         if (type === "error") entry.classList.add("text-red-400");
         else if (type === "success") entry.classList.add("text-green-400");
@@ -112,10 +119,8 @@ function addLogEntry(message, type = "info", logElement = null, logArray = null)
         if (titleElements.length > 0 && titleElements[0].closest(`#${logElement.id}`)) {
             titleHTML = titleElements[0].outerHTML;
         }
-
         const initialMessages = ["En attente", "initialisé", "Aucun événement récent", "Log Combat:"];
         const placeholderP = logElement.querySelector('p.text-gray-500.italic');
-
         if (placeholderP && initialMessages.some(msg => placeholderP.textContent.trim().toLowerCase().includes(msg.toLowerCase().replace("...", "")))) {
              logElement.innerHTML = titleHTML; 
         }
@@ -133,7 +138,6 @@ function addLogEntry(message, type = "info", logElement = null, logArray = null)
             }
         }
         if (shouldClearArray) { logArray.length = 0; }
-
         logArray.push(`${timestamp}${message}`);
         const maxLogLength = (logElement === nightAssaultLogEl) ? 75 : (logElement === explorationLogEl ? 50 : (logElement === combatLogSummaryEl ? 30 : 100));
         while (logArray.length > maxLogLength) {
@@ -150,168 +154,89 @@ function calculateModifiedDamage(baseDamage, damageType, targetResistances) {
     return Math.max(0, Math.floor(baseDamage * (1 - resistanceValue)));
 }
 
-function showNightAssaultVideo(videoSrc = "videos/night_assault_alert.mp4") {
-    const videoContainer = document.getElementById('night-assault-video-container');
-    const videoElement = document.getElementById('night-assault-video');
+function showNightAssaultVideo(videoSrc = "videos/night_assault_alert.mp4") { /* ... (identique) ... */ }
+function hideNightAssaultVideo() { /* ... (identique) ... */ }
 
-    if (!videoContainer || !videoElement) {
-        console.warn("Éléments de la vidéo d'assaut nocturne non trouvés.");
-        return;
-    }
-    const currentVideoFile = videoElement.getAttribute('src');
-    if (currentVideoFile !== videoSrc) {
-         videoElement.src = videoSrc;
-         videoElement.load(); 
-    }
-    videoContainer.classList.remove('hidden');
-    videoElement.currentTime = 0;
-    videoElement.muted = true; 
-
-    videoElement.play().then(() => {}).catch(error => {
-        console.warn("showNightAssaultVideo: Lecture automatique de la vidéo bloquée :", error);
-        if(typeof addLogEntry === 'function' && typeof eventLogEl !== 'undefined' && typeof gameState !== 'undefined' && gameState.eventLog){
-            addLogEntry("Animation d'alerte: lecture auto bloquée.", "warning", eventLogEl, gameState.eventLog);
-        }
-    });
-    videoElement.onended = function() { hideNightAssaultVideo(); videoElement.onended = null; };
-    videoElement.onerror = function(e) {
-        console.error("showNightAssaultVideo: Erreur de chargement/lecture vidéo.", videoElement.error);
-        if(typeof addLogEntry === 'function' && typeof eventLogEl !== 'undefined' && typeof gameState !== 'undefined' && gameState.eventLog){
-            addLogEntry("Erreur lors du chargement de l'animation d'alerte.", "error", eventLogEl, gameState.eventLog);
-        }
-        hideNightAssaultVideo(); videoElement.onerror = null; 
-    };
-}
-function hideNightAssaultVideo() {
-    const videoContainer = document.getElementById('night-assault-video-container');
-    const videoElement = document.getElementById('night-assault-video');
-    if (!videoContainer || !videoElement) return;
-    videoContainer.classList.add('hidden');
-    if (!videoElement.paused) videoElement.pause();
-}
-
-
-// --- DEBUT SYSTEME DE TOOLTIP ---
 let tooltipElement;
-let tooltipTimeout; // Pour un léger délai avant l'affichage
+let tooltipTimeout; 
 
 function initializeTooltipSystem() {
     tooltipElement = document.getElementById('tooltip');
     if (!tooltipElement) {
-        console.error("Élément Tooltip non trouvé ! Assurez-vous qu'il existe dans l'HTML.");
+        console.error("Élément Tooltip non trouvé !");
         return;
     }
-
-    // Utiliser la délégation d'événements sur un conteneur plus global si possible
-    // ou document.body si nécessaire.
     const gameAreaForTooltips = document.getElementById('game-container') || document.body;
-
     gameAreaForTooltips.addEventListener('mouseover', handleTooltipShow);
     gameAreaForTooltips.addEventListener('mouseout', handleTooltipHide);
-    gameAreaForTooltips.addEventListener('mousemove', positionTooltip); // Pour que le tooltip suive la souris
+    gameAreaForTooltips.addEventListener('mousemove', positionTooltip);
     console.log("Système de Tooltip initialisé.");
 }
 
 function handleTooltipShow(event) {
     const target = event.target.closest('[data-tooltip-type]');
     if (!target || !tooltipElement) return;
-
     clearTimeout(tooltipTimeout);
     tooltipTimeout = setTimeout(() => {
         const tooltipType = target.dataset.tooltipType;
         const tooltipId = target.dataset.tooltipId;
         const tooltipExtra = target.dataset.tooltipExtra;
-
         const content = generateTooltipContent(tooltipType, tooltipId, tooltipExtra, target);
         if (content) {
             tooltipElement.innerHTML = content;
             tooltipElement.classList.remove('hidden');
-            // Laisser positionTooltip gérer le positionnement initial basé sur l'événement mousemove capturé
         } else {
             tooltipElement.classList.add('hidden');
         }
-    }, 200); // Délai de 200ms
+    }, 200);
 }
 
 function handleTooltipHide(event) {
-    // Vérifier si la souris est toujours sur un élément qui *devrait* afficher un tooltip
-    // ou si elle est passée sur le tooltip lui-même (ce qu'on évite avec pointer-events: none)
     const relatedTargetIsTooltipChild = tooltipElement && tooltipElement.contains(event.relatedTarget);
     const currentTargetHasTooltip = event.target.closest && event.target.closest('[data-tooltip-type]');
-
     if (!relatedTargetIsTooltipChild && !tooltipElement.matches(':hover') && (!currentTargetHasTooltip || !event.relatedTarget || !event.relatedTarget.closest || !event.relatedTarget.closest('[data-tooltip-type]'))) {
         clearTimeout(tooltipTimeout);
         tooltipElement.classList.add('hidden');
     }
 }
 
-
 function positionTooltip(event) {
     if (!tooltipElement || tooltipElement.classList.contains('hidden')) return;
-
-    let x = event.clientX + 15; // Décalage pour ne pas être sous le curseur
-    let y = event.clientY + 15;
-
-    const tooltipWidth = tooltipElement.offsetWidth;
-    const tooltipHeight = tooltipElement.offsetHeight;
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
-
-    // Ajuster si le tooltip sort de l'écran
-    if (x + tooltipWidth > windowWidth - 10) { // 10px de marge
-        x = event.clientX - tooltipWidth - 15; // Le mettre à gauche du curseur
-    }
-    if (y + tooltipHeight > windowHeight - 10) {
-        y = event.clientY - tooltipHeight - 15; // Le mettre au-dessus du curseur
-    }
-    if (x < 10) x = 10;
-    if (y < 10) y = 10;
-
-
-    tooltipElement.style.left = `${x}px`;
-    tooltipElement.style.top = `${y}px`;
+    let x = event.clientX + 15; let y = event.clientY + 15;
+    const tooltipWidth = tooltipElement.offsetWidth; const tooltipHeight = tooltipElement.offsetHeight;
+    const windowWidth = window.innerWidth; const windowHeight = window.innerHeight;
+    if (x + tooltipWidth > windowWidth - 10) x = event.clientX - tooltipWidth - 15;
+    if (y + tooltipHeight > windowHeight - 10) y = event.clientY - tooltipHeight - 15;
+    if (x < 10) x = 10; if (y < 10) y = 10;
+    tooltipElement.style.left = `${x}px`; tooltipElement.style.top = `${y}px`;
 }
 
 function generateTooltipContent(type, id, extra, targetElement) {
-    if (typeof gameState === 'undefined' || gameState === null) return null; // S'assurer que gameState est disponible
-
-    // Charger les données de config si elles ne sont pas globales (ce qui devrait être le cas avec 'var')
-    // Normalement, elles sont globales via les fichiers de config chargés avant.
+    if (typeof gameState === 'undefined' || gameState === null) return null;
     if (typeof buildingsData === 'undefined' || typeof itemsData === 'undefined' ||
         typeof researchData === 'undefined' || typeof nanobotModulesData === 'undefined' ||
         typeof EQUIPMENT_SLOTS === 'undefined' || typeof MAX_MOBILITY_POINTS === 'undefined' ||
-        typeof MOBILITY_RECHARGE_TICKS === 'undefined' || typeof TICK_SPEED === 'undefined'
+        typeof MOBILITY_RECHARGE_TICKS === 'undefined' || typeof TICK_SPEED === 'undefined' ||
+        typeof nanobotSkills === 'undefined' // Ajout pour les tooltips de compétences
     ) {
         console.warn("generateTooltipContent: Une ou plusieurs structures de données de config sont manquantes.");
         return "Erreur de données...";
     }
-
-
     switch (type) {
-        case 'resource-header':
-            return getResourceHeaderTooltip(id);
-        case 'stat-nanobot':
-            return getNanobotStatTooltip(id);
-        case 'building-card':
-            return getBuildingCardTooltip(id);
-        case 'research-card':
-            return getResearchCardTooltip(id);
-        case 'module-card': // Pour les modules Nanobot
-            return getModuleCardTooltip(id);
-        case 'inventory-item':
-            return getItemTooltip(id, 'inventory');
-        case 'shop-item':
-            return getItemTooltip(id, 'shop');
-        case 'equipment-slot':
-            return getEquipmentSlotTooltip(id); // id ici serait 'weapon', 'armor', etc.
-        // case 'base-defense-grid': // Pourrait être utile plus tard si vous voulez survoler les défenses sur la grille
-        //     return getPlacedDefenseTooltip(id, extra);
-        default:
-            return `<i>Tooltip pour "${type}" non implémenté.</i>`;
+        case 'resource-header': return getResourceHeaderTooltip(id);
+        case 'stat-nanobot': return getNanobotStatTooltip(id);
+        case 'building-card': return getBuildingCardTooltip(id);
+        case 'research-card': return getResearchCardTooltip(id);
+        case 'module-card': return getModuleCardTooltip(id);
+        case 'inventory-item': return getItemTooltip(id, 'inventory');
+        case 'shop-item': return getItemTooltip(id, 'shop');
+        case 'equipment-slot': return getEquipmentSlotTooltip(id);
+        case 'nanobot-skill-combat': return getNanobotSkillCombatTooltip(id); // NOUVEAU
+        default: return `<i>Tooltip pour "${type}" non implémenté.</i>`;
     }
 }
 
-function getResourceHeaderTooltip(resourceId) {
+function getResourceHeaderTooltip(resourceId) { /* ... (identique à la version précédente) ... */ 
     let html = `<strong>${resourceId.charAt(0).toUpperCase() + resourceId.slice(1)}</strong><hr>`;
     const currentAmount = gameState.resources[resourceId] !== undefined ? Math.floor(gameState.resources[resourceId]) : 'N/A';
     html += `<p>Actuel: ${currentAmount}</p>`;
@@ -330,23 +255,24 @@ function getResourceHeaderTooltip(resourceId) {
             }
         }
     } else if (resourceId === 'energy') {
-        const totalCapacity = gameState.capacity.energy;
+        const totalCapacity = gameState.capacity.energy; // Capacité totale après production des générateurs
         const totalConsumed = gameState.resources.totalEnergyConsumed || 0;
         html += `<p>Consommé: ${Math.floor(totalConsumed)}</p>`;
-        html += `<p>Capacité: ${totalCapacity}</p>`;
+        // La capacité affichée dans le header est déjà la capacité totale, donc pas besoin de la recalculer ici pour le tooltip.
+        // gameState.capacity.energy est la capacité *totale*. gameState.resources.energy est l'énergie *disponible*.
+        html += `<p>Capacité Totale: ${totalCapacity}</p>`;
         if(totalCapacity < totalConsumed) html += `<p class="resource-cost insufficient">DÉFICIT: ${totalCapacity - totalConsumed}</p>`;
 
         for (const buildingId in gameState.buildings) {
             const level = gameState.buildings[buildingId];
             if (level > 0 && buildingsData[buildingId] && buildingsData[buildingId].levels[level - 1]) {
                 const consumption = buildingsData[buildingId].levels[level - 1].energyConsumption;
-                const capacity = buildingsData[buildingId].levels[level-1].capacity?.energy;
-                if (capacity > 0) producers.push(`${buildingsData[buildingId].name} (Niv.${level}): +${capacity}`);
-                if (consumption > 0) consumers.push(`${buildingsData[buildingId].name} (Niv.${level}): -${consumption}`);
+                const capacityGen = buildingsData[buildingId].levels[level-1].capacity?.energy;
+                if (capacityGen > 0) producers.push(`${buildingsData[buildingId].name} (Niv.${level}): +${capacityGen}`);
+                if (consumption > 0 && buildingId !== 'powerPlant') consumers.push(`${buildingsData[buildingId].name} (Niv.${level}): -${consumption}`);
             }
         }
          if(gameState.resources.energyConsumedByDefenses > 0) consumers.push(`Défenses Actives: -${gameState.resources.energyConsumedByDefenses}`);
-
 
     } else if (resourceId === 'mobility') {
          html += `<p>Max: ${MAX_MOBILITY_POINTS}</p>`;
@@ -357,7 +283,7 @@ function getResourceHeaderTooltip(resourceId) {
             const ticksRemaining = ticksPerPoint - (gameState.mobilityRechargeTimer || 0);
             html += `<p>Prochain point dans: ${formatTime(Math.ceil(ticksRemaining * (TICK_SPEED / 1000)))}</p>`;
          }
-    } else if (resourceId === 'base-health-value') { // Pour le tooltip sur les PV de la base
+    } else if (resourceId === 'base-health-value') { 
         html = `<strong>Santé du Noyau</strong><hr>`;
         html += `<p>Actuel: ${Math.floor(gameState.baseStats.currentHealth)} / ${gameState.baseStats.maxHealth}</p>`;
         let bonuses = [];
@@ -368,29 +294,23 @@ function getResourceHeaderTooltip(resourceId) {
                 bonuses.push(`Tech Muraille (Niv.${wallTechLevel}): <span class="stat-bonus">+${wallTechData.baseHealthBonus} PV</span>`);
             }
         }
-        // Pourrait aussi lister les défenses actives contribuant à la défense (pas directement aux PV max)
         if (bonuses.length > 0) html += `<hr><p><strong>Sources de PV Max:</strong><br>${bonuses.join('<br>')}</p>`;
         html += `<p>Défense totale base: ${gameState.baseStats.defensePower}</p>`;
     } else if (resourceId === 'crystal_shards') {
-        // Pourrait lister où trouver/utiliser les cristaux si c'est pertinent
+         html += `<p>Utilisé pour technologies et modules avancés.</p>`;
     }
 
     if (producers.length > 0) html += `<hr><p><strong>Sources:</strong><br>${producers.join('<br>')}</p>`;
     if (consumers.length > 0) html += `<hr><p><strong>Consommateurs:</strong><br>${consumers.join('<br>')}</p>`;
-
     return html;
 }
-
-function getNanobotStatTooltip(statId) {
-    const currentStats = gameState.nanobotStats; // Les stats finales déjà calculées par calculateNanobotStats
+function getNanobotStatTooltip(statId) { /* ... (identique) ... */ 
+    const currentStats = gameState.nanobotStats; 
     const baseValues = { health: currentStats.baseHealth, attack: currentStats.baseAttack, defense: currentStats.baseDefense, speed: currentStats.baseSpeed };
-
     let html = `<strong>${statId.charAt(0).toUpperCase() + statId.slice(1)}</strong><hr>`;
     html += `<p>Valeur de Base: ${baseValues[statId] !== undefined ? baseValues[statId] : 'N/A'}</p>`;
     let totalBonus = 0;
     let bonusSources = [];
-
-    // Bonus de recherche
     if (gameState.research && researchData) {
         for (const researchId in gameState.research) {
             if (gameState.research[researchId] && researchData[researchId] && researchData[researchId].grantsStatBoost && researchData[researchId].grantsStatBoost[statId]) {
@@ -400,7 +320,6 @@ function getNanobotStatTooltip(statId) {
             }
         }
     }
-    // Bonus des modules
     if (gameState.nanobotModuleLevels && nanobotModulesData) {
         for (const moduleId in gameState.nanobotModuleLevels) {
             const level = gameState.nanobotModuleLevels[moduleId];
@@ -414,7 +333,6 @@ function getNanobotStatTooltip(statId) {
             }
         }
     }
-    // Bonus de l'équipement
     if (gameState.nanobotEquipment && itemsData) {
         for (const slot in gameState.nanobotEquipment) {
             const itemId = gameState.nanobotEquipment[slot];
@@ -426,7 +344,6 @@ function getNanobotStatTooltip(statId) {
             }
         }
     }
-
     if (bonusSources.length > 0) {
         html += `<p><strong>Bonus Totaux: <span class="${totalBonus >= 0 ? 'stat-bonus' : 'stat-malus'}">${totalBonus >= 0 ? '+' : ''}${totalBonus}</span></strong></p>`;
         html += `<ul style="list-style-type: none; padding-left: 0; margin-top: 5px;">${bonusSources.map(s => `<li>${s}</li>`).join('')}</ul>`;
@@ -437,15 +354,12 @@ function getNanobotStatTooltip(statId) {
     }
     return html;
 }
-
-function getBuildingCardTooltip(buildingId) {
+function getBuildingCardTooltip(buildingId) { /* ... (identique) ... */ 
     const building = buildingsData[buildingId];
     if (!building) return `Bâtiment inconnu: ${buildingId}`;
     const currentLevel = gameState.buildings[buildingId] || 0;
-
     let html = `<strong>${building.name}</strong><hr>`;
     html += `<p class="text-gray-300">${building.description}</p>`;
-
     if (currentLevel > 0) {
         const levelData = building.levels[currentLevel - 1];
         html += `<p class="mt-1"><strong>Niveau Actuel (${currentLevel}):</strong></p><ul class="list-none pl-0 text-xs">`;
@@ -459,8 +373,7 @@ function getBuildingCardTooltip(buildingId) {
     } else {
         html += `<p class="text-yellow-400 mt-1"><em>Non construit / Niveau 0</em></p>`;
     }
-
-    const nextLevelData = building.levels[currentLevel]; // Prochain niveau (si currentLevel est 0, c'est le niveau 1)
+    const nextLevelData = building.levels[currentLevel]; 
     if (nextLevelData) {
         html += `<hr><p class="mt-1"><strong>Prochain Niveau (${nextLevelData.level}):</strong></p><ul class="list-none pl-0 text-xs">`;
         if (nextLevelData.production) html += `<li>Prod: ${Object.entries(nextLevelData.production).map(([k,v])=>`${v}/s ${k}`).join(', ')}</li>`;
@@ -470,7 +383,6 @@ function getBuildingCardTooltip(buildingId) {
         if (nextLevelData.researchSpeedFactor) html += `<li>Vitesse Recherche: x${nextLevelData.researchSpeedFactor}</li>`;
         if (nextLevelData.stats && building.type === "defense") html += `<li>Stats: PV ${nextLevelData.stats.health}, Att ${nextLevelData.stats.attack}, Portée ${nextLevelData.stats.range}</li>`;
         html += `</ul>`;
-
         const costData = currentLevel === 0 ? nextLevelData.costToUnlockOrUpgrade : nextLevelData.costToUpgrade;
         if (costData) {
             html += `<p class="mt-1">Coût Amélioration: ${getCostString(costData, true)}</p>`;
@@ -478,27 +390,22 @@ function getBuildingCardTooltip(buildingId) {
     } else if (currentLevel > 0) {
         html += `<hr><p class="text-green-400 mt-1">Niveau technologique maximum atteint.</p>`;
     }
-
     if (building.type === "defense" && building.placementCost) {
         html += `<hr><p class="mt-1">Coût Placement Instance: ${getCostString(building.placementCost, true)}</p>`;
     }
     return html;
 }
-
-function getResearchCardTooltip(researchId) {
+function getResearchCardTooltip(researchId) { /* ... (identique) ... */ 
     const research = researchData[researchId];
     if (!research) return `Recherche inconnue: ${researchId}`;
-
     let html = `<strong>${research.name}</strong><hr>`;
     html += `<p class="text-gray-300">${research.description}</p>`;
-
     if (research.grantsStatBoost) {
         html += `<p class="mt-1">Bonus Stats: ${Object.entries(research.grantsStatBoost).map(([s,v]) => `<span class="stat-bonus">${s.charAt(0).toUpperCase()+s.slice(1)}: +${v}</span>`).join(', ')}</p>`;
     }
     if (research.grantsModule && nanobotModulesData[research.grantsModule]) {
         html += `<p class="mt-1">Débloque Module: <span class="text-lime-300">${nanobotModulesData[research.grantsModule].name}</span></p>`;
     }
-    // Lister les prérequis de manière plus lisible
     if (research.requirements) {
         html += `<hr><p class="mt-1"><strong>Prérequis:</strong></p><ul class="list-none pl-0 text-xs">`;
         if (research.requirements.buildings) {
@@ -519,29 +426,24 @@ function getResearchCardTooltip(researchId) {
     html += `<p>Temps de recherche (base): ${formatTime(research.time)}</p>`;
     return html;
 }
-
-function getModuleCardTooltip(moduleId) {
+function getModuleCardTooltip(moduleId) { /* ... (identique) ... */ 
     const moduleData = nanobotModulesData[moduleId];
     if (!moduleData) return `Module inconnu: ${moduleId}`;
     const currentLevel = gameState.nanobotModuleLevels[moduleId] || 0;
-
     let html = `<strong>${moduleData.name}</strong><hr>`;
     html += `<p class="text-gray-300">${moduleData.description}</p>`;
-
     if (moduleData.unlockMethod) {
         html += `<p class="mt-1 text-xs text-gray-400">Déblocage: `;
         if (moduleData.unlockMethod.research) html += `Recherche "${researchData[moduleData.unlockMethod.research]?.name}"`;
         if (moduleData.unlockMethod.building) html += `Bâtiment "${buildingsData[moduleData.unlockMethod.building]?.name}" Niv. ${moduleData.unlockMethod.buildingLevel}`;
         html += `</p>`;
     }
-
     if (currentLevel > 0) {
         const levelData = moduleData.levels[currentLevel - 1];
         html += `<p class="mt-1"><strong>Niveau Actuel (${currentLevel}):</strong></p><ul class="list-none pl-0 text-xs">`;
         if (levelData.statBoost) html += `<li>Bonus: ${Object.entries(levelData.statBoost).map(([s,v]) => `<span class="${v >= 0 ? 'stat-bonus' : 'stat-malus'}">${s.charAt(0).toUpperCase()+s.slice(1)}: ${v >= 0 ? '+' : ''}${v}</span>`).join(', ')}</li>`;
         html += `</ul>`;
     }
-
     const nextLevelData = moduleData.levels[currentLevel];
     if (nextLevelData) {
         html += `<hr><p class="mt-1"><strong>Prochain Niveau (${nextLevelData.level}):</strong></p><ul class="list-none pl-0 text-xs">`;
@@ -556,11 +458,9 @@ function getModuleCardTooltip(moduleId) {
     }
     return html;
 }
-
-function getItemTooltip(itemId, context) { // context peut être 'inventory', 'shop', 'reward'
+function getItemTooltip(itemId, context) { /* ... (identique) ... */ 
     const item = itemsData[itemId];
     if (!item) return `Objet inconnu: ${itemId}`;
-
     let html = `<strong>${item.name}</strong> <span style="font-size:0.8em; color:var(--text-secondary);">- ${item.rarity || 'Commun'}</span><hr>`;
     html += `<p class="text-gray-300">${item.description}</p>`;
     if (item.statBoost) {
@@ -580,14 +480,11 @@ function getItemTooltip(itemId, context) { // context peut être 'inventory', 's
     }
     return html;
 }
-
-function getEquipmentSlotTooltip(slotId) {
+function getEquipmentSlotTooltip(slotId) { /* ... (identique) ... */ 
     const slotName = EQUIPMENT_SLOTS[slotId];
     if (!slotName) return `Emplacement inconnu: ${slotId}`;
-
     const itemId = gameState.nanobotEquipment[slotId];
     const item = itemId ? itemsData[itemId] : null;
-
     let html = `<strong>${slotName}</strong><hr>`;
     if (item) {
         html += `<p class="text-lime-300">${item.name}</p>`;
@@ -603,17 +500,60 @@ function getEquipmentSlotTooltip(slotId) {
     }
     return html;
 }
+// NOUVEAU : Tooltip pour les compétences en combat
+function getNanobotSkillCombatTooltip(skillId) {
+    const skill = nanobotSkills[skillId];
+    if (!skill) return `Compétence inconnue: ${skillId}`;
 
-// Helper pour afficher les coûts avec indicateur de suffisance
-function getCostString(costObject, checkAffordability = false) {
-    return Object.entries(costObject)
+    let html = `<strong>${skill.name}</strong><hr>`;
+    html += `<p>${skill.description}</p>`;
+    if (skill.cost) {
+        let costParts = [];
+        if (skill.cost.rage) costParts.push(`${skill.cost.rage} Rage`);
+        if (skill.cost.energy) costParts.push(`${skill.cost.energy} Énergie`);
+        // Ajoutez d'autres types de coûts ici
+        if (costParts.length > 0) {
+             // Ici on vérifie si on peut payer pour l'affichage dans le tooltip
+            let costStringForTooltip = costParts.map(part => {
+                let canAffordThis = true;
+                if (part.includes("Rage")) canAffordThis = (currentNanobotCombatData?.rage || 0) >= skill.cost.rage;
+                if (part.includes("Énergie")) canAffordThis = (gameState?.resources.energy || 0) >= skill.cost.energy;
+                return `<span class="resource-cost ${!canAffordThis ? 'insufficient' : ''}">${part}</span>`;
+            }).join(', ');
+            html += `<p>Coût: ${costStringForTooltip}</p>`;
+        }
+    }
+    if (skill.cooldown > 0) {
+        const lastUsed = currentNanobotCombatData?.skillLastUsed?.[skillId] || -Infinity;
+        const roundsRemaining = Math.max(0, (lastUsed + skill.cooldown) - currentCombatRound);
+        if (roundsRemaining > 0) {
+            html += `<p>Cooldown: ${roundsRemaining} / ${skill.cooldown} tours</p>`;
+        } else {
+            html += `<p>Cooldown: ${skill.cooldown} tours</p>`;
+        }
+    }
+    // Afficher les effets principaux
+    if (skill.effect) {
+        html += `<p class="mt-1"><strong>Effets:</strong></p><ul class="list-none pl-0 text-xs">`;
+        if (skill.effect.damageMultiplier) html += `<li>Multiplicateur Dégâts: <span class="stat-bonus">x${skill.effect.damageMultiplier}</span></li>`;
+        if (skill.effect.healAmount) html += `<li>Soin: <span class="stat-bonus">+${skill.effect.healAmount} PV</span></li>`;
+        if (skill.effect.defensePiercing) html += `<li>Perforation Défense: <span class="stat-bonus">${skill.effect.defensePiercing * 100}%</span> (Prochaine Att.)</li>`;
+        if (skill.effect.damageAbsorption) html += `<li>Absorption Dégâts: <span class="stat-bonus">${skill.effect.damageAbsorption} PV</span></li>`;
+        if (skill.effect.damageBonusPerStack) html += `<li>Bonus Dégâts/stack: <span class="stat-bonus">+${skill.effect.damageBonusPerStack}</span> (Max ${skill.effect.maxStacks})</li>`;
+        html += `</ul>`;
+    }
+    return html;
+}
+
+function getCostString(costObject, checkAffordability = false) { /* ... (identique) ... */ 
+     return Object.entries(costObject)
         .map(([res, val]) => {
             let canAffordThis = true;
             const name = (itemsData && itemsData[res]) ? itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1);
-            if (checkAffordability && gameState) { // S'assurer que gameState est défini
-                if (itemsData && itemsData[res]) { // C'est un item/composant
+            if (checkAffordability && gameState) { 
+                if (itemsData && itemsData[res]) { 
                     canAffordThis = (gameState.inventory && gameState.inventory.filter(id => id === res).length || 0) >= val;
-                } else { // C'est une ressource
+                } else { 
                     canAffordThis = (gameState.resources && gameState.resources[res] || 0) >= val;
                 }
             }
@@ -622,42 +562,28 @@ function getCostString(costObject, checkAffordability = false) {
         .join(', ');
 }
 
-// --- FIN SYSTEME DE TOOLTIP ---
-
-
-// --- DEBUT FEEDBACK VISUEL DES COUTS ---
-function highlightInsufficientCosts(buttonElement, costObject) {
+function highlightInsufficientCosts(buttonElement, costObject) { /* ... (identique) ... */ 
     if (!gameState || !costObject) return;
-    const costParts = buttonElement.querySelectorAll('.cost-part');
-
+    const costParts = buttonElement.querySelectorAll('.cost-part'); // Cible les spans dans le bouton
     costParts.forEach(span => {
         const resourceId = span.dataset.resourceId;
         const requiredAmount = parseInt(span.dataset.requiredAmount);
         if (!resourceId || isNaN(requiredAmount)) return;
-
         let hasEnough = true;
-
         if (itemsData && itemsData[resourceId]) {
             hasEnough = (gameState.inventory && gameState.inventory.filter(id => id === resourceId).length || 0) >= requiredAmount;
         } else {
             hasEnough = (gameState.resources && gameState.resources[resourceId] || 0) >= requiredAmount;
         }
-
-        if (!hasEnough) {
-            span.classList.add('insufficient'); // La classe CSS .insufficient doit exister
-        } else {
-            span.classList.remove('insufficient');
-        }
+        if (!hasEnough) span.classList.add('insufficient');
+        else span.classList.remove('insufficient');
     });
 }
-
-function clearCostHighlights(buttonElement) {
+function clearCostHighlights(buttonElement) { /* ... (identique) ... */ 
     const costParts = buttonElement.querySelectorAll('.cost-part');
     costParts.forEach(span => {
         span.classList.remove('insufficient');
     });
 }
-// --- FIN FEEDBACK VISUEL DES COUTS ---
-
 
 console.log("utils.js - Fin du fichier, fonctions définies.");

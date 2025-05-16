@@ -5,29 +5,38 @@ function calculateNanobotStats() {
     // console.log("gameplayLogic: calculateNanobotStats CALLED");
     if (!gameState || !gameState.nanobotStats) { console.error("calculateNanobotStats: gameState ou nanobotStats non défini."); return; }
     const stats = gameState.nanobotStats;
-    // Reset to base stats before applying bonuses
+    
+    // Réinitialiser aux valeurs de base
     stats.health = stats.baseHealth;
     stats.attack = stats.baseAttack;
     stats.defense = stats.baseDefense;
     stats.speed = stats.baseSpeed;
-    // Ensure currentHealth does not exceed new maxHealth from previous calculations if baseHealth changed
+    stats.resistances = {}; // Important: Réinitialiser pour recalculer à partir de zéro
+
+    // S'assurer que currentHealth ne dépasse pas la nouvelle maxHealth (si baseHealth a changé)
     stats.currentHealth = Math.min(stats.currentHealth, stats.health);
 
-
+    // Appliquer bonus de recherche
     if (typeof researchData !== 'undefined' && gameState && gameState.research) {
         for (const researchId in gameState.research) {
-            if (gameState.research[researchId] && researchData[researchId]) { // Check if research is completed
+            if (gameState.research[researchId] && researchData[researchId]) {
                 const resData = researchData[researchId];
                 if (resData.grantsStatBoost) {
                     for (const stat in resData.grantsStatBoost) {
-                        stats[stat] = (stats[stat] || 0) + resData.grantsStatBoost[stat];
+                        if (stat === 'resistances' && typeof resData.grantsStatBoost.resistances === 'object') {
+                            for (const resType in resData.grantsStatBoost.resistances) {
+                                stats.resistances[resType] = (stats.resistances[resType] || 0) + resData.grantsStatBoost.resistances[resType];
+                            }
+                        } else if (stat !== 'resistances') {
+                            stats[stat] = (stats[stat] || 0) + resData.grantsStatBoost[stat];
+                        }
                     }
                 }
             }
         }
-    } else { /* console.warn("calculateNanobotStats: researchData non défini ou gameState.research manquant."); */ }
+    }
 
-
+    // Appliquer bonus des modules
     if (typeof nanobotModulesData !== 'undefined' && gameState && gameState.nanobotModuleLevels) {
         for (const moduleId in gameState.nanobotModuleLevels) {
             const currentLevel = gameState.nanobotModuleLevels[moduleId];
@@ -37,37 +46,50 @@ function calculateNanobotStats() {
                     const levelStats = moduleData.levels[currentLevel - 1].statBoost;
                     if (levelStats) {
                         for (const stat in levelStats) {
-                            stats[stat] = (stats[stat] || 0) + levelStats[stat];
+                            if (stat === 'resistances' && typeof levelStats.resistances === 'object') {
+                                for (const resType in levelStats.resistances) {
+                                    stats.resistances[resType] = (stats.resistances[resType] || 0) + levelStats.resistances[resType];
+                                }
+                            } else if (stat !== 'resistances') {
+                                stats[stat] = (stats[stat] || 0) + levelStats[stat];
+                            }
                         }
                     }
                 }
             }
         }
-    } else { /* console.warn("calculateNanobotStats: nanobotModulesData non défini ou gameState.nanobotModuleLevels manquant."); */ }
+    }
 
+    // Appliquer bonus de l'équipement
     if (typeof itemsData !== 'undefined' && gameState && gameState.nanobotEquipment) {
         for (const slot in gameState.nanobotEquipment) {
             const itemId = gameState.nanobotEquipment[slot];
             if (itemId && itemsData[itemId] && itemsData[itemId].statBoost) {
-                const itemBoosts = itemsData[itemId].statBoost;
-                for (const stat in itemBoosts) {
-                    // Avoid applying onUse stats directly here, they are typically one-time
-                    if (stat !== 'health_regen_on_use' && typeof itemsData[itemId].onUse === 'undefined') {
-                         stats[stat] = (stats[stat] || 0) + itemBoosts[stat];
+                const item = itemsData[itemId]; // Obtenir l'objet item complet
+                const itemBoosts = item.statBoost;
+                // Ne pas appliquer les effets `onUse` ici, car ce sont des bonus permanents de l'équipement
+                // Vérifier si l'item est un consommable avant d'appliquer les stats,
+                // ou si onUse est défini (ce qui implique souvent que c'est un consommable ou un effet spécial)
+                if (typeof item.onUse === 'undefined' && !item.consumable) {
+                    for (const stat in itemBoosts) {
+                        if (stat === 'resistances' && typeof itemBoosts.resistances === 'object') {
+                            for (const resType in itemBoosts.resistances) {
+                                stats.resistances[resType] = (stats.resistances[resType] || 0) + itemBoosts.resistances[resType];
+                            }
+                        } else if (stat !== 'resistances') {
+                            stats[stat] = (stats[stat] || 0) + itemBoosts[stat];
+                        }
                     }
                 }
             }
         }
-    } else { /* console.warn("calculateNanobotStats: itemsData non défini ou gameState.nanobotEquipment manquant."); */ }
+    }
 
-
-    // Ensure currentHealth is capped by maxHealth and not negative
     stats.currentHealth = Math.min(stats.currentHealth, stats.health);
     if (stats.currentHealth < 0) stats.currentHealth = 0;
 }
 
 function upgradeNanobotModule(moduleId) {
-    // console.log(`gameplayLogic: upgradeNanobotModule pour ${moduleId}`);
     if (typeof nanobotModulesData === 'undefined' || typeof itemsData === 'undefined' || typeof gameState === 'undefined') {
         console.error("upgradeNanobotModule: Dépendances (nanobotModulesData, itemsData, ou gameState) non définies.");
         if(typeof addLogEntry === 'function') addLogEntry("Erreur de configuration des modules.", "error", eventLogEl, gameState?.eventLog);
@@ -77,7 +99,6 @@ function upgradeNanobotModule(moduleId) {
     if (!moduleData) { if(typeof addLogEntry === 'function') addLogEntry("Module inconnu.", "error", eventLogEl, gameState.eventLog); return; }
 
     let currentLevel = gameState.nanobotModuleLevels[moduleId] || 0;
-
     let isReplacedByActiveHigher = false;
     for (const checkId in nanobotModulesData) {
         if (nanobotModulesData[checkId].replaces === moduleId && gameState.nanobotModuleLevels[checkId] > 0) {
@@ -88,125 +109,100 @@ function upgradeNanobotModule(moduleId) {
         if(typeof addLogEntry === 'function') addLogEntry(`Impossible d'améliorer ${moduleData.name}, il est déjà remplacé par une version supérieure.`, "warning", eventLogEl, gameState.eventLog);
         return;
     }
-
     if (!moduleData.levels || currentLevel >= moduleData.levels.length) {
         if(typeof addLogEntry === 'function') addLogEntry(`${moduleData.name} est déjà au niveau maximum.`, "info", eventLogEl, gameState.eventLog);
         return;
     }
-
     const costData = currentLevel === 0 ? moduleData.levels[0].costToUnlockOrUpgrade : moduleData.levels[currentLevel].costToUpgrade;
     if (!costData) {
          if(typeof addLogEntry === 'function') addLogEntry(`Coût non défini pour améliorer ${moduleData.name}.`, "error", eventLogEl, gameState.eventLog);
          return;
     }
-    // console.log(`gameplayLogic: upgradeNanobotModule - Coût pour ${moduleId} Niv ${currentLevel + 1}:`, JSON.parse(JSON.stringify(costData)));
-
     for(const resourceId in costData) {
         const requiredAmount = costData[resourceId];
-        if (itemsData[resourceId]) { // Check if it's an item (material)
+        if (itemsData[resourceId]) { 
             const countInInventory = gameState.inventory.filter(itemId => itemId === resourceId).length;
             if (countInInventory < requiredAmount) { if(typeof addLogEntry === 'function') addLogEntry(`Manque de ${itemsData[resourceId].name} (x${requiredAmount}) pour ${moduleData.name}.`, "error", eventLogEl, gameState.eventLog); return; }
-        } else { // Assume it's a resource like biomass or nanites
+        } else { 
             if ((gameState.resources[resourceId] || 0) < requiredAmount) { if(typeof addLogEntry === 'function') addLogEntry(`Ressources (${resourceId}) insuffisantes pour ${moduleData.name}. Requis: ${requiredAmount}.`, "error", eventLogEl, gameState.eventLog); return; }
         }
     }
-
-    // Deduct costs
     for(const resourceId in costData) {
         const paidAmount = costData[resourceId];
         if (itemsData[resourceId]) { for (let i = 0; i < paidAmount; i++) { if(typeof removeFromInventory === 'function') removeFromInventory(resourceId); else console.error("removeFromInventory non défini"); }
         } else { gameState.resources[resourceId] -= paidAmount; }
     }
-
     if (moduleData.replaces && gameState.nanobotModuleLevels[moduleData.replaces]) {
         const replacedModuleId = moduleData.replaces;
         if(typeof addLogEntry === 'function') addLogEntry(`${nanobotModulesData[replacedModuleId].name} désactivé et remplacé par ${moduleData.name}.`, "info", eventLogEl, gameState.eventLog);
-        delete gameState.nanobotModuleLevels[replacedModuleId]; // Remove the replaced module's level
+        delete gameState.nanobotModuleLevels[replacedModuleId]; 
     }
-
     gameState.nanobotModuleLevels[moduleId] = currentLevel + 1;
     const actionText = currentLevel === 0 ? "activé/fabriqué" : "amélioré";
     if(typeof addLogEntry === 'function') addLogEntry(`${moduleData.name} ${actionText} au Niveau ${currentLevel + 1}!`, "success", eventLogEl, gameState.eventLog);
-
     if(typeof calculateNanobotStats === 'function') calculateNanobotStats();
     if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateDisplays === 'function') uiUpdates.updateDisplays();
-    else if (typeof updateDisplays === 'function') updateDisplays(); // Fallback for older structure
-
-    // Check quest progress after upgrade
+    else if (typeof updateDisplays === 'function') updateDisplays(); 
     if (typeof questController !== 'undefined' && typeof questController.checkAllQuestsProgress === 'function') {
         questController.checkAllQuestsProgress();
     }
 }
 
 function calculateBaseStats() {
-    // console.log("gameplayLogic: calculateBaseStats CALLED");
     if (!gameState || !gameState.baseStats || typeof BASE_INITIAL_HEALTH === 'undefined' || typeof buildingsData === 'undefined' || typeof ZONE_DATA === 'undefined' || typeof BASE_COORDINATES === 'undefined') {
         console.error("calculateBaseStats: Dépendances manquantes.");
         return;
     }
     let maxHealth = BASE_INITIAL_HEALTH;
     let defensePower = 0;
-
-    // Add health bonus from Reinforced Walls (technology level)
     for (const buildingId in gameState.buildings) {
         const techLevel = gameState.buildings[buildingId];
         if (techLevel > 0 && buildingsData[buildingId] && buildingsData[buildingId].type === 'defense') {
             const buildingDef = buildingsData[buildingId];
-             // For walls, the baseHealthBonus applies from technology, not placed instances
             if (buildingId === 'reinforcedWall' && buildingDef.levels && buildingDef.levels[techLevel - 1] && buildingDef.levels[techLevel - 1].baseHealthBonus) {
                  maxHealth += buildingDef.levels[techLevel - 1].baseHealthBonus;
             }
         }
     }
-
-    // Calculate defense power from placed and powered defenses
     for(const instanceId in gameState.defenses){
         const defenseInstance = gameState.defenses[instanceId];
         const buildingDef = buildingsData[defenseInstance.id];
         if(defenseInstance.currentHealth > 0 && buildingDef && buildingDef.levels[defenseInstance.level -1]) {
-             // Check against total consumption
-             if (gameState.capacity.energy >= (gameState.resources.totalEnergyConsumed || 0) ) {
+             if ( (gameState.capacity.energy + (gameState.resources.totalEnergyConsumed - gameState.resources.energyConsumedByDefenses) ) >= (gameState.resources.totalEnergyConsumed || 0) ) { // Vérifie si assez d'énergie pour les bâtiments NON défensifs ET cette défense
                 defensePower += defenseInstance.attack || 0;
-             } else { // Deficit - scale defense power
-                const deficitFactor = gameState.capacity.energy > 0 ? gameState.capacity.energy / (gameState.resources.totalEnergyConsumed || 1) : 0; // Avoid div by zero
+             } else { 
+                const totalProdCapacity = gameState.capacity.energy;
+                const totalNeeded = gameState.resources.totalEnergyConsumed || 1;
+                const deficitFactor = totalProdCapacity > 0 ? totalProdCapacity / totalNeeded : 0;
                 defensePower += Math.floor((defenseInstance.attack || 0) * deficitFactor);
              }
         }
     }
-
-
     const playerBaseZoneKey = Object.keys(ZONE_DATA).find(key => ZONE_DATA[key].basePlayerCoordinates);
     const playerBaseZone = playerBaseZoneKey ? ZONE_DATA[playerBaseZoneKey] : null;
     const playerBaseCoords = playerBaseZone?.basePlayerCoordinates || BASE_COORDINATES;
-
-
     if (gameState.nanobotStats.isDefendingBase &&
-        gameState.currentZoneId === (playerBaseZone?.id || 'verdant_archipelago') && // Fallback to default zone
+        playerBaseZone && gameState.currentZoneId === playerBaseZone.id && 
         gameState.map.nanobotPos.x === playerBaseCoords.x &&
         gameState.map.nanobotPos.y === playerBaseCoords.y) {
-        defensePower += gameState.nanobotStats.attack; // Add Nanobot's attack if defending base
+        defensePower += gameState.nanobotStats.attack; 
     }
-
     gameState.baseStats.maxHealth = maxHealth;
     gameState.baseStats.defensePower = defensePower;
     gameState.baseStats.currentHealth = Math.min(gameState.baseStats.currentHealth, gameState.baseStats.maxHealth);
-    if (gameState.baseStats.currentHealth <= 0 && gameState.baseStats.maxHealth > 0) { gameState.baseStats.currentHealth = 0; /* Game Over logic would go here */ }
-    // console.log("gameplayLogic: calculateBaseStats - PV Base:", gameState.baseStats.currentHealth, "/", gameState.baseStats.maxHealth, "Défense:", gameState.baseStats.defensePower);
+    if (gameState.baseStats.currentHealth <= 0 && gameState.baseStats.maxHealth > 0) { gameState.baseStats.currentHealth = 0; }
 }
 
 function calculateProductionAndConsumption() {
-    // console.log("gameplayLogic: calculateProductionAndConsumption CALLED");
     if (!gameState || !gameState.productionRates || !gameState.capacity || typeof buildingsData === 'undefined') {
         console.error("calculateProductionAndConsumption: gameState ou buildingsData non défini.");
         return;
     }
-
     gameState.productionRates.biomass = 0;
     gameState.productionRates.nanites = 0;
     let totalEnergyConsumption = 0;
-    gameState.resources.energyConsumedByDefenses = 0; // Recalculate this
+    gameState.resources.energyConsumedByDefenses = 0; 
 
-    // Calculate production and energy consumption from buildings (non-defense)
     for (const buildingId in gameState.buildings) {
         const level = gameState.buildings[buildingId];
         if (level > 0) {
@@ -219,15 +215,12 @@ function calculateProductionAndConsumption() {
                         if (levelData.production.nanites) gameState.productionRates.nanites += levelData.production.nanites;
                     }
                 }
-                // Only add consumption for non-defense buildings here
                 if (buildingDef.type !== "defense" && levelData && levelData.energyConsumption) {
                     totalEnergyConsumption += levelData.energyConsumption;
                 }
             }
         }
     }
-
-    // Calculate energy consumption from active defenses
     let currentDefenseEnergyConsumption = 0;
     for (const defId in gameState.defenses) {
         const defenseInstance = gameState.defenses[defId];
@@ -239,46 +232,46 @@ function calculateProductionAndConsumption() {
     totalEnergyConsumption += currentDefenseEnergyConsumption;
     gameState.resources.energyConsumedByDefenses = currentDefenseEnergyConsumption;
 
-
-    // Calculate energy capacity
-    gameState.capacity.energy = 0;
-    const powerPlantLevel = gameState.buildings['powerPlant'] || 0;
-    if (powerPlantLevel > 0 && buildingsData['powerPlant'] && buildingsData['powerPlant'].levels[powerPlantLevel - 1]) {
-        gameState.capacity.energy += buildingsData['powerPlant'].levels[powerPlantLevel - 1].capacity.energy;
+    gameState.capacity.energy = 0; // Réinitialiser la capacité
+    const powerPlantTechLevel = gameState.buildings['powerPlant'] || 0; // Niveau technologique de la centrale
+    if (powerPlantTechLevel > 0 && buildingsData['powerPlant'] && buildingsData['powerPlant'].levels[powerPlantTechLevel - 1]) {
+        gameState.capacity.energy += buildingsData['powerPlant'].levels[powerPlantTechLevel - 1].capacity.energy;
     } else {
-        gameState.capacity.energy = 50; // Default base capacity if no power plant or level 0
+         // Si aucune centrale construite (ou tech niveau 0), on pourrait avoir une capacité de base du Noyau.
+         // Pour l'instant, si pas de centrale, capacité = 0 au-delà de la capacité de base.
+         // La capacité de base est souvent implicite ou ajoutée au `capacity.energy` initial.
+         // Supposons une capacité de base si gameState.capacity.energy est déjà > 0 à ce stade (ex: 50 de base).
+         // Si on veut une capacité de base du Noyau, elle devrait être ajoutée ici si powerPlantLevel === 0
+         // ou gameState.capacity.energy = BASE_NEXUS_ENERGY_CAPACITY + bonus_powerplant
+         // Pour l'instant, on considère que powerPlant est la seule source.
+         // Si vous voulez 50 de base + centrale :
+         // gameState.capacity.energy = 50;
+         // if (powerPlantTechLevel > 0 && ...) gameState.capacity.energy += ...
     }
+     if (gameState.capacity.energy === 0 && totalEnergyConsumption > 0 && powerPlantTechLevel === 0) { // Capacité de base si aucune centrale mais consommation
+        gameState.capacity.energy = 50; // Valeur par défaut que vous aviez
+     }
 
 
-    // Apply night penalty to production
     if (!gameState.isDay) {
-        gameState.productionRates.biomass *= 0.7; // 70% production at night
-        gameState.productionRates.nanites *= 0.7; // 70% production at night
+        gameState.productionRates.biomass *= 0.7; 
+        gameState.productionRates.nanites *= 0.7; 
     }
-
-    // Store total consumption for UI and logic
     gameState.resources.totalEnergyConsumed = totalEnergyConsumption;
-    // Calculate available energy
-    gameState.resources.energy = gameState.capacity.energy - totalEnergyConsumption; // This is now *available* energy. Could be negative if deficit.
+    // gameState.resources.energy = gameState.capacity.energy - totalEnergyConsumption; // Ceci est calculé en haut dans updateResourceDisplay
 
-
-    // Handle energy deficit for production rates
     if (totalEnergyConsumption > gameState.capacity.energy) {
-        // gameState.resources.energy is already correctly < 0 or 0 here
         const deficitFactor = gameState.capacity.energy > 0 ? gameState.capacity.energy / totalEnergyConsumption : 0;
         gameState.productionRates.biomass *= deficitFactor;
         gameState.productionRates.nanites *= deficitFactor;
-
         if (!gameState.deficitWarningLogged || gameState.gameTime > gameState.deficitWarningLogged + (DAY_DURATION / 4)) {
             if(typeof addLogEntry === 'function') addLogEntry("Surcharge énergétique! Production et efficacité des défenses réduites.", "error", eventLogEl, gameState.eventLog);
             gameState.deficitWarningLogged = gameState.gameTime;
         }
     } else {
-        gameState.deficitWarningLogged = 0; // Reset warning log timer if no deficit
+        gameState.deficitWarningLogged = 0; 
     }
-    // console.log("gameplayLogic: Production:", JSON.parse(JSON.stringify(gameState.productionRates)), "Conso Énergie:", totalEnergyConsumption, "Capacité Énergie:", gameState.capacity.energy, "Énergie Dispo:", gameState.resources.energy);
 }
-
 
 function build(buildingId) {
     // console.log(`gameplayLogic: build - Tentative pour ${buildingId}`);
