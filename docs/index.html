@@ -20,6 +20,9 @@
             --accent-red: #e53e3e;
             --accent-yellow: #ecc94b;
             --map-tile-effective-size: 22px;
+            /* AJOUTÉ POUR LES COULEURS RGBA */
+            --bg-primary-rgb: 26, 32, 44;
+            --bg-secondary-rgb: 45, 55, 72;
         }
         body { font-family: 'Roboto', sans-serif; background-color: var(--bg-primary); color: var(--text-primary); overflow-x: hidden; margin: 0; padding: 0; }
         .font-orbitron { font-family: 'Orbitron', sans-serif; }
@@ -154,7 +157,7 @@
         .content-section.active { display: flex; }
         .content-section > .panel { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
 
-        .panel { background-color: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 0.375rem; padding: 0.75rem; margin-bottom: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .panel { background-color: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 0.375rem; padding: 0.75rem; margin-bottom: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.2); position: relative; /* AJOUTÉ pour info-icon */ }
         .sub-nav-bar { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 0.75rem; flex-shrink: 0; }
         .sub-nav-button {
             padding: 0.5rem 0.75rem; font-size: 0.8rem; color: var(--text-secondary);
@@ -360,7 +363,6 @@
         .damage-float[style*="color: rgb(72, 187, 120)"] { animation: floatUpHeal 1.2s ease-out forwards; }
         .damage-float[style*="color: rgb(160, 174, 192)"] { animation: floatMiss 0.8s ease-in forwards; }
         
-        /* NOUVEAU CSS POUR LES BOUTONS D'ACTION EN COMBAT */
         #combat-actions-container button { min-width: 100px; }
         #combat-actions-container button.skill-button.on-cooldown {
             background-color: var(--border-color) !important;
@@ -374,7 +376,6 @@
             opacity: 0.7;
             cursor: not-allowed;
         }
-        /* FIN NOUVEAU CSS */
 
         .quest-item { background-color: var(--bg-secondary); padding: 0.5rem; border-radius: 0.25rem; margin-bottom: 0.5rem; border-left: 4px solid transparent; }
         .quest-item h4 { font-size: 0.875rem; margin-bottom: 0.1rem;}
@@ -387,12 +388,12 @@
         .quest-status-COMPLETED, .quest-status-FINISHED { border-left-color: var(--accent-green); }
         .quest-status-LOCKED { display: none; }
 
-        .inventory-item, .shop-item.panel { display: flex; flex-direction: column; padding: 0.5rem; cursor: default; } /* Ajout cursor pour tooltip */
+        .inventory-item, .shop-item.panel { display: flex; flex-direction: column; padding: 0.5rem; cursor: default; }
         .shop-item .item-details { margin-bottom: 0.5rem;}
         .inventory-item .item-details { flex-grow: 1; }
         .item-name { font-weight: bold; color: var(--text-primary); font-size: 0.875rem; }
         .item-stats { font-size: 0.7em; color: var(--text-secondary); }
-        .equipment-slot { display: flex; flex-direction: column; align-items: stretch; padding: 0.5rem; margin-bottom: 0.375rem; background-color:var(--bg-secondary); border:1px solid var(--border-color); border-radius: 0.25rem; cursor: default; } /* Ajout cursor pour tooltip */
+        .equipment-slot { display: flex; flex-direction: column; align-items: stretch; padding: 0.5rem; margin-bottom: 0.375rem; background-color:var(--bg-secondary); border:1px solid var(--border-color); border-radius: 0.25rem; cursor: default; position: relative; /* Pour icone info */ }
         .slot-name { font-size: 0.8rem; font-weight: 600; margin-bottom: 0.125rem; }
         .equipped-item-name { font-size: 0.75rem; }
         .empty-slot { font-size: 0.75rem; font-style: italic; }
@@ -447,6 +448,33 @@
         #tooltip .stat-bonus { color: var(--accent-green); }
         #tooltip .stat-malus { color: var(--accent-red); }
         #tooltip hr { border-color: var(--border-color); margin-top: 4px; margin-bottom: 4px; }
+
+        /* NOUVEAU CSS POUR INFO ICON */
+        .info-icon-container {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            z-index: 5;
+        }
+        .info-icon {
+            font-size: 1rem;
+            color: var(--accent-blue);
+            cursor: pointer;
+            padding: 2px;
+            background-color: rgba(var(--bg-primary-rgb, 26, 32, 44), 0.6);
+            border-radius: 50%;
+            line-height: 1;
+        }
+        .info-icon:hover {
+            color: #63b3ed;
+            background-color: rgba(var(--bg-secondary-rgb, 45, 55, 72), 0.8);
+        }
+        .module-card, .panel[data-tooltip-type="building-card"], .panel[data-tooltip-type="research-card"] {
+             position: relative; /* Déjà sur .panel, mais réassure pour .module-card */
+        }
+        /* .inventory-item et .shop-item.panel ont déjà .panel qui a position:relative */
+        /* .equipment-slot a déjà position:relative */
+
 
         @keyframes pulse-core { 0%, 100% { transform: scale(1); box-shadow: 0 0 8px var(--accent-blue), 0 0 15px rgba(66, 153, 225, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 12px var(--accent-blue), 0 0 25px rgba(66, 153, 225, 0.7); } }
         @keyframes pulse-shield { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
@@ -763,7 +791,6 @@
         <div id="combat-modal-content" class="modal-content">
             <h2 class="font-orbitron text-xl mb-1 text-center text-[var(--accent-red)]">Affrontement!</h2>
             
-            <!-- NOUVEAU: Indicateur de Tour -->
             <div id="combat-turn-indicator" class="text-center font-semibold text-lg mb-2 text-sky-300">
                 Préparation...
             </div>
@@ -793,7 +820,6 @@
                 <!-- Boutons d'action générés par JS -->
             </div>
             
-            <!-- MODIFIÉ: Bouton Fuir uniquement ici, les autres ont été retirés -->
             <div class="text-center mt-3"> 
                 <button id="combat-action-flee" class="btn btn-warning btn-sm">Fuir (-10 PV)</button>
             </div>

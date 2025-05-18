@@ -15,33 +15,48 @@ function formatTime(seconds) {
 var modalConfirmCallback = null;
 var modalCancelCallback = null;
 
-function showModal(title, message, onConfirm, showCancel = true, onCancel = null) {
+// MODIFIÉ pour gérer "confirmText" et "cancelText" et le mode info (pas de bouton Confirm)
+function showModal(title, message, onConfirm, showCancel = true, onCancel = null, confirmText = "OK", cancelText = "Annuler") {
     if (typeof modalTitle !== 'undefined' && modalTitle) modalTitle.textContent = title;
     else console.warn("utils.js: showModal - modalTitle non trouvé.");
 
-    if (typeof modalMessage !== 'undefined' && modalMessage) modalMessage.innerHTML = message;
+    if (typeof modalMessage !== 'undefined' && modalMessage) modalMessage.innerHTML = message; // Utiliser innerHTML pour permettre le formatage HTML dans le message
     else console.warn("utils.js: showModal - modalMessage non trouvé.");
 
     modalConfirmCallback = onConfirm;
     modalCancelCallback = onCancel;
 
     if (typeof modalConfirm !== 'undefined' && modalConfirm) {
-        modalConfirm.style.display = onConfirm ? 'inline-block' : 'none';
-        modalConfirm.classList.toggle('hidden', !onConfirm);
+        if (onConfirm) { // S'il y a une action de confirmation
+            modalConfirm.textContent = confirmText;
+            modalConfirm.style.display = 'inline-block';
+            modalConfirm.classList.remove('hidden');
+        } else { // S'il n'y a pas d'action de confirmation (par ex. pour une modale d'info pure)
+            modalConfirm.style.display = 'none';
+            modalConfirm.classList.add('hidden');
+        }
     } else console.warn("utils.js: showModal - modalConfirm non trouvé.");
 
     if (typeof modalCancel !== 'undefined' && modalCancel) {
-         modalCancel.style.display = showCancel ? 'inline-block' : 'none';
-         modalCancel.classList.toggle('hidden', !showCancel);
-         modalCancel.onclick = () => {
-            if (modalCancelCallback) modalCancelCallback();
-            hideModal();
-         };
+         if (showCancel) {
+            // Si onConfirm est null (mode info), le bouton "Annuler" devient "Fermer"
+            modalCancel.textContent = onConfirm ? cancelText : "Fermer";
+            modalCancel.style.display = 'inline-block';
+            modalCancel.classList.remove('hidden');
+            modalCancel.onclick = () => { // S'assurer que le callback est bien géré
+                if (modalCancelCallback) modalCancelCallback();
+                hideModal();
+            };
+         } else {
+            modalCancel.style.display = 'none';
+            modalCancel.classList.add('hidden');
+         }
     } else console.warn("utils.js: showModal - modalCancel non trouvé.");
 
     if (typeof modal !== 'undefined' && modal) modal.classList.remove('hidden');
     else console.warn("utils.js: showModal - modal non trouvé.");
 }
+
 
 function hideModal() {
     if (typeof modal !== 'undefined' && modal) modal.classList.add('hidden');
@@ -154,8 +169,26 @@ function calculateModifiedDamage(baseDamage, damageType, targetResistances) {
     return Math.max(0, Math.floor(baseDamage * (1 - resistanceValue)));
 }
 
-function showNightAssaultVideo(videoSrc = "videos/night_assault_alert.mp4") { /* ... (identique) ... */ }
-function hideNightAssaultVideo() { /* ... (identique) ... */ }
+function showNightAssaultVideo(videoSrc = "videos/night_assault_alert.mp4") {
+    if (nightAssaultVideoContainerEl && nightAssaultVideoEl) {
+        nightAssaultVideoContainerEl.classList.remove('hidden');
+        nightAssaultVideoEl.src = videoSrc;
+        nightAssaultVideoEl.load(); // Important pour charger la nouvelle source
+        nightAssaultVideoEl.play().catch(error => {
+            console.warn("Lecture automatique de la vidéo bloquée : ", error);
+            // Afficher un message ou un bouton play si la lecture auto est bloquée
+        });
+    } else {
+        console.warn("showNightAssaultVideo: Éléments vidéo non trouvés.");
+    }
+}
+function hideNightAssaultVideo() {
+     if (nightAssaultVideoContainerEl && nightAssaultVideoEl) {
+        nightAssaultVideoContainerEl.classList.add('hidden');
+        nightAssaultVideoEl.pause();
+        nightAssaultVideoEl.currentTime = 0; // Rembobiner la vidéo
+    }
+}
 
 let tooltipElement;
 let tooltipTimeout; 
@@ -176,6 +209,15 @@ function initializeTooltipSystem() {
 function handleTooltipShow(event) {
     const target = event.target.closest('[data-tooltip-type]');
     if (!target || !tooltipElement) return;
+
+    // Ne pas afficher le tooltip au survol si une icône d'info est présente ET qu'on est sur un écran tactile (mobile probable)
+    const hasInfoIcon = target.querySelector('.info-icon-container');
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (hasInfoIcon && isTouchDevice) {
+        tooltipElement.classList.add('hidden'); // S'assurer qu'il est caché
+        return;
+    }
+
     clearTimeout(tooltipTimeout);
     tooltipTimeout = setTimeout(() => {
         const tooltipType = target.dataset.tooltipType;
@@ -217,7 +259,7 @@ function generateTooltipContent(type, id, extra, targetElement) {
         typeof researchData === 'undefined' || typeof nanobotModulesData === 'undefined' ||
         typeof EQUIPMENT_SLOTS === 'undefined' || typeof MAX_MOBILITY_POINTS === 'undefined' ||
         typeof MOBILITY_RECHARGE_TICKS === 'undefined' || typeof TICK_SPEED === 'undefined' ||
-        typeof nanobotSkills === 'undefined' // Ajout pour les tooltips de compétences
+        typeof nanobotSkills === 'undefined'
     ) {
         console.warn("generateTooltipContent: Une ou plusieurs structures de données de config sont manquantes.");
         return "Erreur de données...";
@@ -231,12 +273,31 @@ function generateTooltipContent(type, id, extra, targetElement) {
         case 'inventory-item': return getItemTooltip(id, 'inventory');
         case 'shop-item': return getItemTooltip(id, 'shop');
         case 'equipment-slot': return getEquipmentSlotTooltip(id);
-        case 'nanobot-skill-combat': return getNanobotSkillCombatTooltip(id); // NOUVEAU
+        case 'nanobot-skill-combat': return getNanobotSkillCombatTooltip(id);
         default: return `<i>Tooltip pour "${type}" non implémenté.</i>`;
     }
 }
 
-function getResourceHeaderTooltip(resourceId) { /* ... (identique à la version précédente) ... */ 
+// AJOUT DE LA FONCTION showItemInfoModal
+function showItemInfoModal(tooltipType, itemId, itemTitle = "Détails") {
+    const content = generateTooltipContent(tooltipType, itemId, null, null);
+    if (content) {
+        let title = itemTitle;
+        // Tenter d'obtenir un titre plus spécifique si possible
+        if(tooltipType.includes('item') && itemsData[itemId]) title = itemsData[itemId].name;
+        else if(tooltipType.includes('module') && nanobotModulesData[itemId]) title = nanobotModulesData[itemId].name;
+        else if(tooltipType.includes('building') && buildingsData[itemId]) title = buildingsData[itemId].name;
+        else if(tooltipType.includes('research') && researchData[itemId]) title = researchData[itemId].name;
+        else if(tooltipType.includes('skill') && nanobotSkills[itemId]) title = nanobotSkills[itemId].name;
+        
+        showModal(title, content, null, true); // onConfirm est null, showCancel est true (donc bouton "Fermer")
+    } else {
+        showModal("Information", "Impossible d'afficher les détails pour cet élément.", null, true);
+    }
+}
+
+
+function getResourceHeaderTooltip(resourceId) {
     let html = `<strong>${resourceId.charAt(0).toUpperCase() + resourceId.slice(1)}</strong><hr>`;
     const currentAmount = gameState.resources[resourceId] !== undefined ? Math.floor(gameState.resources[resourceId]) : 'N/A';
     html += `<p>Actuel: ${currentAmount}</p>`;
@@ -255,11 +316,9 @@ function getResourceHeaderTooltip(resourceId) { /* ... (identique à la version 
             }
         }
     } else if (resourceId === 'energy') {
-        const totalCapacity = gameState.capacity.energy; // Capacité totale après production des générateurs
+        const totalCapacity = gameState.capacity.energy; 
         const totalConsumed = gameState.resources.totalEnergyConsumed || 0;
         html += `<p>Consommé: ${Math.floor(totalConsumed)}</p>`;
-        // La capacité affichée dans le header est déjà la capacité totale, donc pas besoin de la recalculer ici pour le tooltip.
-        // gameState.capacity.energy est la capacité *totale*. gameState.resources.energy est l'énergie *disponible*.
         html += `<p>Capacité Totale: ${totalCapacity}</p>`;
         if(totalCapacity < totalConsumed) html += `<p class="resource-cost insufficient">DÉFICIT: ${totalCapacity - totalConsumed}</p>`;
 
@@ -304,7 +363,7 @@ function getResourceHeaderTooltip(resourceId) { /* ... (identique à la version 
     if (consumers.length > 0) html += `<hr><p><strong>Consommateurs:</strong><br>${consumers.join('<br>')}</p>`;
     return html;
 }
-function getNanobotStatTooltip(statId) { /* ... (identique) ... */ 
+function getNanobotStatTooltip(statId) {
     const currentStats = gameState.nanobotStats; 
     const baseValues = { health: currentStats.baseHealth, attack: currentStats.baseAttack, defense: currentStats.baseDefense, speed: currentStats.baseSpeed };
     let html = `<strong>${statId.charAt(0).toUpperCase() + statId.slice(1)}</strong><hr>`;
@@ -354,7 +413,7 @@ function getNanobotStatTooltip(statId) { /* ... (identique) ... */
     }
     return html;
 }
-function getBuildingCardTooltip(buildingId) { /* ... (identique) ... */ 
+function getBuildingCardTooltip(buildingId) {
     const building = buildingsData[buildingId];
     if (!building) return `Bâtiment inconnu: ${buildingId}`;
     const currentLevel = gameState.buildings[buildingId] || 0;
@@ -395,7 +454,7 @@ function getBuildingCardTooltip(buildingId) { /* ... (identique) ... */
     }
     return html;
 }
-function getResearchCardTooltip(researchId) { /* ... (identique) ... */ 
+function getResearchCardTooltip(researchId) {
     const research = researchData[researchId];
     if (!research) return `Recherche inconnue: ${researchId}`;
     let html = `<strong>${research.name}</strong><hr>`;
@@ -426,7 +485,7 @@ function getResearchCardTooltip(researchId) { /* ... (identique) ... */
     html += `<p>Temps de recherche (base): ${formatTime(research.time)}</p>`;
     return html;
 }
-function getModuleCardTooltip(moduleId) { /* ... (identique) ... */ 
+function getModuleCardTooltip(moduleId) {
     const moduleData = nanobotModulesData[moduleId];
     if (!moduleData) return `Module inconnu: ${moduleId}`;
     const currentLevel = gameState.nanobotModuleLevels[moduleId] || 0;
@@ -458,7 +517,7 @@ function getModuleCardTooltip(moduleId) { /* ... (identique) ... */
     }
     return html;
 }
-function getItemTooltip(itemId, context) { /* ... (identique) ... */ 
+function getItemTooltip(itemId, context) {
     const item = itemsData[itemId];
     if (!item) return `Objet inconnu: ${itemId}`;
     let html = `<strong>${item.name}</strong> <span style="font-size:0.8em; color:var(--text-secondary);">- ${item.rarity || 'Commun'}</span><hr>`;
@@ -480,7 +539,7 @@ function getItemTooltip(itemId, context) { /* ... (identique) ... */
     }
     return html;
 }
-function getEquipmentSlotTooltip(slotId) { /* ... (identique) ... */ 
+function getEquipmentSlotTooltip(slotId) {
     const slotName = EQUIPMENT_SLOTS[slotId];
     if (!slotName) return `Emplacement inconnu: ${slotId}`;
     const itemId = gameState.nanobotEquipment[slotId];
@@ -500,7 +559,6 @@ function getEquipmentSlotTooltip(slotId) { /* ... (identique) ... */
     }
     return html;
 }
-// NOUVEAU : Tooltip pour les compétences en combat
 function getNanobotSkillCombatTooltip(skillId) {
     const skill = nanobotSkills[skillId];
     if (!skill) return `Compétence inconnue: ${skillId}`;
@@ -511,9 +569,7 @@ function getNanobotSkillCombatTooltip(skillId) {
         let costParts = [];
         if (skill.cost.rage) costParts.push(`${skill.cost.rage} Rage`);
         if (skill.cost.energy) costParts.push(`${skill.cost.energy} Énergie`);
-        // Ajoutez d'autres types de coûts ici
         if (costParts.length > 0) {
-             // Ici on vérifie si on peut payer pour l'affichage dans le tooltip
             let costStringForTooltip = costParts.map(part => {
                 let canAffordThis = true;
                 if (part.includes("Rage")) canAffordThis = (currentNanobotCombatData?.rage || 0) >= skill.cost.rage;
@@ -532,7 +588,6 @@ function getNanobotSkillCombatTooltip(skillId) {
             html += `<p>Cooldown: ${skill.cooldown} tours</p>`;
         }
     }
-    // Afficher les effets principaux
     if (skill.effect) {
         html += `<p class="mt-1"><strong>Effets:</strong></p><ul class="list-none pl-0 text-xs">`;
         if (skill.effect.damageMultiplier) html += `<li>Multiplicateur Dégâts: <span class="stat-bonus">x${skill.effect.damageMultiplier}</span></li>`;
@@ -545,7 +600,7 @@ function getNanobotSkillCombatTooltip(skillId) {
     return html;
 }
 
-function getCostString(costObject, checkAffordability = false) { /* ... (identique) ... */ 
+function getCostString(costObject, checkAffordability = false) {
      return Object.entries(costObject)
         .map(([res, val]) => {
             let canAffordThis = true;
@@ -562,9 +617,9 @@ function getCostString(costObject, checkAffordability = false) { /* ... (identiq
         .join(', ');
 }
 
-function highlightInsufficientCosts(buttonElement, costObject) { /* ... (identique) ... */ 
+function highlightInsufficientCosts(buttonElement, costObject) {
     if (!gameState || !costObject) return;
-    const costParts = buttonElement.querySelectorAll('.cost-part'); // Cible les spans dans le bouton
+    const costParts = buttonElement.querySelectorAll('.cost-part'); 
     costParts.forEach(span => {
         const resourceId = span.dataset.resourceId;
         const requiredAmount = parseInt(span.dataset.requiredAmount);
@@ -579,7 +634,7 @@ function highlightInsufficientCosts(buttonElement, costObject) { /* ... (identiq
         else span.classList.remove('insufficient');
     });
 }
-function clearCostHighlights(buttonElement) { /* ... (identique) ... */ 
+function clearCostHighlights(buttonElement) {
     const costParts = buttonElement.querySelectorAll('.cost-part');
     costParts.forEach(span => {
         span.classList.remove('insufficient');

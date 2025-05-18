@@ -194,7 +194,7 @@ var nightAssaultEnemies = [
     { id: 'heavy_crawler', name: "Rampant Lourd", baseHealth: 80, baseAttack: 3, speed: 1.5, attackRange: 15, damageType: DAMAGE_TYPES.KINETIC, resistances: { kinetic: 0.25, energy: 0.1 }, reward: { biomass: 8, nanites: 2 }, spritePath: 'https://placehold.co/12x12/d69e2e/1a202c?text=C', visualClass: 'crawler' }
 ];
 var bossDefinitions = {
-    'siege_breaker_alpha': { // ID unique pour ce boss
+    'siege_breaker_alpha': { 
         id: 'siege_breaker_alpha', name: "Briseur de Siège Alpha",
         baseHealth: 500, baseAttack: 25, defense: 5, speed: 0.8, attackRange: 25,
         damageType: DAMAGE_TYPES.KINETIC, resistances: { kinetic: 0.3, energy: 0.1 },
@@ -231,18 +231,16 @@ var nightEvents = [
     }
 ];
 
-// --- NANOBOT SKILLS - MODIFIED FOR ACTIVE SKILLS ---
 var nanobotSkills = {
     'powerStrike': {
         id: 'powerStrike',
         name: "Frappe Puissante",
         description: "Une attaque concentrée qui inflige 150% des dégâts normaux.",
-        type: "active_attack_boost", // Indique une compétence active
-        target: "enemy", // Cible l'ennemi
+        type: "active_attack_boost", 
+        target: "enemy", 
         cost: { rage: 30 },
         effect: { damageMultiplier: 1.5 },
-        cooldown: 2, // Cooldown en tours de combat
-        // lastUsedRound sera géré dans nanobotCombatStats
+        cooldown: 2, 
         activationMessage: "Nexus-7 concentre son énergie pour une Frappe Puissante !",
         effectMessage: (damage) => `L'attaque inflige ${damage} dégâts critiques !`
     },
@@ -251,8 +249,8 @@ var nanobotSkills = {
         name: "Nanites Réparateurs",
         description: "Restaure une petite quantité de PV.",
         type: "active_heal",
-        target: "self", // Cible le Nanobot lui-même
-        cost: { energy: 10 }, // Coûte de l'énergie globale du joueur
+        target: "self", 
+        cost: { energy: 10 }, 
         effect: { healAmount: 20 }, 
         cooldown: 3,
         activationMessage: "Nexus-7 active ses nanites réparateurs !",
@@ -274,10 +272,10 @@ var nanobotSkills = {
         id: 'emergencyShield', 
         name: "Bouclier d'Urgence", 
         description: "Bouclier temporaire absorbant 20 dégâts.", 
-        type: "passive_defensive_buff", // Changé pour clarifier
+        type: "passive_defensive_buff", 
         trigger: { healthPercentBelow: 30 }, 
-        effect: { damageAbsorption: 20, duration: 1 }, // Duration 1 = 1 instance de dégât ou 1 tour
-        cooldown: 5, // Cooldown en tours de combat (était 10 ticks globaux avant)
+        effect: { damageAbsorption: 20, duration: 1 }, 
+        cooldown: 5, 
         activationMessage: "Systèmes d'urgence ! Bouclier temporaire activé !", 
         effectMessage: "Le bouclier absorbe les prochains dégâts." 
     },
@@ -293,8 +291,6 @@ var nanobotSkills = {
         activationMessage: (stacks) => `Concentration accrue (x${stacks}) !` 
     }
 };
-// --- FIN NANOBOT SKILLS ---
-
 
 var QUEST_DATA = {
     'main_01_survival_basics': {

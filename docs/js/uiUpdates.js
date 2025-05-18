@@ -23,8 +23,7 @@ var uiUpdates = {
             crystalShardsDisplayContainer.classList.add('hidden');
         }
         if(energyEl && typeof gameState.resources.totalEnergyConsumed !== 'undefined' && typeof gameState.capacity.energy !== 'undefined') {
-             // Afficher Consommé / Capacité Totale. Capacité Totale = Capacité des générateurs.
-             const totalCapacity = gameState.capacity.energy; // Ceci est déjà la capacité totale produite
+             const totalCapacity = gameState.capacity.energy;
              energyEl.textContent = `${Math.floor(gameState.resources.totalEnergyConsumed)} / ${totalCapacity}`;
         } else if (energyEl) {
             energyEl.textContent = `? / ?`;
@@ -32,7 +31,8 @@ var uiUpdates = {
         if(biomassRateEl) biomassRateEl.textContent = gameState.productionRates.biomass.toFixed(1);
         if(nanitesRateEl) nanitesRateEl.textContent = gameState.productionRates.nanites.toFixed(1);
     },
-    updateBuildingDisplay: function() { /* ... (identique à la version précédente) ... */ 
+    // MODIFIÉ pour inclure l'icône d'info
+    updateBuildingDisplay: function() {
         const buildingsContainer = document.getElementById('buildings-section');
         if (!buildingsContainer) { console.warn("UI: updateBuildingDisplay - Conteneur #buildings-section non trouvé."); return; }
         if (typeof buildingsData === 'undefined' || Object.keys(buildingsData).length === 0) { buildingsContainer.innerHTML = '<p class="text-gray-500 italic text-sm">Données de modules non chargées.</p>'; return; }
@@ -42,8 +42,21 @@ var uiUpdates = {
             buildingCount++; const building = buildingsData[id]; const level = gameState.buildings[id] || 0;
             const currentLevelData = level > 0 && building.levels && building.levels[level - 1] ? building.levels[level - 1] : null;
             const nextLevelDefinition = building.levels && building.levels[level] ? building.levels[level] : null;
-            const div = document.createElement('div'); div.className = 'panel p-2 mb-2';
+            const div = document.createElement('div'); div.className = 'panel p-2 mb-2'; // position: relative est sur .panel
             div.dataset.tooltipType = 'building-card'; div.dataset.tooltipId = id;
+
+            const infoIconContainer = document.createElement('div');
+            infoIconContainer.className = 'info-icon-container';
+            const infoIcon = document.createElement('i');
+            infoIcon.className = 'ti ti-info-circle info-icon';
+            infoIcon.title = `Plus d'infos sur ${building.name}`;
+            infoIcon.onclick = (e) => {
+                e.stopPropagation();
+                showItemInfoModal('building-card', id, building.name);
+            };
+            infoIconContainer.appendChild(infoIcon);
+            div.appendChild(infoIconContainer);
+
             let content = `<h4 class="text-sm font-semibold ${building.type === 'defense' ? 'text-[var(--accent-yellow)]' : 'text-[var(--accent-blue)]'}">${building.name} (Niv. ${level})</h4>`;
             content += `<p class="text-xs text-gray-400 mb-1">${building.description}</p>`;
             if (currentLevelData) {
@@ -53,7 +66,9 @@ var uiUpdates = {
                 if(currentLevelData.energyConsumption) content += `<p class="text-xs text-red-300">Conso. Énergie: ${currentLevelData.energyConsumption}</p>`;
                 if(currentLevelData.baseHealthBonus && building.id === 'reinforcedWall') content += `<p class="text-xs text-teal-300">Bonus PV Noyau: +${currentLevelData.baseHealthBonus}</p>`;
             } else if (level === 0) { content += `<p class="text-xs text-yellow-400">Non débloqué.</p>`; }
-            div.innerHTML = content;
+            
+            div.insertAdjacentHTML('beforeend', content); // Insérer après l'icône
+
             if (nextLevelDefinition) {
                 const costObject = level === 0 ? nextLevelDefinition.costToUnlockOrUpgrade : nextLevelDefinition.costToUpgrade;
                 if (costObject) {
@@ -66,21 +81,24 @@ var uiUpdates = {
                     let buttonTextContent = level === 0 ? `Débloquer (` : `Améliorer Niv. ${level + 1} (`;
                     buttonTextContent += Object.entries(costObject).map(([res, val]) => { const resourceName = (typeof itemsData !== 'undefined' && itemsData[res]) ? itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1); return `<span class="cost-part" data-resource-id="${res}" data-required-amount="${val}">${val} ${resourceName}</span>`; }).join(', ');
                     buttonTextContent += `)`; button.innerHTML = buttonTextContent;
-                    if (!canAfford) button.disabled = true; button.onclick = () => { if(typeof build === 'function') build(id); };
+                    if (!canAfford) button.disabled = true;
+                    button.onclick = (e) => { e.stopPropagation(); if(typeof build === 'function') build(id); };
                     if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') { button.addEventListener('mouseover', () => highlightInsufficientCosts(button, costObject)); button.addEventListener('mouseout', () => clearCostHighlights(button)); }
                     div.appendChild(button);
                 }
             } else if (level > 0 && building.type !== 'defense' && building.levels && level >= building.levels.length) { div.innerHTML += `<p class="text-xs text-green-400 mt-1">Tech Max</p>`; }
             if (building.type === 'defense' && level > 0 && building.placementCost) {
                 const placeButton = document.createElement('button'); placeButton.className = 'btn btn-info btn-xs mt-1 w-full';
-                placeButton.textContent = `Placer ${building.name}`; placeButton.onclick = () => { if(typeof enterPlacementMode === 'function') enterPlacementMode(id); else console.error("enterPlacementMode non défini"); };
+                placeButton.textContent = `Placer ${building.name}`;
+                placeButton.onclick = (e) => { e.stopPropagation(); if(typeof enterPlacementMode === 'function') enterPlacementMode(id); else console.error("enterPlacementMode non défini"); };
                 div.appendChild(placeButton);
             }
             buildingsContainer.appendChild(div);
         }
         if (buildingCount === 0) { buildingsContainer.innerHTML += "<p class='text-gray-500 italic text-sm'>Aucun module structurel ou défensif disponible.</p>"; }
     },
-    updateResearchDisplay: function() { /* ... (identique) ... */ 
+    // MODIFIÉ pour inclure l'icône d'info
+    updateResearchDisplay: function() {
         const researchContainer = document.getElementById('research-content');
         if(!researchContainer) { console.warn("UI: updateResearchDisplay - Conteneur #research-content non trouvé."); return; }
         if (typeof researchData === 'undefined' || Object.keys(researchData).length === 0) { researchContainer.innerHTML = '<p class="text-gray-500 italic text-sm">Données de recherche non chargées.</p>'; return; }
@@ -95,7 +113,20 @@ var uiUpdates = {
             const progress = Math.min(100, (effectiveTotalTimeSeconds > 0 ? (elapsedSeconds / effectiveTotalTimeSeconds) : 0) * 100);
             const researchDiv = document.createElement('div'); researchDiv.className = 'panel p-2 mb-2';
             researchDiv.dataset.tooltipType = 'research-card'; researchDiv.dataset.tooltipId = gameState.activeResearch.id;
-            researchDiv.innerHTML = `<h4 class="text-sm font-semibold text-yellow-400">En cours: ${research.name}</h4><p class="text-xs text-gray-400 mb-1">${research.description}</p><div class="w-full bg-gray-700 rounded-full h-2 mb-0.5"><div class="bg-blue-500 h-2 rounded-full" style="width: ${progress.toFixed(2)}%"></div></div><p class="text-xs text-gray-300">Temps Restant: ${formatTime(timeRemainingSecondsDisplay)}</p>`;
+            
+            const infoIconContainer = document.createElement('div');
+            infoIconContainer.className = 'info-icon-container';
+            const infoIcon = document.createElement('i');
+            infoIcon.className = 'ti ti-info-circle info-icon';
+            infoIcon.title = `Plus d'infos sur ${research.name}`;
+            infoIcon.onclick = (e) => {
+                e.stopPropagation();
+                showItemInfoModal('research-card', gameState.activeResearch.id, research.name);
+            };
+            infoIconContainer.appendChild(infoIcon);
+            researchDiv.appendChild(infoIconContainer);
+
+            researchDiv.insertAdjacentHTML('beforeend', `<h4 class="text-sm font-semibold text-yellow-400">En cours: ${research.name}</h4><p class="text-xs text-gray-400 mb-1">${research.description}</p><div class="w-full bg-gray-700 rounded-full h-2 mb-0.5"><div class="bg-blue-500 h-2 rounded-full" style="width: ${progress.toFixed(2)}%"></div></div><p class="text-xs text-gray-300">Temps Restant: ${formatTime(timeRemainingSecondsDisplay)}</p>`);
             researchContainer.appendChild(researchDiv); researchAvailableCount++;
         }
         for (const id in researchData) {
@@ -103,7 +134,20 @@ var uiUpdates = {
             if (gameState.research[id]) {
                 const div = document.createElement('div'); div.className = 'panel p-2 mb-2 opacity-60';
                 div.dataset.tooltipType = 'research-card'; div.dataset.tooltipId = id;
-                div.innerHTML = `<h4 class="text-sm font-semibold text-green-400">${research.name} (Acquis)</h4><p class="text-xs text-gray-500">${research.description}</p>`;
+                
+                const infoIconContainer = document.createElement('div');
+                infoIconContainer.className = 'info-icon-container';
+                const infoIcon = document.createElement('i');
+                infoIcon.className = 'ti ti-info-circle info-icon';
+                infoIcon.title = `Plus d'infos sur ${research.name}`;
+                infoIcon.onclick = (e) => {
+                    e.stopPropagation();
+                    showItemInfoModal('research-card', id, research.name);
+                };
+                infoIconContainer.appendChild(infoIcon);
+                div.appendChild(infoIconContainer);
+                
+                div.insertAdjacentHTML('beforeend', `<h4 class="text-sm font-semibold text-green-400">${research.name} (Acquis)</h4><p class="text-xs text-gray-500">${research.description}</p>`);
                 researchContainer.appendChild(div); researchAvailableCount++; continue;
             }
             if (gameState.activeResearch && gameState.activeResearch.id === id) continue;
@@ -112,26 +156,42 @@ var uiUpdates = {
                 if (research.requirements.buildings) { for (const buildingId in research.requirements.buildings) { if ((gameState.buildings[buildingId] || 0) < research.requirements.buildings[buildingId]) { canResearch = false; requirementText += `<span class="text-red-400">${buildingsData[buildingId]?.name || buildingId} Niv. ${research.requirements.buildings[buildingId]} requis.</span><br>`;}}}
                 if (research.requirements.research) { research.requirements.research.forEach(reqResearchId => { if (!gameState.research[reqResearchId]) { canResearch = false; requirementText += `<span class="text-red-400">Recherche "${researchData[reqResearchId]?.name || reqResearchId}" requise.</span><br>`;}});}}
             const div = document.createElement('div'); div.className = 'panel p-2 mb-2'; div.dataset.tooltipType = 'research-card'; div.dataset.tooltipId = id;
+            
+            const infoIconContainer = document.createElement('div');
+            infoIconContainer.className = 'info-icon-container';
+            const infoIcon = document.createElement('i');
+            infoIcon.className = 'ti ti-info-circle info-icon';
+            infoIcon.title = `Plus d'infos sur ${research.name}`;
+            infoIcon.onclick = (e) => {
+                e.stopPropagation();
+                showItemInfoModal('research-card', id, research.name);
+            };
+            infoIconContainer.appendChild(infoIcon);
+            div.appendChild(infoIconContainer);
+
             let effectsText = "";
             if(research.grantsStatBoost) effectsText += `Stats: ${Object.entries(research.grantsStatBoost).map(([s,v])=>`${s}:+${v}`).join(', ')}. `;
             if(research.grantsModule && typeof nanobotModulesData !== 'undefined' && nanobotModulesData[research.grantsModule]) effectsText += `Module: ${nanobotModulesData[research.grantsModule].name}. `;
             let content = `<h4 class="text-sm font-semibold text-blue-300">${research.name}</h4> <p class="text-xs text-gray-400 mb-0.5">${research.description}</p>`;
             if (effectsText) content += `<p class="text-xs text-green-300">Effets: ${effectsText}</p>`;
             if (requirementText) content += `<div class="text-xs mt-0.5">${requirementText}</div>`;
-            div.innerHTML = content;
+            div.insertAdjacentHTML('beforeend', content); // MODIFIÉ
+
             const button = document.createElement('button'); let canAfford = true;
             for (const resource_1 in research.cost) { if ((gameState.resources[resource_1]||0) < research.cost[resource_1]) { canAfford = false; break; }}
             button.className = `btn ${(canResearch && canAfford && !gameState.activeResearch) ? 'btn-success' : 'btn-disabled'} btn-xs mt-1 w-full`;
             let buttonTextContent = `Lancer Recherche (`;
             buttonTextContent += Object.entries(research.cost).map(([res, val]) => { const resourceName = (typeof itemsData !== 'undefined' && itemsData[res]) ? itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1); return `<span class="cost-part" data-resource-id="${res}" data-required-amount="${val}">${val} ${resourceName}</span>`; }).join(', ');
             buttonTextContent += ` - ${formatTime(research.time)})`; button.innerHTML = buttonTextContent;
-            if (!canResearch || !canAfford || gameState.activeResearch) button.disabled = true; button.onclick = () => { if(typeof startResearch === 'function') startResearch(id); };
+            if (!canResearch || !canAfford || gameState.activeResearch) button.disabled = true;
+            button.onclick = (e) => { e.stopPropagation(); if(typeof startResearch === 'function') startResearch(id); };
             if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') { button.addEventListener('mouseover', () => highlightInsufficientCosts(button, research.cost)); button.addEventListener('mouseout', () => clearCostHighlights(button));}
             div.appendChild(button); researchContainer.appendChild(div); researchAvailableCount++;
         }
         if (researchAvailableCount === 0) { researchContainer.innerHTML += "<p class='text-gray-500 italic text-sm'>Aucune recherche disponible ou en cours.</p>"; }
     },
-    updateNanobotModulesDisplay: function() { /* ... (identique) ... */ 
+    // MODIFIÉ pour inclure l'icône d'info
+    updateNanobotModulesDisplay: function() {
         const container = equippedModulesDisplayEl;
         if (!container) { console.warn("UI: updateNanobotModulesDisplay - #equipped-modules-display non trouvé."); return; }
         container.innerHTML = ''; let hasModules = false;
@@ -148,8 +208,21 @@ var uiUpdates = {
             if(isReplacedByActiveHigherTier && currentLevel === 0) continue;
             if (isUnlocked || currentLevel > 0) {
                 hasModules = true; const moduleDiv = document.createElement('div');
-                moduleDiv.className = 'module-card bg-gray-700 bg-opacity-70 p-2.5 rounded-md shadow border border-gray-600';
+                moduleDiv.className = 'module-card bg-gray-700 bg-opacity-70 p-2.5 rounded-md shadow border border-gray-600'; // position: relative est sur .module-card
                 moduleDiv.dataset.tooltipType = 'module-card'; moduleDiv.dataset.tooltipId = moduleId;
+                
+                const infoIconContainer = document.createElement('div');
+                infoIconContainer.className = 'info-icon-container';
+                const infoIcon = document.createElement('i');
+                infoIcon.className = 'ti ti-info-circle info-icon';
+                infoIcon.title = `Plus d'infos sur ${moduleData.name}`;
+                infoIcon.onclick = (e) => {
+                    e.stopPropagation();
+                    showItemInfoModal('module-card', moduleId, moduleData.name);
+                };
+                infoIconContainer.appendChild(infoIcon);
+                moduleDiv.appendChild(infoIconContainer);
+
                 let content = `<div class="flex justify-between items-baseline mb-1"><h4 class="font-semibold text-sm text-lime-400">${moduleData.name}</h4><span class="text-xs text-gray-400">Niv. ${currentLevel}</span></div>`;
                 content += `<p class="text-xs text-gray-300 mb-1.5">${moduleData.description}</p>`;
                 if (currentLevel > 0) {
@@ -157,7 +230,9 @@ var uiUpdates = {
                     if (currentLevelData && currentLevelData.statBoost) content += `<div class="text-xs text-green-300 mb-1.5"><strong>Actuel:</strong> ${Object.entries(currentLevelData.statBoost).map(([s,v]) => `${s.charAt(0).toUpperCase() + s.slice(1)}:+${v}`).join(', ')}</div>`;
                 } else if (isReplacedByActiveHigherTier) { content += `<p class="text-xs text-gray-500 italic">Remplacé par une version supérieure.</p>`;
                 } else { content += `<p class="text-xs text-yellow-400">Prêt à activer.</p>`; }
-                moduleDiv.innerHTML = content;
+                
+                moduleDiv.insertAdjacentHTML('beforeend', content); // MODIFIÉ
+
                 const nextLevelData = moduleData.levels.find(l => l.level === currentLevel + 1);
                 const costDataForNextLevel = currentLevel === 0 ? moduleData.levels[0].costToUnlockOrUpgrade : (nextLevelData ? nextLevelData.costToUpgrade : null) ;
                 if (costDataForNextLevel && (currentLevel < moduleData.levels.length) && !isReplacedByActiveHigherTier) {
@@ -172,7 +247,8 @@ var uiUpdates = {
                     let buttonHtmlContent = `${buttonText} (`;
                     buttonHtmlContent += Object.entries(costDataForNextLevel).map(([res, val]) => { const resourceName = (typeof itemsData !== 'undefined' && itemsData[res]) ? itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1); return `<span class="cost-part" data-resource-id="${res}" data-required-amount="${val}">${val} ${resourceName}</span>`; }).join(', ');
                     buttonHtmlContent += `)`; upgradeButton.innerHTML = buttonHtmlContent;
-                    if(!canAfford) upgradeButton.disabled = true; upgradeButton.onclick = () => { if(typeof upgradeNanobotModule === 'function') upgradeNanobotModule(moduleId);};
+                    if(!canAfford) upgradeButton.disabled = true;
+                    upgradeButton.onclick = (e) => { e.stopPropagation(); if(typeof upgradeNanobotModule === 'function') upgradeNanobotModule(moduleId);};
                     if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') { upgradeButton.addEventListener('mouseover', () => highlightInsufficientCosts(upgradeButton, costDataForNextLevel)); upgradeButton.addEventListener('mouseout', () => clearCostHighlights(upgradeButton)); }
                     moduleDiv.appendChild(upgradeButton);
                 } else if (currentLevel > 0 && !isReplacedByActiveHigherTier) { moduleDiv.innerHTML += `<p class="text-xs text-green-400 mt-1.5">Niveau Max de Technologie Atteint</p>`; }
@@ -181,7 +257,7 @@ var uiUpdates = {
         }
         if (!hasModules) { container.innerHTML = "<p class='text-xs text-gray-500 italic'>Aucun module débloqué ou disponible pour activation.</p>"; }
     },
-    updateNanobotDisplay: function() { /* ... (identique) ... */ 
+    updateNanobotDisplay: function() {
         if (!gameState || !gameState.nanobotStats) { console.error("UI: updateNanobotDisplay - gameState ou nanobotStats non défini."); return; }
         if(nanobotHealthEl) nanobotHealthEl.textContent = `${Math.floor(gameState.nanobotStats.currentHealth)} / ${gameState.nanobotStats.health}`;
         if(nanobotAttackEl) nanobotAttackEl.textContent = gameState.nanobotStats.attack;
@@ -216,38 +292,55 @@ var uiUpdates = {
         if(typeof this.updateEquippedItemsDisplay === 'function') this.updateEquippedItemsDisplay();
         if(typeof this.updateNanobotModulesDisplay === 'function') this.updateNanobotModulesDisplay();
     },
-    updateEquippedItemsDisplay: function() { /* ... (identique) ... */ 
-        const container = nanobotEquipmentSlotsEl; 
+    // MODIFIÉ pour inclure l'icône d'info
+    updateEquippedItemsDisplay: function() {
+        const container = nanobotEquipmentSlotsEl;
         if(!container) { console.warn("UI: updateEquippedItemsDisplay - #nanobot-equipment-slots non trouvé."); return;}
-        container.innerHTML = ''; 
+        container.innerHTML = '';
         if (typeof EQUIPMENT_SLOTS === 'undefined' || typeof itemsData === 'undefined' || !gameState || !gameState.nanobotEquipment) { container.innerHTML = "<p class='text-xs text-gray-500 italic'>Données d'équipement non disponibles.</p>"; return; }
         for (const slotId in EQUIPMENT_SLOTS) {
             const slotName = EQUIPMENT_SLOTS[slotId]; const itemId = gameState.nanobotEquipment[slotId]; const item = itemId ? itemsData[itemId] : null;
-            const slotDiv = document.createElement('div'); slotDiv.className = 'equipment-slot bg-gray-700 bg-opacity-70 p-2.5 rounded-md shadow border border-gray-600';
+            const slotDiv = document.createElement('div'); slotDiv.className = 'equipment-slot';
             slotDiv.dataset.tooltipType = 'equipment-slot'; slotDiv.dataset.tooltipId = slotId;
+
+            if (item) {
+                const infoIconContainer = document.createElement('div');
+                infoIconContainer.className = 'info-icon-container';
+                const infoIcon = document.createElement('i');
+                infoIcon.className = 'ti ti-info-circle info-icon';
+                infoIcon.title = `Plus d'infos sur ${item.name}`;
+                infoIcon.onclick = (e) => {
+                    e.stopPropagation();
+                    showItemInfoModal('inventory-item', itemId, item.name);
+                };
+                infoIconContainer.appendChild(infoIcon);
+                slotDiv.appendChild(infoIconContainer);
+            }
+
             let contentHtml = `<div class="flex justify-between items-center mb-1"><span class="slot-name text-sm font-semibold text-fuchsia-400">${slotName}:</span>`;
             if (item) {
-                contentHtml += `<span class="equipped-item-name text-sm text-gray-100">${item.name}</span></div>`; 
+                contentHtml += `<span class="equipped-item-name text-sm text-gray-100">${item.name}</span></div>`;
                 let itemEffects = [];
                 if (item.statBoost) itemEffects.push(Object.entries(item.statBoost).map(([s,v]) => `<span class="text-xs ${v > 0 ? 'text-green-400' : 'text-red-400'}">${s.charAt(0).toUpperCase() + s.slice(1)}: ${v > 0 ? '+' : ''}${v}</span>`).join(', '));
                 if (item.damageType) itemEffects.push(`<span class="text-xs text-cyan-400">Type Dégât: ${item.damageType.charAt(0).toUpperCase() + item.damageType.slice(1)}</span>`);
                 if (itemEffects.length > 0) contentHtml += `<div class="text-xs text-gray-300 mt-0.5 mb-1.5">${itemEffects.join('; ')}</div>`;
                 contentHtml += `<p class="text-xs text-gray-400 mb-2 italic">${item.description}</p>`;
-                contentHtml += `<button class="btn btn-outline btn-danger btn-xs w-full" onclick="unequipItem('${slotId}')">Retirer</button>`;
+                contentHtml += `<button class="btn btn-outline btn-danger btn-xs w-full" onclick="event.stopPropagation(); unequipItem('${slotId}')">Retirer</button>`;
             } else {
-                contentHtml += `<span class="empty-slot text-sm text-gray-500 italic">Vide</span></div>`; 
+                contentHtml += `<span class="empty-slot text-sm text-gray-500 italic">Vide</span></div>`;
                 contentHtml += `<p class="text-xs text-gray-500 h-10 mb-2">Choisissez un objet depuis l'inventaire pour l'équiper.</p>`;
                 contentHtml += `<button class="btn btn-disabled btn-xs w-full" disabled>Retirer</button>`;
             }
-            slotDiv.innerHTML = contentHtml; container.appendChild(slotDiv);
+            slotDiv.insertAdjacentHTML('beforeend', contentHtml); 
+            container.appendChild(slotDiv);
         }
     },
-    updateXpBar: function() { /* ... (identique) ... */ 
+    updateXpBar: function() {
         if(!xpBarEl || !gameState || !gameState.nanobotStats || gameState.nanobotStats.level === undefined) return;
         const stats = gameState.nanobotStats; const percent = (stats.xpToNext > 0 && stats.xpToNext !== Infinity ? (stats.xp / stats.xpToNext) : (stats.xpToNext === Infinity ? 100 : 0) ) * 100;
         xpBarEl.style.width = `${Math.min(100, Math.max(0, percent))}%`;
     },
-    updateBaseStatusDisplay: function() { /* ... (identique) ... */ 
+    updateBaseStatusDisplay: function() {
         if(!baseHealthValueEl || !baseMaxHealthValueEl || !overviewBaseHealthEl || !baseHealthBarEl || !baseDefensePowerEl || !repairBaseBtn || !repairDefensesBtn || !baseHealthDisplayEl ) return;
         if (!gameState || !gameState.baseStats || !gameState.nightAssault) return;
         const base = gameState.baseStats; baseHealthValueEl.textContent = Math.floor(base.currentHealth); baseMaxHealthValueEl.textContent = base.maxHealth; overviewBaseHealthEl.textContent = `${Math.floor(base.currentHealth)} / ${base.maxHealth}`;
@@ -259,7 +352,7 @@ var uiUpdates = {
         baseHealthDisplayEl.classList.toggle('text-[var(--accent-red)]', gameState.nightAssault.isActive && !gameState.isDay); baseHealthDisplayEl.classList.toggle('font-bold', gameState.nightAssault.isActive && !gameState.isDay);
         if(typeof this.updateBasePreview === 'function') this.updateBasePreview();
     },
-    updateBasePreview: function() { /* ... (identique) ... */ 
+    updateBasePreview: function() {
         const previewContainer = basePreviewContainerEl; if (!previewContainer) { console.error("UI: updateBasePreview - basePreviewContainerEl est null !"); return; }
         if (typeof BASE_GRID_SIZE === 'undefined' || !gameState || !Array.isArray(gameState.baseGrid) || typeof gameState.defenses !== 'object' || typeof buildingsData === 'undefined') { previewContainer.innerHTML = "<p class='text-red-500 text-xs'>Erreur: Schéma base.</p>"; return; }
         previewContainer.style.setProperty('--base-grid-cols', BASE_GRID_SIZE.cols); previewContainer.style.setProperty('--base-grid-rows', BASE_GRID_SIZE.rows);
@@ -317,7 +410,7 @@ var uiUpdates = {
             }
         });
     },
-    drawLaserShot: function(startX, startY, endX, endY, type = 'friendly') { /* ... (identique) ... */ 
+    drawLaserShot: function(startX, startY, endX, endY, type = 'friendly') {
         const container = basePreviewContainerEl; if (!container) return;
         const projectile = document.createElement('div'); projectile.className = 'projectile-visual';
         let projectileHeightString = '3px'; let projectileHeightNumeric = parseFloat(projectileHeightString); let projectileShadow;
@@ -330,7 +423,7 @@ var uiUpdates = {
         container.appendChild(projectile); setTimeout(() => { if (projectile.parentElement) projectile.remove();}, 200); 
     },
     drawEnemyProjectile: function(startX, startY, endX, endY, damageType) { this.drawLaserShot(startX, startY, endX, endY, 'enemy');},
-    managePlacedDefense: function(instanceId, row, col) { /* ... (identique) ... */ 
+    managePlacedDefense: function(instanceId, row, col) {
         if (!gameState || !gameState.defenses || !gameState.defenses[instanceId] || !buildingsData || !buildingsData[gameState.defenses[instanceId].id]) { showModal("Erreur", "Impossible de gérer cette défense, données manquantes."); return; }
         const defenseInstance = gameState.defenses[instanceId]; const defenseTypeData = buildingsData[defenseInstance.id]; const currentTechLevel = gameState.buildings[defenseInstance.id] || 0;
         let modalContent = `<h4 class="font-orbitron text-md mb-1">${defenseInstance.name} (Niv. ${defenseInstance.level})</h4>`;
@@ -348,16 +441,16 @@ var uiUpdates = {
                 let canAffordUpgrade = true;
                 for(const res in nextLevelData.costToUpgrade) { if (itemsData[res]) { if ((gameState.inventory.filter(id => id === res).length || 0) < nextLevelData.costToUpgrade[res]) {canAffordUpgrade=false; break;} } else { if ((gameState.resources[res] || 0) < nextLevelData.costToUpgrade[res]) {canAffordUpgrade=false; break;} } }
                 if (!canAffordUpgrade) { upgradeButton.classList.add('btn-disabled'); upgradeButton.disabled = true; }
-                upgradeButton.onclick = () => handleDefenseAction(instanceId, 'upgrade');
+                upgradeButton.onclick = (e) => { e.stopPropagation(); handleDefenseAction(instanceId, 'upgrade'); }; // Ajout e.stopPropagation()
                 if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') { upgradeButton.addEventListener('mouseover', () => highlightInsufficientCosts(upgradeButton.querySelector('.upgrade-cost-wrapper'), nextLevelData.costToUpgrade)); upgradeButton.addEventListener('mouseout', () => clearCostHighlights(upgradeButton.querySelector('.upgrade-cost-wrapper'))); }
                 actionsHtml += upgradeButton.outerHTML;
             }
         } else if (defenseInstance.level >= currentTechLevel && defenseInstance.level < defenseTypeData.levels.length) { actionsHtml += `<p class="text-xs text-yellow-400 italic">Améliorez d'abord la technologie de ${defenseTypeData.name}.</p>`;
         } else if (defenseInstance.level >= defenseTypeData.levels.length) { actionsHtml += `<p class="text-xs text-green-400 italic">Niveau d'instance maximum atteint.</p>`; }
-        actionsHtml += `<button class="btn btn-danger btn-sm" onclick="handleDefenseAction('${instanceId}', 'sell', ${row}, ${col})">Vendre</button>`;
+        actionsHtml += `<button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); handleDefenseAction('${instanceId}', 'sell', ${row}, ${col})">Vendre</button>`; // Ajout e.stopPropagation()
         actionsHtml += `</div>`; modalContent += actionsHtml; showModal("Gérer Défense", modalContent, null, true);
     },
-    updateDisplays: function() { /* ... (identique) ... */ 
+    updateDisplays: function() {
         if (!gameState) { console.warn("UI: updateDisplays - gameState non défini, arrêt."); return; }
         if(typeof this.updateResourceDisplay === 'function') this.updateResourceDisplay();
         if(typeof this.updateXpBar === 'function') this.updateXpBar();
