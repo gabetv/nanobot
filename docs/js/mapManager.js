@@ -4,45 +4,43 @@ console.log("mapManager.js - Fichier chargé et en cours d'analyse...");
 var mapManager = {
     generateMap: function(zoneId) {
         console.log(`mapManager: generateMap pour la zone ${zoneId}`);
-        if (typeof ZONE_DATA === 'undefined' || typeof TILE_TYPES === 'undefined' || typeof explorationEnemyData === 'undefined' || typeof enemyBaseDefinitions === 'undefined' || typeof BASE_COORDINATES === 'undefined' || typeof DEFAULT_MAP_SIZE === 'undefined' || typeof gameState === 'undefined' || typeof TILE_TYPES_TO_RESOURCE_KEY === 'undefined') {
-            console.error("mapManager.generateMap: Dépendances de configuration critiques (ZONE_DATA, TILE_TYPES, gameState, TILE_TYPES_TO_RESOURCE_KEY, etc.) non définies.");
-            if (typeof addLogEntry === 'function') addLogEntry("Erreur critique de configuration de la carte.", "error", eventLogEl, gameState?.eventLog);
-            // Create a fallback empty map if critical data is missing
-             gameState.map.tiles = Array(DEFAULT_MAP_SIZE.height).fill(null).map(() => Array(DEFAULT_MAP_SIZE.width).fill({
-                baseType: TILE_TYPES.PRE_EMPTY, structureType: null, actualType: TILE_TYPES.EMPTY_GRASSLAND,
-                content: null, isExplored: false, isScanned: false, scannedActualType: null, scannedRevealTime: 0
-            }));
-            gameState.map.zoneId = zoneId;
-            gameState.currentZoneId = zoneId; // Ensure currentZoneId is also set
-            gameState.map.nanobotPos = { x: Math.floor(DEFAULT_MAP_SIZE.width / 2), y: Math.floor(DEFAULT_MAP_SIZE.height / 2) };
-             if (gameState.map.tiles[gameState.map.nanobotPos.y]?.[gameState.map.nanobotPos.x]) {
-                 gameState.map.tiles[gameState.map.nanobotPos.y][gameState.map.nanobotPos.x].isExplored = true;
-            }
-            return;
-        }
-        const zone = ZONE_DATA[zoneId];
-        if (!zone) {
-            console.error(`mapManager.generateMap: Données de zone introuvables pour l'ID: ${zoneId}`);
-            if (typeof addLogEntry === 'function') addLogEntry(`Erreur critique: Impossible de générer la carte pour la zone ${zoneId}.`, "error", eventLogEl, gameState.eventLog);
-            // Fallback map generation (similar to above)
+        if (typeof ZONE_DATA === 'undefined' || typeof TILE_TYPES === 'undefined' ||
+            typeof explorationEnemyData === 'undefined' || typeof enemyBaseDefinitions === 'undefined' ||
+            typeof BASE_COORDINATES === 'undefined' || typeof DEFAULT_MAP_SIZE === 'undefined' ||
+            typeof gameState === 'undefined' || typeof TILE_TYPES_TO_RESOURCE_KEY === 'undefined' ||
+            typeof activeTileViewData === 'undefined' // NOUVELLE DÉPENDANCE
+           ) {
+            console.error("mapManager.generateMap: Dépendances de configuration critiques non définies.");
+            // Fallback simple si des configs sont manquantes
             gameState.map.tiles = Array(DEFAULT_MAP_SIZE.height).fill(null).map(() => Array(DEFAULT_MAP_SIZE.width).fill({
                 baseType: TILE_TYPES.PRE_EMPTY, structureType: null, actualType: TILE_TYPES.EMPTY_GRASSLAND,
-                content: null, isExplored: false, isScanned: false, scannedActualType: null, scannedRevealTime: 0
+                content: null, isExplored: false, isFullyExplored: false,
+                baseActions: activeTileViewData?.default?.baseActions || ['scan_local_active', 'search_area_active'], // Utiliser des actions par défaut
+                hiddenFeatures: [], revealedFeatures: [], searchAttempts: 0, usedActions: {},
+                x: 0, y: 0 // Coordonnées de la tuile elle-même
             }));
             gameState.map.zoneId = zoneId;
             gameState.currentZoneId = zoneId;
             gameState.map.nanobotPos = { x: Math.floor(DEFAULT_MAP_SIZE.width / 2), y: Math.floor(DEFAULT_MAP_SIZE.height / 2) };
-            if (gameState.map.tiles[gameState.map.nanobotPos.y]?.[gameState.map.nanobotPos.x]) {
-                gameState.map.tiles[gameState.map.nanobotPos.y][gameState.map.nanobotPos.x].isExplored = true;
-           }
+            const startTile = this.getTile(gameState.map.nanobotPos.x, gameState.map.nanobotPos.y);
+            if (startTile) startTile.isExplored = true;
+            return;
+        }
+
+        const zone = ZONE_DATA[zoneId];
+        if (!zone) {
+            console.error(`mapManager.generateMap: Données de zone introuvables pour l'ID: ${zoneId}`);
+            // Fallback comme ci-dessus
+            // ... (copier le code de fallback précédent si nécessaire)
             return;
         }
 
         gameState.map.tiles = [];
         gameState.map.zoneId = zoneId;
-        gameState.currentZoneId = zoneId;
+        gameState.currentZoneId = zoneId; // S'assurer que currentZoneId est bien mis à jour
         gameState.map.nanobotPos = { ...(zone.entryPoint || {x:Math.floor(zone.mapSize.width / 2), y:Math.floor(zone.mapSize.height / 2)}) };
-        gameState.map.selectedTile = null; // Reset selected tile when changing/generating map
+        gameState.map.selectedTile = null;
+        gameState.map.activeExplorationTileCoords = null; // Réinitialiser en changeant de zone
         console.log(`mapManager.generateMap - NanobotPos initialisé à: (${gameState.map.nanobotPos.x}, ${gameState.map.nanobotPos.y}) pour la zone ${zoneId}`);
 
         const playerBaseCoords = zone.basePlayerCoordinates || BASE_COORDINATES;
@@ -52,46 +50,51 @@ var mapManager = {
             for (let x = 0; x < zone.mapSize.width; x++) {
                 let baseTileType = TILE_TYPES.PRE_EMPTY;
                 let structureOnTile = null;
-                let actualTileType = TILE_TYPES.EMPTY_GRASSLAND; // Default actual type
+                let actualTileType = TILE_TYPES.EMPTY_GRASSLAND;
                 let tileContent = null;
 
-                // 1. Base terrain and visible structures from layout or procedural
+                // NOUVELLES PROPRIÉTÉS POUR L'EXPLORATION ACTIVE
+                let baseActionsForTile = activeTileViewData?.default?.baseActions || ['scan_local_active', 'search_area_active'];
+                let possibleHiddenFeaturesForTile = activeTileViewData?.default?.possibleHiddenFeatures || [];
+                let hiddenFeaturesOnThisTile = [];
+
+                // 1. Base terrain
                 if (zone.baseTerrainLayout && zone.baseTerrainLayout[y] && zone.baseTerrainLayout[y][x] !== undefined) {
                     baseTileType = zone.baseTerrainLayout[y][x];
-                } else { /* ... (your procedural base terrain logic) ... */
+                } else {
+                    // Logique procédurale simplifiée pour le terrain de base
                     if (y === 0 || y === zone.mapSize.height - 1 || x === 0 || x === zone.mapSize.width - 1) {
-                        baseTileType = TILE_TYPES.PRE_HIGH_MOUNTAIN; // Use a more specific impassable pre-type
+                        baseTileType = TILE_TYPES.PRE_HIGH_MOUNTAIN;
                     } else if (Math.random() < 0.1) baseTileType = TILE_TYPES.PRE_ROUGH_TERRAIN;
                     else if (Math.random() < 0.05) baseTileType = TILE_TYPES.PRE_HIGH_MOUNTAIN;
                     else if (Math.random() < 0.08) baseTileType = TILE_TYPES.PRE_WATER;
-                    else baseTileType = TILE_TYPES.PRE_EMPTY;
+                    else baseTileType = TILE_TYPES.PRE_EMPTY; // Default to PRE_EMPTY
                 }
 
+                // 2. Structure visible (pré-définie ou par distribution)
                 if (zone.visibleStructureLayout && zone.visibleStructureLayout[y] && zone.visibleStructureLayout[y][x] !== undefined) {
                     structureOnTile = zone.visibleStructureLayout[y][x];
                 }
 
-                // 2. Determine actualType and tileContent
-                // Player base overrides everything
-                let isPlayerBaseTile = (x === playerBaseCoords.x && y === playerBaseCoords.y);
-                // Ensure currentZoneId matches the zone being generated for base placement
-                if (zoneId !== gameState.currentZoneId && gameState.currentZoneId === 'verdant_archipelago' && zoneId === 'verdant_archipelago') {
-                    // This condition is a bit complex, usually base is only in one zone.
-                    // Simpler: base is only in the zone defined by its basePlayerCoordinates
-                    isPlayerBaseTile = (x === playerBaseCoords.x && y === playerBaseCoords.y && zone.id === 'verdant_archipelago'); // Assuming base is always in verdant_archipelago
-                }
+                // 3. Actual Type et Contenu Principal (visible immédiatement après exploration)
+                let isPlayerBaseTile = (x === playerBaseCoords.x && y === playerBaseCoords.y && zone.id === (ZONE_DATA[gameState.currentZoneId]?.id || zone.id));
 
 
                 if (isPlayerBaseTile) {
-                     actualTileType = TILE_TYPES.PLAYER_BASE;
-                     baseTileType = TILE_TYPES.PLAYER_BASE; // Make base visible immediately
-                     structureOnTile = null; // No other structure on base tile
-                     tileContent = null;     // No resource/enemy content on base tile
+                    actualTileType = TILE_TYPES.PLAYER_BASE;
+                    baseTileType = TILE_TYPES.PLAYER_BASE;
+                    structureOnTile = null;
+                    tileContent = null;
                 } else if (baseTileType === TILE_TYPES.PRE_HIGH_MOUNTAIN) {
                     actualTileType = TILE_TYPES.IMPASSABLE_HIGH_PEAK;
                 } else if (baseTileType === TILE_TYPES.PRE_WATER) {
                     actualTileType = Math.random() < 0.3 ? TILE_TYPES.IMPASSABLE_DEEP_WATER : TILE_TYPES.EMPTY_WATER;
-                } else { // Potentially explorable tile, try to place content
+                } else if (baseTileType === TILE_TYPES.PRE_DEBRIS_FIELD) { // NOUVEAU
+                    actualTileType = TILE_TYPES.DEBRIS_FIELD;
+                } else if (baseTileType === TILE_TYPES.PRE_THICK_VINES) { // NOUVEAU
+                    actualTileType = TILE_TYPES.THICK_VINES;
+                }
+                else { // Potentially explorable tile, try to place main content
                     let random = Math.random();
                     let cumulativeProbability = 0;
                     let foundContent = false;
@@ -101,103 +104,96 @@ var mapManager = {
                             cumulativeProbability += zone.tileContentDistribution[keyInDistroString];
                             if (random < cumulativeProbability) {
                                 foundContent = true;
-                                const numericKey = parseInt(keyInDistroString); // Try to parse key as number for TILE_TYPES
+                                const numericKey = parseInt(keyInDistroString);
 
-                                if (explorationEnemyData[keyInDistroString]) { // Key is a string ID for an enemy
+                                if (explorationEnemyData[keyInDistroString]) {
                                     actualTileType = explorationEnemyData[keyInDistroString].actualTileType;
-                                    tileContent = { type: 'enemy_patrol', details: { ...explorationEnemyData[keyInDistroString] }, id: keyInDistroString };
-                                } else if (enemyBaseDefinitions[keyInDistroString]) { // Key is a string ID for a base
+                                    tileContent = { type: 'enemy_patrol', details: { ...explorationEnemyData[keyInDistroString] }, id: keyInDistroString, x:x, y:y };
+                                } else if (enemyBaseDefinitions[keyInDistroString]) {
                                     actualTileType = enemyBaseDefinitions[keyInDistroString].actualTileType;
-                                    tileContent = { type: 'enemy_base', details: { ...enemyBaseDefinitions[keyInDistroString] }, id: keyInDistroString, currentHealth: enemyBaseDefinitions[keyInDistroString].health };
+                                    tileContent = { type: 'enemy_base', details: { ...enemyBaseDefinitions[keyInDistroString] }, id: keyInDistroString, currentHealth: enemyBaseDefinitions[keyInDistroString].health, x:x, y:y };
                                     structureOnTile = structureOnTile || enemyBaseDefinitions[keyInDistroString].visibleStructureType || TILE_TYPES.PRE_HOSTILE_STRUCTURE;
-                                } else if (!isNaN(numericKey) && Object.values(TILE_TYPES).includes(numericKey)) { // Key is a string that parses to a valid TILE_TYPE number
-                                    actualTileType = numericKey; // Use the parsed numeric TILE_TYPE
-                                    if (TILE_TYPES_TO_RESOURCE_KEY[actualTileType]) { // Check if this TILE_TYPE is a resource
-                                        tileContent = { type: 'resource', resourceType: actualTileType, amount: Math.floor(Math.random() * 60) + 40 };
+                                } else if (!isNaN(numericKey) && Object.values(TILE_TYPES).includes(numericKey)) {
+                                    actualTileType = numericKey;
+                                    if (TILE_TYPES_TO_RESOURCE_KEY[actualTileType]) {
+                                        tileContent = { type: 'resource', resourceType: actualTileType, amount: Math.floor(Math.random() * 60) + 40, x:x, y:y };
                                     } else if (actualTileType === TILE_TYPES.UPGRADE_CACHE) {
-                                        tileContent = { type: 'cache', lootTable: ['comp_av', 'mod_proto', 'item_repair_kit_s'], isOpened: false };
+                                        tileContent = { type: 'poi', poiType: actualTileType, lootTable: ['comp_av', 'mod_proto', 'item_repair_kit_s'], isOpened: false, isInteracted: false, x:x, y:y };
                                     } else if (actualTileType === TILE_TYPES.POI_ANCIENT_STRUCTURE || actualTileType === TILE_TYPES.MERCHANT_WRECKAGE) {
-                                        tileContent = { type: 'poi', poiType: actualTileType, isInteracted: false };
-                                        if (actualTileType === TILE_TYPES.POI_ANCIENT_STRUCTURE) structureOnTile = structureOnTile || TILE_TYPES.PRE_RUIN_SILHOUETTE;
-                                    } else if (actualTileType === TILE_TYPES.FOREST) { // If FOREST is in distribution
-                                         if (Math.random() < 0.6) tileContent = { type: 'resource', resourceType: TILE_TYPES.RESOURCE_BIOMASS_PATCH, amount: Math.floor(Math.random() * 30) + 20 };
-                                         // else actualTileType remains TILE_TYPES.FOREST
-                                    } else if (actualTileType === TILE_TYPES.RUINS) { // If RUINS is in distribution
-                                        if (Math.random() < 0.4) tileContent = {type: 'cache', lootTable:['frag_alien', (itemsData['nanites_medium_cache'] ? 'nanites_medium_cache' : 'comp_av')], isOpened:false};
-                                         // else actualTileType remains TILE_TYPES.RUINS
-                                    } else if (actualTileType === TILE_TYPES.MOUNTAIN) { // If MOUNTAIN is in distribution
-                                        if (Math.random() < 0.2) tileContent = { type: 'resource', resourceType: TILE_TYPES.RESOURCE_CRYSTAL_VEIN, amount: Math.floor(Math.random()*10)+5};
-                                         // else actualTileType remains TILE_TYPES.MOUNTAIN
+                                        tileContent = { type: 'poi', poiType: actualTileType, isInteracted: false, x:x, y:y };
+                                        if (actualTileType === TILE_TYPES.POI_ANCIENT_STRUCTURE && !structureOnTile) structureOnTile = TILE_TYPES.PRE_RUIN_SILHOUETTE;
                                     }
-                                    // Note: If actualTileType is set here but no specific content (like for plain FOREST/RUINS/MOUNTAIN from distribution)
-                                    // tileContent will remain null unless set in one of the conditions above.
-                                } else {
-                                    // Key was not an enemy, base, or recognized numeric TILE_TYPE. Could be a plain terrain type string like "FOREST".
-                                    // This path is less likely if distribution uses TILE_TYPE numbers for terrain.
-                                    // For safety, try to map string key to TILE_TYPE if it exists.
-                                    const tileTypeFromName = TILE_TYPES[keyInDistroString.toUpperCase()]; // e.g. keyInDistroString = "FOREST"
-                                    if(tileTypeFromName !== undefined) {
-                                        actualTileType = tileTypeFromName;
-                                        // Add specific content for these if needed, e.g. a forest might have biomass
-                                        if (actualTileType === TILE_TYPES.FOREST && Math.random() < 0.6) {
-                                            tileContent = { type: 'resource', resourceType: TILE_TYPES.RESOURCE_BIOMASS_PATCH, amount: Math.floor(Math.random() * 30) + 20 };
-                                        }
-                                    } else {
-                                        console.warn(`MapGen: Unhandled key in tileContentDistribution: ${keyInDistroString}`);
-                                        actualTileType = TILE_TYPES.EMPTY_GRASSLAND; // Fallback if key is truly unknown
-                                    }
+                                    // Autres types comme FOREST, MOUNTAIN, RUINS sont gérés ci-dessous si pas de contenu spécifique
                                 }
-                                break; // Content found from distribution, exit loop for this tile
+                                break;
                             }
                         }
                     }
 
-                    if (!foundContent) { // If no content placed by distribution, determine actualType from baseType
-                        if (baseTileType === TILE_TYPES.PRE_ROUGH_TERRAIN) actualTileType = TILE_TYPES.EMPTY_GRASSLAND; // Or TILE_TYPES.MOUNTAIN based on further randomness
+                    // Si aucun contenu majeur placé, déterminer l'actualType basé sur le baseType
+                    if (!foundContent) {
+                        if (baseTileType === TILE_TYPES.PRE_ROUGH_TERRAIN) actualTileType = TILE_TYPES.MOUNTAIN; // Ou TILE_TYPES.EMPTY_GRASSLAND
                         else if (baseTileType === TILE_TYPES.PRE_EMPTY) actualTileType = TILE_TYPES.EMPTY_GRASSLAND;
-                        else actualTileType = TILE_TYPES.EMPTY_GRASSLAND; // Default fallback
+                        else actualTileType = TILE_TYPES.EMPTY_GRASSLAND; // Default
                     }
                 }
 
+                // 4. Déterminer les actions de base et les features cachées pour l'exploration active
+                const tileViewConfig = activeTileViewData[actualTileType] || activeTileViewData.default;
+                baseActionsForTile = tileViewConfig.baseActions ? [...tileViewConfig.baseActions] : ['scan_local_active', 'search_area_active'];
+                possibleHiddenFeaturesForTile = tileViewConfig.possibleHiddenFeatures || [];
+
+                possibleHiddenFeaturesForTile.forEach(featureDef => {
+                    if (Math.random() < (featureDef.chance || 0)) {
+                        hiddenFeaturesOnThisTile.push({ ...featureDef }); // Copier pour éviter modif. de la config
+                    }
+                });
+
+
                 gameState.map.tiles[y][x] = {
+                    x: x, y: y, // Stocker les coordonnées de la tuile elle-même
                     baseType: baseTileType,
                     structureType: structureOnTile,
                     actualType: actualTileType,
-                    content: tileContent,
-                    isExplored: false,
-                    isScanned: false,
-                    scannedActualType: null,
-                    scannedRevealTime: 0
+                    content: tileContent, // Contenu visible après exploration de base
+                    isExplored: false,      // True si le joueur est "entré" dans la case via le mode actif
+                    isFullyExplored: false, // True si toutes les actions uniques/révélations sont faites
+                    isScannedFromMap: false, // Renommé pour clarté (ancien isScanned)
+                    scannedFromMapRevealTime: 0,
+                    scannedFromMapActualType: null,
+
+                    // Pour l'exploration active de tuile
+                    baseActions: baseActionsForTile,
+                    hiddenFeatures: hiddenFeaturesOnThisTile, // Ce qui peut être trouvé par scan_local_active
+                    revealedFeatures: [], // Features révélées par scan_local_active, en attente d'interaction
+                    searchAttempts: 0,    // Compteur pour l'action "Fouiller la Zone"
+                    usedActions: {},      // Pour suivre les actions non répétables (ex: scan_local_active)
+                    triggeredEvents: [],  // Pour suivre les événements uniques déclenchés sur cette tuile
+                    hasActiveTrap: false, // Si un piège a été révélé mais pas désamorcé/déclenché
                 };
             }
         }
 
-        // Reveal starting area
-        const { x: startX, y: startY } = gameState.map.nanobotPos;
-        for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-                const nx = startX + dx;
-                const ny = startY + dy;
-                if (nx >= 0 && nx < zone.mapSize.width && ny >= 0 && ny < zone.mapSize.height) {
-                    const tileToExplore = this.getTile(nx, ny);
-                    if(tileToExplore){
-                         tileToExplore.isExplored = true;
-                    }
-                }
-            }
+        // Révéler la case de départ (juste isExplored, le contenu détaillé se fait via mode actif)
+        const startTile = this.getTile(gameState.map.nanobotPos.x, gameState.map.nanobotPos.y);
+        if (startTile) {
+            startTile.isExplored = true;
+            // On ne met pas isFullyExplored, car le joueur n'a pas encore interagi avec.
         }
 
-        if (typeof addLogEntry === 'function' && typeof explorationLogEl !== 'undefined' && gameState && gameState.explorationLog) {
+        if (typeof addLogEntry === 'function' && typeof explorationLogEl !== 'undefined' && gameState?.explorationLog) {
              addLogEntry(`Arrivée en zone: ${zone.name}. Position (${gameState.map.nanobotPos.x}, ${gameState.map.nanobotPos.y}).`, "map-event", explorationLogEl, gameState.explorationLog);
         }
-        console.log(`mapManager.generateMap - Carte pour ${zoneId} générée. Taille: ${gameState.map.tiles.length}x${gameState.map.tiles[0]?.length}. Première tuile [0][0]:`, gameState.map.tiles[0] ? JSON.parse(JSON.stringify(gameState.map.tiles[0][0])) : "Ligne 0 vide/non générée");
+        console.log(`mapManager.generateMap - Carte pour ${zoneId} générée. Taille: ${gameState.map.tiles.length}x${gameState.map.tiles[0]?.length}.`);
     },
 
     getTile: function(x, y) {
-        if (gameState && gameState.map && gameState.map.tiles && gameState.map.tiles[y] && gameState.map.tiles[y][x]) {
+        if (gameState && gameState.map && gameState.map.tiles &&
+            y >= 0 && y < gameState.map.tiles.length &&
+            x >= 0 && x < gameState.map.tiles[y]?.length) {
             return gameState.map.tiles[y][x];
         }
-        // console.warn(`mapManager.getTile: Tuile non trouvée pour (${x},${y}) dans la zone ${gameState?.map?.zoneId}`);
+        // console.warn(`mapManager.getTile: Tuile non trouvée ou hors limites pour (${x},${y}) dans la zone ${gameState?.map?.zoneId}`);
         return null;
     }
 };

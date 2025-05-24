@@ -619,26 +619,48 @@ function getCostString(costObject, checkAffordability = false) {
 
 function highlightInsufficientCosts(buttonElement, costObject) {
     if (!gameState || !costObject) return;
-    const costParts = buttonElement.querySelectorAll('.cost-part'); 
+    const costParts = buttonElement.querySelectorAll('.cost-part');
     costParts.forEach(span => {
         const resourceId = span.dataset.resourceId;
         const requiredAmount = parseInt(span.dataset.requiredAmount);
         if (!resourceId || isNaN(requiredAmount)) return;
+        
         let hasEnough = true;
-        if (itemsData && itemsData[resourceId]) {
+        let isPrimaryResource = false; // Pour savoir si c'est une ressource du header
+
+        if (itemsData && itemsData[resourceId]) { // C'est un composant/item
             hasEnough = (gameState.inventory && gameState.inventory.filter(id => id === resourceId).length || 0) >= requiredAmount;
-        } else {
+        } else { // C'est une ressource primaire (biomasse, nanites, etc.)
             hasEnough = (gameState.resources && gameState.resources[resourceId] || 0) >= requiredAmount;
+            isPrimaryResource = true;
         }
-        if (!hasEnough) span.classList.add('insufficient');
-        else span.classList.remove('insufficient');
+
+        if (!hasEnough) {
+            span.classList.add('insufficient');
+            // Flash pour les ressources primaires uniquement
+            if (isPrimaryResource) {
+                const headerResourceElement = document.querySelector(`.resource-item[data-tooltip-id="${resourceId}"]`);
+                if (headerResourceElement) {
+                    headerResourceElement.classList.add('insufficient-flash');
+                    // Enlever la classe après l'animation pour permettre de la relancer
+                    setTimeout(() => {
+                        headerResourceElement.classList.remove('insufficient-flash');
+                    }, 1400); // 0.7s * 2 animations
+                }
+            }
+        } else {
+            span.classList.remove('insufficient');
+        }
     });
 }
+
 function clearCostHighlights(buttonElement) {
     const costParts = buttonElement.querySelectorAll('.cost-part');
     costParts.forEach(span => {
         span.classList.remove('insufficient');
     });
+    // On ne retire pas activement le flash du header ici, car l'animation est courte et s'enlève d'elle-même.
+    // Si l'animation était persistante, il faudrait le faire.
 }
 
 console.log("utils.js - Fin du fichier, fonctions définies.");

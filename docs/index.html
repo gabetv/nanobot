@@ -20,15 +20,14 @@
             --accent-red: #e53e3e;
             --accent-yellow: #ecc94b;
             --map-tile-effective-size: 22px;
-            /* AJOUTÉ POUR LES COULEURS RGBA */
             --bg-primary-rgb: 26, 32, 44;
             --bg-secondary-rgb: 45, 55, 72;
         }
         body { font-family: 'Roboto', sans-serif; background-color: var(--bg-primary); color: var(--text-primary); overflow-x: hidden; margin: 0; padding: 0; }
         .font-orbitron { font-family: 'Orbitron', sans-serif; }
 
-        #game-container { display: flex; flex-direction: column; height: 100vh; }
-        
+        #game-container { display: flex; flex-direction: column; height: 100vh; max-height: 100vh; overflow: hidden; }
+
         /* Header Styles */
         #persistent-header {
             position: sticky; top: 0; z-index: 50;
@@ -36,118 +35,47 @@
             border-bottom: 1px solid var(--border-color);
             padding: 0.5rem 0.75rem;
             display: flex;
-            flex-direction: column; 
-            align-items: center; 
-        }
-        #persistent-header h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.25rem; /* text-xl */
-            margin-bottom: 0.5rem; /* mb-2 */
-            width: 100%;
-            text-align: center;
-        }
-        #header-info-container {
-            width: 100%;
-            display: flex;
-            flex-direction: column; /* Empiler les groupes sur mobile */
-            gap: 0.25rem; /* Espace entre les groupes empilés */
-            font-size: 0.75rem; /* text-xs */
-        }
-        .resource-group {
-            display: flex;
-            justify-content: space-around; /* Espacer équitablement les items dans un groupe sur mobile */
+            flex-direction: column;
             align-items: center;
-            gap: 0.5rem; /* Espace entre les items d'un même groupe */
         }
-        .resource-item {
-            display: flex;
-            align-items: center;
-            gap: 0.3rem;
-            color: var(--text-primary);
-            white-space: nowrap;
-            cursor: default; 
-        }
-        .resource-item i {
-            font-size: 1rem; 
-        }
-        .resource-item .rate-text, 
-        #mobility span:not(:first-child),
-        .btn .text-xs { 
-            font-size: 0.65rem; 
-            color: var(--text-secondary);
-            margin-left: 0.1rem;
-        }
-        .btn .text-xs i { 
-             font-size: 0.7rem !important; 
-             vertical-align: middle;
-        }
-
+        #persistent-header h1 { font-family: 'Orbitron', sans-serif; font-size: 1.25rem; margin-bottom: 0.5rem; width: 100%; text-align: center; }
+        #header-info-container { width: 100%; display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.75rem; }
+        .resource-group { display: flex; justify-content: space-around; align-items: center; gap: 0.5rem; }
+        .resource-item { display: flex; align-items: center; gap: 0.3rem; color: var(--text-primary); white-space: nowrap; cursor: default; }
+        .resource-item i { font-size: 1rem; }
+        .resource-item .rate-text, #mobility span:not(:first-child), .btn .text-xs { font-size: 0.65rem; color: var(--text-secondary); margin-left: 0.1rem; }
+        .btn .text-xs i { font-size: 0.7rem !important; vertical-align: middle;}
         #mobility { display: contents; }
         #mobility span:first-child { margin-right: 0.2rem; }
 
         @media (min-width: 640px) { /* sm */
-            #persistent-header h1 {
-                font-size: 1.5rem; 
-            }
-            #header-info-container {
-                font-size: 0.875rem; 
-            }
+            #persistent-header h1 { font-size: 1.5rem; }
+            #header-info-container { font-size: 0.875rem; }
             .resource-item i { font-size: 1.1rem; }
             .resource-item .rate-text, #mobility span:not(:first-child), .btn .text-xs { font-size: 0.75rem; }
             .btn .text-xs i { font-size: 0.8rem !important; }
         }
         @media (min-width: 768px) { /* md */
-            #persistent-header {
-                flex-direction: row;
-                justify-content: space-between;
-                padding: 0.5rem 1rem;
-            }
-            #persistent-header h1 {
-                width: auto;
-                text-align: left;
-                margin-bottom: 0;
-            }
-            #header-info-container {
-                flex-direction: row;
-                align-items: center;
-                justify-content: flex-end;
-                gap: 1rem; 
-            }
-            .resource-group {
-                justify-content: flex-start; 
-                gap: 0.75rem;
-            }
+            #persistent-header { flex-direction: row; justify-content: space-between; padding: 0.5rem 1rem; }
+            #persistent-header h1 { width: auto; text-align: left; margin-bottom: 0; }
+            #header-info-container { flex-direction: row; align-items: center; justify-content: flex-end; gap: 1rem; }
+            .resource-group { justify-content: flex-start; gap: 0.75rem; }
         }
         /* Fin Header Styles */
 
         #main-layout-container { display: flex; flex-grow: 1; overflow: hidden; }
-        #main-navigation { 
+        #main-navigation {
             position: fixed; bottom: 0; left: 0; right: 0;
             background-color: var(--bg-secondary); border-top: 1px solid var(--border-color);
-            display: flex; justify-content: space-around; padding: 0.3rem 0; z-index: 50;
+            display: flex; justify-content: space-around; padding: 0.3rem 0; z-index: 40;
         }
-        .nav-button {
-            display: flex; flex-direction: column; align-items: center;
-            color: var(--text-secondary); font-size: 0.65rem;
-            padding: 0.2rem 0.4rem; border-radius: 0.25rem; 
-            transition: background-color 0.2s, color 0.2s;
-            flex-grow: 1; text-align:center; cursor:pointer;
-        }
+        .nav-button { display: flex; flex-direction: column; align-items: center; color: var(--text-secondary); font-size: 0.65rem; padding: 0.2rem 0.4rem; border-radius: 0.25rem; transition: background-color 0.2s, color 0.2s; flex-grow: 1; text-align:center; cursor:pointer; }
         .nav-button i { font-size: 1.1rem; margin-bottom: 0.05rem; }
         .nav-button.active, .nav-button:hover { color: var(--accent-blue); background-color: rgba(66, 153, 225, 0.1); }
-
-        #main-content-area {
-            flex-grow: 1; overflow-y: auto; padding: 0.75rem;
-            padding-bottom: 60px; display: flex; flex-direction: column;
-        }
+        #main-content-area { flex-grow: 1; overflow-y: auto; padding: 0.75rem; padding-bottom: 60px; display: flex; flex-direction: column; }
 
         @media (min-width: 768px) { /* md: Desktop: Sidebar */
-            #main-navigation {
-                position: static; flex-direction: column; justify-content: flex-start;
-                width: 180px; min-width: 180px; height: 100%;
-                padding: 0.75rem 0.5rem; border-top: none; border-right: 1px solid var(--border-color);
-                overflow-y: auto;
-            }
+            #main-navigation { position: static; flex-direction: column; justify-content: flex-start; width: 180px; min-width: 180px; height: 100%; padding: 0.75rem 0.5rem; border-top: none; border-right: 1px solid var(--border-color); overflow-y: auto; z-index: initial; }
             .nav-button { flex-direction: row; justify-content: flex-start; gap: 0.5rem; width: 100%; font-size: 0.875rem; padding: 0.6rem; margin-bottom: 0.3rem; }
             .nav-button i { font-size: 1.1rem; margin-bottom: 0; }
             #main-content-area { padding-bottom: 0.75rem; }
@@ -156,19 +84,23 @@
         .content-section { display: none; flex-grow: 1; flex-direction: column; }
         .content-section.active { display: flex; }
         .content-section > .panel { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
-
-        .panel { background-color: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 0.375rem; padding: 0.75rem; margin-bottom: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.2); position: relative; /* AJOUTÉ pour info-icon */ }
+        .panel { background-color: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 0.375rem; padding: 0.75rem; margin-bottom: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.2); position: relative; }
         .sub-nav-bar { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 0.75rem; flex-shrink: 0; }
-        .sub-nav-button {
-            padding: 0.5rem 0.75rem; font-size: 0.8rem; color: var(--text-secondary);
-            border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer;
-        }
+        .sub-nav-button { padding: 0.5rem 0.75rem; font-size: 0.8rem; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; }
         .sub-nav-button.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); font-weight: 600; }
         .sub-nav-button:hover { color: var(--accent-blue); }
-        
         .sub-content { display: none; flex-grow: 1; flex-direction: column; overflow: hidden; }
         .sub-content.active { display: flex; }
-        
+
+        /* Styles pour Exploration (Carte du Monde) */
+        #world-section-content {
+            flex-grow: 1; display: flex; flex-direction: column; overflow: hidden;
+            transition: filter 0.3s ease-in-out;
+        }
+        #world-section-content.blurred-background {
+            filter: blur(3px) brightness(0.7);
+            pointer-events: none;
+        }
         #exploration-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         #exploration-layout { display: flex; flex-direction: column; gap: 0.75rem; flex-grow: 1; overflow: hidden; }
         #exploration-map-container { flex-grow: 1; display: flex; flex-direction: column; background-color: var(--bg-tertiary); padding:0.5rem; border-radius: 0.25rem; overflow: hidden; position: relative; }
@@ -193,10 +125,14 @@
         .map-tile.forest { background-color: #166534; } .map-tile.forest::before {content:"🌳"; color: #86efac;}
         .map-tile.mountain { background-color: #6b7280; } .map-tile.mountain::before {content:"⛰️"; color: #d1d5db;}
         .map-tile.ruins { background-color: #4b5563; } .map-tile.ruins::before {content:"🏛️"; color:#9ca3af;}
+        .map-tile.debris-field { background-color: #52525b; } .map-tile.debris-field::before {content:"🔩"; color:#a1a1aa;} /* NOUVEAU */
+        .map-tile.thick-vines { background-color: #15803d; } .map-tile.thick-vines::before {content:"🌿"; font-size: 1.1em; color:#4ade80;} /* NOUVEAU */
         .map-tile.unexplored-impassable { background-color: var(--border-color); }
         .map-tile.unexplored-flat { background-color: #222938; }
         .map-tile.unexplored-water { background-color: #1c3d52; }
         .map-tile.unexplored-rough { background-color: #373c48; }
+        .map-tile.unexplored-debris { background-color: #3a3a44; } /* NOUVEAU */
+        .map-tile.unexplored-vines { background-color: #1c4a2e; } /* NOUVEAU */
         .map-tile.unexplored-ruin-outline::before { content: "🏛️"; opacity: 0.5;}
         .map-tile.unexplored-large-crystal::before { content: "💠"; opacity: 0.5;}
         .map-tile.unexplored-enemy-base-outline::before { content: "💢"; opacity: 0.6; color: var(--accent-red); }
@@ -205,27 +141,28 @@
         .map-tile.impassable-mountain.explored-impassable::before { content: "⛰️"; opacity: 0.8; font-size: 1rem; color: var(--border-color);}
         .map-tile.poi-structure::before { content:"🌟"; color:var(--accent-yellow);}
         .map-tile.poi-wreckage::before { content:"⚓"; color:var(--text-secondary);}
-        .map-tile.scanned { box-shadow: 0 0 3px yellow; animation: pulse-scan-border 1.5s infinite alternate; }
-        .map-tile.scanned::after { position: absolute; opacity: 0.7; font-size:0.8em; left:50%; top:50%; transform: translate(-50%, -50%); z-index:1; pointer-events: none; }
-        .map-tile.scanned.scanned-actual-biomass::after { content: "🌿"; }
-        .map-tile.scanned.scanned-actual-nanites::after { content: "⚙️"; }
-        .map-tile.scanned.scanned-actual-crystal::after { content: "💎"; }
-        .map-tile.scanned.scanned-actual-enemy::after { content: "💀"; }
-        .map-tile.scanned.scanned-actual-upgrade::after { content: "💡"; }
-        .map-tile.scanned.scanned-actual-enemy-base::after { content: "🏰";font-size: 1em; }
-        .map-tile.scanned.scanned-actual-empty::after { content: "·"; font-size:1.1em; font-weight:bold; }
-        .map-tile.scanned.scanned-actual-impassable-water::after { content: "🌊"; opacity: 0.6; }
-        .map-tile.scanned.scanned-actual-impassable-mountain::after { content: "⛰️"; opacity: 0.6; }
+        .map-tile.scanned-on-map { outline: 1px dashed var(--accent-yellow); outline-offset: -1px; animation: pulse-scan-border 1.5s infinite alternate; } /* Changé de 'scanned' */
+        .map-tile.scanned-on-map::after { position: absolute; opacity: 0.7; font-size:0.8em; left:50%; top:50%; transform: translate(-50%, -50%); z-index:1; pointer-events: none; color: var(--accent-yellow); }
+        .map-tile.scanned-map-actual-biomass::after { content: "🌿"; } /* Changé de 'scanned-actual-*' */
+        .map-tile.scanned-map-actual-nanites::after { content: "⚙️"; }
+        .map-tile.scanned-map-actual-crystal::after { content: "💎"; }
+        .map-tile.scanned-map-actual-enemy::after { content: "💀"; }
+        .map-tile.scanned-map-actual-upgrade::after { content: "💡"; }
+        .map-tile.scanned-map-actual-enemy-base::after { content: "🏰";font-size: 1em; }
+        .map-tile.scanned-map-actual-empty::after { content: "·"; font-size:1.1em; font-weight:bold; }
+        .map-tile.scanned-map-actual-impassable-water::after { content: "🌊"; opacity: 0.6; }
+        .map-tile.scanned-map-actual-impassable-mountain::after { content: "⛰️"; opacity: 0.6; }
         .map-tile.enemy-base::before { content: "🏰"; color: var(--accent-red); font-size: 1.1rem; }
         .map-tile.has-active-resource { animation: pulse-resource-highlight 1.5s infinite alternate; z-index: 2; }
         .map-tile.resource-biomass::before, .map-tile.resource-nanites::before, .map-tile.resource-crystal::before { z-index: 3; position: relative; }
+        .map-tile.fully-explored-overlay { filter: grayscale(70%) brightness(0.8); }
         #map-info { text-align: center; font-size: 0.7rem; margin-top: 0.25rem; color: var(--text-secondary); flex-shrink:0; }
         #exploration-details-panels { display: flex; flex-direction: column; gap: 0.75rem; flex-shrink: 0; }
         #exploration-details-panels > .panel { display: flex; flex-direction: column; min-height: 0; }
         #exploration-log, #zone-list, #tile-interaction-panel { background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 0.25rem; padding: 0.5rem; font-size: 0.75rem; color: var(--text-primary); overflow-y: auto; }
         #exploration-log { height: 120px; flex-shrink:0; }
         #zone-list { max-height: 100px; flex-shrink:0; }
-        #tile-interaction-panel { flex-grow: 1; display: flex; flex-direction: column; } 
+        #tile-interaction-panel { flex-grow: 1; display: flex; flex-direction: column; }
         #tile-interaction-panel h4 {font-size: 0.875rem;}
         #tile-interaction-details { margin-bottom: 0.5rem; word-break: break-word; overflow-wrap: break-word; min-height: 0; flex-shrink: 1; overflow-y: auto; }
         #tile-interaction-details p { margin-bottom: 0.2rem; line-height: 1.3; }
@@ -233,12 +170,111 @@
         @media (min-width: 1024px) { /* lg */
             #exploration-layout { flex-direction: row; }
             #exploration-map-container { width: 65%; }
-            #exploration-details-panels { width: 35%; display: flex; flex-direction: column; gap: 0.75rem; overflow: hidden; }
-            #exploration-log, #zone-list { flex-shrink: 0; }
-            #tile-interaction-panel { flex-grow: 1; }
+            #exploration-details-panels { width: 35%; }
         }
         #center-map-btn { position: absolute; bottom: 8px; right: 8px; z-index: 20; }
+        /* Fin styles exploration carte du monde */
 
+        /* --- NOUVEAU : Styles pour l'UI d'Exploration Active de Tuile --- */
+        #active-tile-exploration-ui {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(var(--bg-primary-rgb), 0.98);
+            z-index: 100;
+            display: flex; flex-direction: column;
+            padding: 0.75rem; box-sizing: border-box;
+            overflow: hidden;
+        }
+        #active-tile-exploration-ui.hidden { display: none !important; } /* !important pour forcer le masquage */
+
+        #active-exploration-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-shrink: 0; }
+        #active-exploration-header h2 { font-family: 'Orbitron'; font-size: 1.1rem; sm:font-size: 1.25rem; color: var(--accent-blue); }
+
+        #active-exploration-main-content {
+            flex-grow: 1; display: grid;
+            grid-template-columns: 1fr 2fr 1fr; /* Ouest (1fr), Centre (2fr), Est (1fr) */
+            grid-template-rows: auto 1fr auto; /* Aperçu Nord, Contenu Principal, Aperçu Sud + Log */
+            gap: 0.5rem; overflow: hidden;
+        }
+        /* Placement des éléments dans la grille */
+        #preview-north { grid-column: 1 / 4; grid-row: 1 / 2; } /* S'étend sur 3 colonnes */
+        #preview-west { grid-column: 1 / 2; grid-row: 2 / 3; }
+        #current-tile-view-container { grid-column: 2 / 3; grid-row: 2 / 3; display: flex; flex-direction: column; overflow:hidden; }
+        #preview-east { grid-column: 3 / 4; grid-row: 2 / 3; }
+        #active-tile-log-container { grid-column: 1 / 4; grid-row: 3 / 4; } /* S'étend sur 3 colonnes */
+        #preview-south { display:none; } /* Caché pour l'instant, car le log prend sa place en bas */
+
+
+        .adjacent-preview-slot {
+            background-color: rgba(var(--bg-secondary-rgb), 0.7);
+            border: 1px solid var(--border-color); border-radius: 0.25rem;
+            padding: 0.3rem; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center;
+            min-height: 60px; md:min-height: 80px;
+            transition: background-color 0.2s;
+        }
+        .adjacent-preview-slot.can-move { cursor: pointer; }
+        .adjacent-preview-slot.can-move:hover { background-color: var(--bg-tertiary); }
+        .adjacent-preview-slot i { color: var(--text-secondary); font-size: 1.25rem; md:font-size:1.5rem; }
+        .adjacent-preview-slot .text-xs { font-size: 0.65rem; md:font-size: 0.7rem; }
+        .adjacent-preview-slot .text-\[0\.65rem\] { font-size: 0.55rem; md:font-size: 0.6rem; }
+
+
+        #current-tile-view { /* Conteneur intérieur de la vue centrale */
+            background-color: var(--bg-tertiary); border: 1px solid var(--accent-blue);
+            border-radius: 0.375rem; padding: 0.5rem;
+            display: flex; flex-direction: column; flex-grow: 1; overflow: hidden;
+        }
+        #current-tile-image {
+            width: 100%; height: 120px; md:height: 150px;
+            background-color: var(--bg-primary);
+            background-size: cover; background-position: center;
+            border-radius: 0.25rem; margin-bottom: 0.5rem; border: 1px solid var(--border-color);
+        }
+        #current-tile-description { font-size: 0.75rem; md:font-size:0.8rem; margin-bottom: 0.5rem; color: var(--text-secondary); max-height:60px; overflow-y:auto;}
+        #current-tile-description strong { color: var(--text-primary); }
+        #current-tile-actions-grid {
+            flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.3rem;
+            padding-right: 0.25rem;
+        }
+        #current-tile-actions-grid .btn {
+            justify-content: flex-start; background-color: var(--bg-secondary);
+            padding: 0.3rem 0.5rem; font-size: 0.75rem;
+        }
+        #current-tile-actions-grid .btn:not(.btn-disabled):hover { background-color: var(--border-color); }
+        #current-tile-actions-grid .btn i { font-size: 1rem; margin-right: 0.3rem;}
+        #current-tile-actions-grid .btn div { text-align: left; }
+        #current-tile-actions-grid .btn div p { font-size: 0.65rem; line-height: 1.2; }
+
+
+        #active-tile-log-container {
+            background-color: rgba(var(--bg-secondary-rgb),0.7); border: 1px solid var(--border-color);
+            padding: 0.3rem; border-radius: 0.25rem;
+            height: 70px; md:height:80px; overflow-y: auto; font-size: 0.7rem;
+        }
+        #active-tile-log p { margin-bottom: 0.1rem; }
+
+        #active-exploration-navigation-buttons {
+            display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+            gap: 0.25rem; width: 100px; height:100px; margin: 0.5rem auto 0; flex-shrink: 0;
+        }
+        #active-explore-nav-north { grid-column: 2; grid-row: 1; }
+        #active-explore-nav-west  { grid-column: 1; grid-row: 2; }
+        #active-explore-nav-south { grid-column: 2; grid-row: 3; }
+        #active-explore-nav-east  { grid-column: 3; grid-row: 2; }
+        #active-exploration-navigation-buttons .btn { padding: 0.25rem; font-size:1rem; }
+        #active-exploration-navigation-buttons .btn-disabled { background-color: var(--border-color) !important; opacity:0.5; }
+
+
+        #active-exploration-footer {
+            margin-top: 0.5rem; padding-top: 0.3rem;
+            border-top: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+            flex-shrink: 0; font-size: 0.7rem; md:font-size:0.75rem; color: var(--text-secondary);
+        }
+        /* Fin NOUVEAU Styles */
+
+
+        /* Styles Communs (Boutons, Modales, Scrollbar, Animations) */
         .btn { transition: all 0.3s ease; border-radius: 0.375rem; padding: 0.5rem 1rem; font-weight: 600; cursor: pointer; text-align: center; display: inline-flex; align-items: center; justify-content: center; }
         .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
         .btn-xs { padding: 0.125rem 0.3rem; font-size: 0.75rem; }
@@ -252,31 +288,18 @@
         .btn-outline { background-color: transparent; border-width: 1px; }
         .btn-outline.btn-danger { border-color: var(--accent-red); color: var(--accent-red); }
         .btn-outline.btn-danger:hover { background-color: rgba(229, 62, 62, 0.1); }
-        .btn .cost-part.insufficient {
-            color: var(--accent-red) !important; 
-            font-weight: bold;
-        }
-        .btn:not(.btn-disabled) .cost-part:not(.insufficient) {
-             color: inherit; 
-        }
-        .btn.btn-primary .cost-part:not(.insufficient),
-        .btn.btn-success .cost-part:not(.insufficient),
-        .btn.btn-danger .cost-part:not(.insufficient),
-        .btn.btn-info .cost-part:not(.insufficient) {
-            color: white; 
-        }
-        .btn.btn-warning .cost-part:not(.insufficient) {
-            color: var(--bg-primary); 
-        }
-        .btn.btn-secondary .cost-part:not(.insufficient) {
-            color: var(--text-primary); 
-        }
+        .btn .cost-part.insufficient { color: var(--accent-red) !important; font-weight: bold; }
+        .btn:not(.btn-disabled) .cost-part:not(.insufficient) { color: inherit; }
+        .btn.btn-primary .cost-part:not(.insufficient), .btn.btn-success .cost-part:not(.insufficient),
+        .btn.btn-danger .cost-part:not(.insufficient), .btn.btn-info .cost-part:not(.insufficient) { color: white; }
+        .btn.btn-warning .cost-part:not(.insufficient) { color: var(--bg-primary); }
+        .btn.btn-secondary .cost-part:not(.insufficient) { color: var(--text-primary); }
 
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 0.5rem; }
         .modal-content { background-color: var(--bg-secondary); padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); min-width: 280px; max-width: 95%; width: auto; max-height: 90vh; overflow-y: auto; }
         .modal-content h2, .modal-content h3 { margin-bottom: 0.5rem; }
         .modal-content p { margin-bottom: 0.75rem; }
-        
+
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-secondary); border-radius: 10px; }
         ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
@@ -285,124 +308,64 @@
         #night-assault-video-container { z-index: 1005; }
         #night-assault-video { max-width: 90vw; max-height: 80vh; border: 3px solid var(--accent-red); box-shadow: 0 0 25px #c53030; }
         #close-night-assault-video-btn { position: absolute; top: 10px; right: 10px; z-index: 1010; }
-
-        .nanobot-display { 
-            aspect-ratio: 1 / 1.3; 
-            margin: 0.5rem auto; 
-            position: relative;
-            border: 2px solid var(--border-color);
-            background: radial-gradient(circle, var(--bg-secondary) 0%, var(--bg-primary) 70%);
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            border-radius: 8px; 
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-            width: 100%; 
-            max-width: 150px; 
-            height: auto;
-            overflow: hidden;
-        }
-        #nanobot-body {
-            width: 100%; 
-            height: 100%; 
-            position: relative; 
-            background-size: contain; 
-            background-position: center; 
-            background-repeat: no-repeat; 
-        }
-        .nanobot-module, .nanobot-item-visual {
-            position: absolute; 
-            background-size: contain;    
-            background-repeat: no-repeat;
-            background-position: center;
-        }
+        .resource-item.insufficient-flash { animation: insufficient-resource-flash 0.7s 2; }
+        .resource-item.insufficient-flash i, .resource-item.insufficient-flash span { color: var(--accent-red) !important; }
+        @keyframes insufficient-resource-flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .nanobot-display { aspect-ratio: 1 / 1.3; margin: 0.5rem auto; position: relative; border: 2px solid var(--border-color); background: radial-gradient(circle, var(--bg-secondary) 0%, var(--bg-primary) 70%); display: flex; align-items: center; justify-content: center; border-radius: 8px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); width: 100%; max-width: 150px; height: auto; overflow: hidden; }
+        #nanobot-body { width: 100%; height: 100%; position: relative; background-size: contain; background-position: center; background-repeat: no-repeat; }
+        .nanobot-module, .nanobot-item-visual { position: absolute; background-size: contain; background-repeat: no-repeat; background-position: center; }
         .module-arm-blade { width: 70%; height: 70%; top: 50%; left: 5%; transform: translate(-30%, -50%) rotate(-15deg); transform-origin: 30% 50%; z-index: 10; }
+        .module-arm-drill { width: 65%; height: 65%; top: 55%; left: 10%; transform: translate(-35%, -50%) rotate(-25deg); z-index: 9; } /* Exemple */
+        .module-arm-cutter { width: 60%; height: 30%; top: 40%; right: -10%; transform: rotate(30deg) translateY(-50%); z-index: 9; } /* Exemple */
         .module-legs-antigrav { width: 35%; height: 45%; bottom: -8%; z-index: 5; }
-        .module-legs-antigrav.left { left: 10%; transform: rotate(-10deg) translateX(-5%); } 
-        .module-legs-antigrav.right { right: 10%; transform: rotate(10deg) translateX(5%); } 
+        .module-legs-antigrav.left { left: 10%; transform: rotate(-10deg) translateX(-5%); }
+        .module-legs-antigrav.right { right: 10%; transform: rotate(10deg) translateX(5%); }
         .module-shield { width: 110%; height: 110%; top: -5%; left: -5%; border: 2px dashed var(--accent-blue); border-radius: 50%; animation: pulse-shield 2s infinite; z-index: 1; }
         .item-weapon-laser { width: 45%; height: 25%; top: 35%; right: -15%; transform: rotate(20deg) translateY(-50%); transform-origin: 0% 50%; z-index: 10;}
         .item-armor-plating { width: 105%; height: 105%; border-radius: 10%; top: -2.5%; left: -2.5%; box-sizing: border-box; z-index: 0; }
 
         #combat-modal-content { min-width: 90vw; md:min-w-[500px]; min-height: 50vh; }
-        .combat-arena {
-            display: flex; justify-content: space-around; align-items: flex-end;
-            height: 180px; background-color: var(--bg-primary); 
-            border: 1px solid var(--border-color); border-radius: 0.25rem;
-            padding: 8px; margin-bottom: 0.5rem; position: relative; overflow: hidden;
-            background-size: cover; background-position: center;
-            transition: background-image 0.5s ease-in-out, background-color 0.5s ease-in-out;
-        }
-        .combat-arena-verdant { background-image: url('images/bg_verdant_combat.png'); background-color: #284c37; } 
-        .combat-arena-caves { background-image: url('images/bg_caves_combat.png'); background-color: #3a3a52; }  
+        .combat-arena { display: flex; justify-content: space-around; align-items: flex-end; height: 180px; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 0.25rem; padding: 8px; margin-bottom: 0.5rem; position: relative; overflow: hidden; background-size: cover; background-position: center; transition: background-image 0.5s ease-in-out, background-color 0.5s ease-in-out; }
+        .combat-arena-verdant { background-image: url('images/bg_verdant_combat.png'); background-color: #284c37; }
+        .combat-arena-caves { background-image: url('images/bg_caves_combat.png'); background-color: #3a3a52; }
         .combat-arena-default { background-color: var(--bg-primary); }
         .combatant { position: relative; text-align: center; transition: transform 0.3s ease-out; width: 80px; }
-        .combatant-sprite {
-            width: 60px; height: 80px; margin: 0 auto; position: relative; 
-            background-size: contain; background-repeat: no-repeat; background-position: center bottom; 
-            animation: idle-breath 3s infinite ease-in-out;
-            transition: box-shadow 0.2s, filter 0.2s;
-        }
+        .combatant-sprite { width: 60px; height: 80px; margin: 0 auto; position: relative; background-size: contain; background-repeat: no-repeat; background-position: center bottom; animation: idle-breath 3s infinite ease-in-out; transition: box-shadow 0.2s, filter 0.2s; }
         .combatant-sprite.is-acting { animation: none; }
         .sprite-hit-flash { animation: hit-flash-effect 0.2s ease-out; }
-        #combat-enemy-sprite { background-color: var(--accent-red); } 
+        #combat-enemy-sprite { background-color: var(--accent-red); }
         .combatant-name { font-weight: bold; margin-bottom: 3px; font-size: 0.7rem; }
         .health-bar-container { width: 60px; height: 7px; background-color: #718096; border-radius: 3px; margin: 3px auto 0; overflow: hidden; border: 1px solid var(--border-color);}
         .health-bar { height: 100%; background-color: var(--accent-green); width: 100%; transition: width 0.5s ease; }
-        .health-bar.low { background-color: #f56565; }
-        .health-bar.medium { background-color: #faf089; }
-        .damage-float {
-            position: absolute; top: -15px; left: 50%;
-            font-size: 1rem; font-weight: bold; color: var(--accent-red);
-            animation: floatUpBase 1s ease-out forwards;
-            opacity: 0; white-space: nowrap;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
-            z-index: 20;
-        }
+        .health-bar.low { background-color: #f56565; } .health-bar.medium { background-color: #faf089; }
+        .damage-float { position: absolute; top: -15px; left: 50%; font-size: 1rem; font-weight: bold; color: var(--accent-red); animation: floatUpBase 1s ease-out forwards; opacity: 0; white-space: nowrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.7); z-index: 20; }
         .damage-float.critical { color: var(--accent-yellow) !important; font-size: 1.3rem; animation: floatUpCritical 1.5s ease-out forwards;}
         .damage-float[style*="color: rgb(72, 187, 120)"] { animation: floatUpHeal 1.2s ease-out forwards; }
         .damage-float[style*="color: rgb(160, 174, 192)"] { animation: floatMiss 0.8s ease-in forwards; }
-        
+
         #combat-actions-container button { min-width: 100px; }
-        #combat-actions-container button.skill-button.on-cooldown {
-            background-color: var(--border-color) !important;
-            color: var(--text-secondary) !important;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-        #combat-actions-container button.skill-button.insufficient-resources {
-            background-color: var(--accent-red) !important;
-            color: white !important;
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
+        #combat-actions-container button.skill-button.on-cooldown { background-color: var(--border-color) !important; color: var(--text-secondary) !important; cursor: not-allowed; opacity: 0.6; }
+        #combat-actions-container button.skill-button.insufficient-resources { background-color: var(--accent-red) !important; color: white !important; opacity: 0.7; cursor: not-allowed; }
 
         .quest-item { background-color: var(--bg-secondary); padding: 0.5rem; border-radius: 0.25rem; margin-bottom: 0.5rem; border-left: 4px solid transparent; }
-        .quest-item h4 { font-size: 0.875rem; margin-bottom: 0.1rem;}
-        .quest-item p { font-size: 0.75em; }
+        .quest-item h4 { font-size: 0.875rem; margin-bottom: 0.1rem;} .quest-item p { font-size: 0.75em; }
         .quest-item .objectives-list { list-style-type: disc; margin-left: 1rem; color: #90cdf4; font-size:0.7em; }
         .quest-item .objectives-list li.completed { text-decoration: line-through; color: var(--accent-green); }
         .quest-item .rewards { margin-top: 0.25rem; font-size: 0.7em; color: var(--accent-yellow); }
-        .quest-status-AVAILABLE { border-left-color: var(--accent-yellow); }
-        .quest-status-ACTIVE { border-left-color: var(--accent-blue); }
-        .quest-status-COMPLETED, .quest-status-FINISHED { border-left-color: var(--accent-green); }
-        .quest-status-LOCKED { display: none; }
+        .quest-status-AVAILABLE { border-left-color: var(--accent-yellow); } .quest-status-ACTIVE { border-left-color: var(--accent-blue); }
+        .quest-status-COMPLETED, .quest-status-FINISHED { border-left-color: var(--accent-green); } .quest-status-LOCKED { display: none; }
 
         .inventory-item, .shop-item.panel { display: flex; flex-direction: column; padding: 0.5rem; cursor: default; }
-        .shop-item .item-details { margin-bottom: 0.5rem;}
-        .inventory-item .item-details { flex-grow: 1; }
+        .shop-item .item-details { margin-bottom: 0.5rem;} .inventory-item .item-details { flex-grow: 1; }
         .item-name { font-weight: bold; color: var(--text-primary); font-size: 0.875rem; }
         .item-stats { font-size: 0.7em; color: var(--text-secondary); }
-        .equipment-slot { display: flex; flex-direction: column; align-items: stretch; padding: 0.5rem; margin-bottom: 0.375rem; background-color:var(--bg-secondary); border:1px solid var(--border-color); border-radius: 0.25rem; cursor: default; position: relative; /* Pour icone info */ }
+        .equipment-slot { display: flex; flex-direction: column; align-items: stretch; padding: 0.5rem; margin-bottom: 0.375rem; background-color:var(--bg-secondary); border:1px solid var(--border-color); border-radius: 0.25rem; cursor: default; position: relative; }
         .slot-name { font-size: 0.8rem; font-weight: 600; margin-bottom: 0.125rem; }
-        .equipped-item-name { font-size: 0.75rem; }
-        .empty-slot { font-size: 0.75rem; font-style: italic; }
+        .equipped-item-name { font-size: 0.75rem; } .empty-slot { font-size: 0.75rem; font-style: italic; }
 
-        #base-status-section { padding: 0.5rem; }
-        #base-health-bar-container { height: 10px; }
+        #base-status-section { padding: 0.5rem; } #base-health-bar-container { height: 10px; }
         #base-status-section.night-assault-active { border: 2px dashed var(--accent-red) !important; animation: pulse-danger 1s infinite alternate; }
-        #night-assault-enemies-display { min-h-[18px]; }
-        #night-assault-log { padding: 0.4rem; height: 80px; font-size: 0.7rem; }
+        #night-assault-enemies-display { min-h-[18px]; } #night-assault-log { padding: 0.4rem; height: 80px; font-size: 0.7rem; }
         #night-assault-log p { margin-bottom: 0.2rem; word-break: break-word; }
 
         #combat-log-details-container { margin-top: 0.5rem; margin-bottom: 0.5rem; }
@@ -422,65 +385,34 @@
         .base-preview-cell.placement-blocked { cursor: not-allowed; background-color: rgba(255,0,0,0.2) !important; }
         .base-preview-cell.placement-active { cursor: copy; background-color: rgba(60,179,113,0.4) !important; }
         .base-preview-cell.placement-active:hover { background-color: rgba(60,179,113,0.6) !important; }
-
         .defense-visual-on-grid { text-align: center; font-weight: bold; transition: background-color 0.3s ease, border-color 0.3s ease; z-index: 2; box-sizing: border-box; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding: 1px; }
         .defense-visual-on-grid.laserTurret { background-color: rgba(230, 160, 40, 0.7); border-color: #F6E05E; color: black; }
         .defense-visual-on-grid.gatlingTurret { background-color: rgba(160, 174, 192, 0.7); border-color: #A0AEC0; color: black; }
         .defense-visual-on-grid.reinforcedWall { background-color: rgba(113, 128, 150, 0.7); border-color: #718096; font-size: 0.5rem !important; writing-mode: vertical-rl; text-orientation: mixed; color: white; }
-
         .base-enemy-visual { width: 10px; height: 10px; background-color: var(--accent-red); border: 1px solid white; border-radius: 50%; position: absolute; transition: transform 0.5s ease-out, left 0.5s linear, top 0.5s linear; box-shadow: 0 0 4px var(--accent-red); z-index: 15; background-size: contain; background-repeat: no-repeat; background-position: center; }
-        .base-enemy-visual.drone { background-color: #e53e3e; }
-        .base-enemy-visual.bot { background-color: #dd6b20; }
-        .base-enemy-visual.crawler { background-color: #d69e2e; }
+        .base-enemy-visual.drone { background-color: #e53e3e; } .base-enemy-visual.bot { background-color: #dd6b20; } .base-enemy-visual.crawler { background-color: #d69e2e; }
         .boss-visual-dynamic { width: 26px; height: 26px; background-color: #7f1d1d; border: 2px solid gold; border-radius: 3px; box-shadow: 0 0 8px gold; z-index: 15; background-size: contain; background-repeat: no-repeat; background-position: center; }
-        
         .projectile-visual { position: absolute; transform-origin: 0 50%; z-index: 10; pointer-events: none; }
         .enemy-health-bar-on-grid-container { background-color: #555; border: 1px solid #333; border-radius: 1px; overflow: hidden; box-sizing: border-box; z-index: 16; position: absolute; }
         .enemy-health-bar-on-grid-fill { background-color: var(--accent-red); height: 100%; transition: width 0.3s ease-out; }
-        
         #tutorial-modal .modal-content { box-shadow: 0 0 15px var(--accent-yellow); border: 2px solid var(--accent-yellow); }
-
         #tooltip { transition: opacity 0.1s ease-out; pointer-events: none; }
         #tooltip.hidden { opacity: 0; visibility: hidden; }
         #tooltip strong { color: var(--accent-yellow); }
         #tooltip .resource-cost { color: var(--accent-yellow); }
         #tooltip .resource-cost.insufficient { color: var(--accent-red); font-weight: bold; }
-        #tooltip .stat-bonus { color: var(--accent-green); }
-        #tooltip .stat-malus { color: var(--accent-red); }
+        #tooltip .stat-bonus { color: var(--accent-green); } #tooltip .stat-malus { color: var(--accent-red); }
         #tooltip hr { border-color: var(--border-color); margin-top: 4px; margin-bottom: 4px; }
-
-        /* NOUVEAU CSS POUR INFO ICON */
-        .info-icon-container {
-            position: absolute;
-            top: 2px;
-            right: 2px;
-            z-index: 5;
-        }
-        .info-icon {
-            font-size: 1rem;
-            color: var(--accent-blue);
-            cursor: pointer;
-            padding: 2px;
-            background-color: rgba(var(--bg-primary-rgb, 26, 32, 44), 0.6);
-            border-radius: 50%;
-            line-height: 1;
-        }
-        .info-icon:hover {
-            color: #63b3ed;
-            background-color: rgba(var(--bg-secondary-rgb, 45, 55, 72), 0.8);
-        }
-        .module-card, .panel[data-tooltip-type="building-card"], .panel[data-tooltip-type="research-card"] {
-             position: relative; /* Déjà sur .panel, mais réassure pour .module-card */
-        }
-        /* .inventory-item et .shop-item.panel ont déjà .panel qui a position:relative */
-        /* .equipment-slot a déjà position:relative */
-
+        .info-icon-container { position: absolute; top: 2px; right: 2px; z-index: 5; }
+        .info-icon { font-size: 1rem; color: var(--accent-blue); cursor: pointer; padding: 2px; background-color: rgba(var(--bg-primary-rgb, 26, 32, 44), 0.6); border-radius: 50%; line-height: 1; }
+        .info-icon:hover { color: #63b3ed; background-color: rgba(var(--bg-secondary-rgb, 45, 55, 72), 0.8); }
+        .module-card, .panel[data-tooltip-type="building-card"], .panel[data-tooltip-type="research-card"] { position: relative; }
 
         @keyframes pulse-core { 0%, 100% { transform: scale(1); box-shadow: 0 0 8px var(--accent-blue), 0 0 15px rgba(66, 153, 225, 0.5); } 50% { transform: scale(1.05); box-shadow: 0 0 12px var(--accent-blue), 0 0 25px rgba(66, 153, 225, 0.7); } }
         @keyframes pulse-shield { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
         @keyframes floatUp { 0% { opacity: 1; top: -12px; } 100% { opacity: 0; top: -40px; } }
         @keyframes pulse-signal { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
-        @keyframes pulse-scan-border { from { box-shadow: 0 0 2px yellow; } to { box-shadow: 0 0 5px orange; } }
+        @keyframes pulse-scan-border { from { outline-color: var(--accent-yellow); } to { outline-color: orange; } } /* Adapté pour outline */
         @keyframes pulse-resource-highlight { from { box-shadow: 0 0 3px 0.5px gold; } to { box-shadow: 0 0 6px 1px orange; } }
         @keyframes pulse-danger { from { box-shadow: 0 0 5px var(--accent-red); } to { box-shadow: 0 0 10px #c53030, 0 0 3px var(--accent-red); } }
         @keyframes pulse-dot { from { opacity: 0.7; transform: scale(0.9); } to { opacity: 1; transform: scale(1.1); } }
@@ -495,43 +427,22 @@
 
     <div id="game-container">
         <header id="persistent-header">
-            <h1 class="font-orbitron text-xl md:text-2xl w-full md:w-auto text-center md:text-left mb-2 md:mb-0">Nexus-7</h1>
-            <div id="header-info-container" class="w-full flex flex-col md:flex-row md:items-center md:justify-end gap-y-1 md:gap-y-0 md:gap-x-4 text-xs sm:text-sm">
-                <div class="resource-group flex justify-around md:justify-start items-center gap-x-2 md:gap-x-3">
-                    <div class="resource-item" title="Biomasse" data-tooltip-type="resource-header" data-tooltip-id="biomass">
-                        <i class="ti ti-leaf text-green-400"></i>
-                        <div><span id="biomass">0</span><span class="rate-text">(<span id="biomassRate">0</span>/s)</span></div>
-                    </div>
-                    <div class="resource-item" title="Nanites" data-tooltip-type="resource-header" data-tooltip-id="nanites">
-                        <i class="ti ti-settings-2 text-blue-400"></i>
-                        <div><span id="nanites">0</span><span class="rate-text">(<span id="nanitesRate">0</span>/s)</span></div>
-                    </div>
-                    <div id="crystal-shards-display-container" class="resource-item hidden" title="Cristaux" data-tooltip-type="resource-header" data-tooltip-id="crystal_shards">
-                        <i class="ti ti-diamond text-cyan-400"></i>
-                        <span id="crystal_shards">0</span>
-                    </div>
+            <h1 class="font-orbitron">Nexus-7</h1>
+            <div id="header-info-container">
+                <div class="resource-group">
+                    <div class="resource-item" title="Biomasse" data-tooltip-type="resource-header" data-tooltip-id="biomass"><i class="ti ti-leaf text-green-400"></i><div><span id="biomass">0</span><span class="rate-text">(<span id="biomassRate">0</span>/s)</span></div></div>
+                    <div class="resource-item" title="Nanites" data-tooltip-type="resource-header" data-tooltip-id="nanites"><i class="ti ti-settings-2 text-blue-400"></i><div><span id="nanites">0</span><span class="rate-text">(<span id="nanitesRate">0</span>/s)</span></div></div>
+                    <div id="crystal-shards-display-container" class="resource-item hidden" title="Cristaux" data-tooltip-type="resource-header" data-tooltip-id="crystal_shards"><i class="ti ti-diamond text-cyan-400"></i><span id="crystal_shards">0</span></div>
                 </div>
                 <div class="hidden md:block border-l border-gray-600 h-6 mx-1"></div>
-                <div class="resource-group flex justify-around md:justify-start items-center gap-x-2 md:gap-x-3">
-                    <div class="resource-item" title="Énergie (Consommée/Max)" data-tooltip-type="resource-header" data-tooltip-id="energy">
-                        <i class="ti ti-bolt text-yellow-400"></i>
-                        <span id="energy">0/0</span>
-                    </div>
-                    <div class="resource-item" title="Points de Mobilité" data-tooltip-type="resource-header" data-tooltip-id="mobility">
-                        <i class="ti ti-shoe text-purple-400"></i>
-                        <span id="mobility">0/0</span>
-                    </div>
+                <div class="resource-group">
+                    <div class="resource-item" title="Énergie (Consommée/Max)" data-tooltip-type="resource-header" data-tooltip-id="energy"><i class="ti ti-bolt text-yellow-400"></i><span id="energy">0/0</span></div>
+                    <div class="resource-item" title="Points de Mobilité" data-tooltip-type="resource-header" data-tooltip-id="mobility"><i class="ti ti-shoe text-purple-400"></i><span id="mobility">0/0</span></div>
                 </div>
                 <div class="hidden md:block border-l border-gray-600 h-6 mx-1"></div>
-                <div class="resource-group flex justify-around md:justify-start items-center gap-x-2 md:gap-x-3">
-                    <div id="base-health-display" class="resource-item" title="Santé du Noyau" data-tooltip-type="resource-header" data-tooltip-id="base-health-value">
-                        <i class="ti ti-shield-heart text-red-400"></i>
-                        <div><span id="base-health-value">0</span>/<span id="base-max-health-value">0</span></div>
-                    </div>
-                    <div class="resource-item" title="Cycle Actuel (Temps restant)">
-                        <i class="ti ti-clock text-gray-400"></i>
-                        <div><span id="cycleStatus">Jour</span><span id="gameTime" class="rate-text">(00:00)</span></div>
-                    </div>
+                <div class="resource-group">
+                    <div id="base-health-display" class="resource-item" title="Santé du Noyau" data-tooltip-type="resource-header" data-tooltip-id="base-health-value"><i class="ti ti-shield-heart text-red-400"></i><div><span id="base-health-value">0</span>/<span id="base-max-health-value">0</span></div></div>
+                    <div class="resource-item" title="Cycle Actuel (Temps restant)"><i class="ti ti-clock text-gray-400"></i><div><span id="cycleStatus">Jour</span><span id="gameTime" class="rate-text">(00:00)</span></div></div>
                 </div>
             </div>
         </header>
@@ -561,9 +472,7 @@
                                         <div id="base-health-bar" class="bg-green-500 h-2.5 rounded-full" style="width: 100%"></div>
                                     </div>
                                     <h4 class="font-orbitron text-xs text-[var(--accent-red)] mt-2 mb-1">Menaces:</h4>
-                                    <div id="night-assault-enemies-display" class="min-h-[18px] text-xs">
-                                         <p class="text-gray-500 italic text-xs">Aucune menace.</p>
-                                    </div>
+                                    <div id="night-assault-enemies-display" class="min-h-[18px] text-xs"><p class="text-gray-500 italic text-xs">Aucune menace.</p></div>
                                     <div class="mt-2 grid grid-cols-2 gap-1">
                                         <button id="repair-base-btn" class="btn btn-success btn-xs"><i class="ti ti-tool mr-1"></i>Réparer Noyau</button>
                                         <button id="repair-defenses-btn" class="btn btn-info btn-xs"><i class="ti ti-recycle mr-1"></i>Réparer Déf.</button>
@@ -574,18 +483,13 @@
                             <div class="panel">
                                 <h3 class="font-orbitron text-md mb-1 text-[var(--accent-blue)]">Schéma Défensif</h3>
                                 <div id="base-preview-section">
-                                    <div id="base-preview-container"> <!-- Sera rempli par JS --> </div>
-                                    <div id="placement-info" class="text-center text-xs text-[var(--accent-yellow)] mt-1 hidden">
-                                        Placement: <span id="selected-defense-for-placement" class="font-bold"></span>.
-                                        <button id="cancel-placement-btn" class="btn btn-danger btn-xs ml-1">X</button>
-                                    </div>
+                                    <div id="base-preview-container"></div>
+                                    <div id="placement-info" class="text-center text-xs text-[var(--accent-yellow)] mt-1 hidden">Placement: <span id="selected-defense-for-placement" class="font-bold"></span>.<button id="cancel-placement-btn" class="btn btn-danger btn-xs ml-1">X</button></div>
                                 </div>
                             </div>
                              <div class="panel flex-grow min-h-0">
                                 <h3 class="font-orbitron text-sm mb-1 text-[var(--accent-red)] border-b border-[var(--border-color)] pb-0.5">Journal d'Assaut</h3>
-                                <div id="night-assault-log" class="h-full max-h-28 overflow-y-auto">
-                                     <p class="text-gray-500 italic text-xs">En attente...</p>
-                                </div>
+                                <div id="night-assault-log" class="h-full max-h-28 overflow-y-auto"><p class="text-gray-500 italic text-xs">En attente...</p></div>
                             </div>
                         </div>
                         <div class="lg:w-2/3 panel">
@@ -595,15 +499,11 @@
                             </div>
                             <div id="engineering-subtab" class="sub-content active">
                                 <h3 class="font-orbitron text-md mb-2 text-[var(--accent-blue)] border-b border-[var(--border-color)] pb-1">Ingénierie Structurelle & Défensive</h3>
-                                <div id="buildings-section" class="flex-grow overflow-y-auto pr-1">
-                                    <p class="text-xs text-gray-400 italic">Chargement ingénierie...</p>
-                                </div>
+                                <div id="buildings-section" class="flex-grow overflow-y-auto pr-1"><p class="text-xs text-gray-400 italic">Chargement ingénierie...</p></div>
                             </div>
                             <div id="research-subtab" class="sub-content">
                                 <h3 class="font-orbitron text-md mb-2 text-[var(--accent-blue)] border-b border-[var(--border-color)] pb-1">Arbre Technologique</h3>
-                                <div id="research-content" class="flex-grow overflow-y-auto pr-1">
-                                    <p class="text-xs text-gray-400 italic">Chargement recherche...</p>
-                                </div>
+                                <div id="research-content" class="flex-grow overflow-y-auto pr-1"><p class="text-xs text-gray-400 italic">Chargement recherche...</p></div>
                             </div>
                         </div>
                     </div>
@@ -618,35 +518,22 @@
                         </div>
                         <div id="nanobot-config-subtab" class="sub-content active">
                             <div id="nanobot-content" class="flex-grow overflow-y-auto p-1 space-y-4">
-                                <h2 class="font-orbitron text-lg mb-3 text-[var(--accent-blue)] border-b-2 border-[var(--accent-blue)] pb-1 flex items-center">
-                                    <i class="ti ti-settings-cog mr-2"></i>Configuration Nexus-7
-                                </h2>
+                                <h2 class="font-orbitron text-lg mb-3 text-[var(--accent-blue)] border-b-2 border-[var(--accent-blue)] pb-1 flex items-center"><i class="ti ti-settings-cog mr-2"></i>Configuration Nexus-7</h2>
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div class="md:col-span-1 space-y-4">
                                         <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md">
-                                            <h3 class="font-orbitron text-md mb-2 text-sky-300 flex items-center">
-                                                <i class="ti ti-eye mr-2"></i>Visualisation
-                                            </h3>
-                                            <div id="nanobot-visual-container" class="nanobot-display mx-auto mb-2">
-                                                <div id="nanobot-body">
-                                                </div>
-                                            </div>
+                                            <h3 class="font-orbitron text-md mb-2 text-sky-300 flex items-center"><i class="ti ti-eye mr-2"></i>Visualisation</h3>
+                                            <div id="nanobot-visual-container" class="nanobot-display mx-auto mb-2"><div id="nanobot-body"></div></div>
                                             <div id="equipped-items-display-brief" class="mt-1 text-xs text-center text-gray-400">Aucun équipement.</div>
                                         </div>
                                         <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md">
-                                            <h3 class="font-orbitron text-md mb-2 text-lime-300 flex items-center">
-                                                <i class="ti ti-components mr-2"></i>Modules Actifs
-                                            </h3>
-                                            <div id="equipped-modules-display" class="space-y-2 max-h-60 md:max-h-none md:flex-grow overflow-y-auto text-xs pr-1">
-                                                <p class="text-xs text-gray-500 italic">Chargement modules...</p>
-                                            </div>
+                                            <h3 class="font-orbitron text-md mb-2 text-lime-300 flex items-center"><i class="ti ti-components mr-2"></i>Modules Actifs</h3>
+                                            <div id="equipped-modules-display" class="space-y-2 max-h-60 md:max-h-none md:flex-grow overflow-y-auto text-xs pr-1"><p class="text-xs text-gray-500 italic">Chargement modules...</p></div>
                                         </div>
                                     </div>
                                     <div class="md:col-span-1 space-y-4">
                                         <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md">
-                                            <h3 class="font-orbitron text-md mb-2 text-amber-300 flex items-center">
-                                                <i class="ti ti-chart-bar mr-2"></i>Statistiques
-                                            </h3>
+                                            <h3 class="font-orbitron text-md mb-2 text-amber-300 flex items-center"><i class="ti ti-chart-bar mr-2"></i>Statistiques</h3>
                                             <ul class="space-y-1 text-sm">
                                                 <li class="flex justify-between items-center" data-tooltip-type="stat-nanobot" data-tooltip-id="health"><span><i class="ti ti-heart text-red-400 mr-1.5"></i>Santé:</span> <span id="nanobot-health" class="font-semibold text-gray-200">0</span></li>
                                                 <li class="flex justify-between items-center" data-tooltip-type="stat-nanobot" data-tooltip-id="attack"><span><i class="ti ti-sword text-orange-400 mr-1.5"></i>Attaque:</span> <span id="nanobot-attack" class="font-semibold text-gray-200">0</span></li>
@@ -655,31 +542,21 @@
                                             </ul>
                                         </div>
                                         <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md">
-                                            <h3 class="font-orbitron text-md mb-2 text-teal-300 flex items-center">
-                                                <i class="ti ti-tool mr-2"></i>Actions
-                                            </h3>
+                                            <h3 class="font-orbitron text-md mb-2 text-teal-300 flex items-center"><i class="ti ti-tool mr-2"></i>Actions</h3>
                                             <div class="space-y-2">
                                                 <button id="toggle-nanobot-defend-base-btn" class="btn btn-secondary w-full btn-sm flex items-center justify-center"><i class="ti ti-home-shield mr-2"></i>Déf. Noyau</button>
-                                                <button id="simulate-combat-btn" class="btn btn-danger w-full btn-sm flex items-center justify-center"><i class="ti ti-flame mr-2"></i>Test Combat</button>
+                                                <!-- <button id="simulate-combat-btn" class="btn btn-danger w-full btn-sm flex items-center justify-center"><i class="ti ti-flame mr-2"></i>Test Combat</button> -->
                                             </div>
                                         </div>
                                         <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md h-32 flex flex-col">
-                                            <h3 class="font-orbitron text-sm mb-1 text-gray-400 flex items-center">
-                                                <i class="ti ti-file-text mr-2"></i>Log Combat
-                                            </h3>
-                                            <div id="combat-log-summary" class="flex-grow bg-black bg-opacity-20 p-2 rounded h-full overflow-y-auto text-xs">
-                                                 <h4 class="font-semibold text-gray-300 text-xs">Log Combat:</h4>
-                                            </div>
+                                            <h3 class="font-orbitron text-sm mb-1 text-gray-400 flex items-center"><i class="ti ti-file-text mr-2"></i>Log Combat</h3>
+                                            <div id="combat-log-summary" class="flex-grow bg-black bg-opacity-20 p-2 rounded h-full overflow-y-auto text-xs"><h4 class="font-semibold text-gray-300 text-xs">Log Combat:</h4></div>
                                         </div>
                                     </div>
                                     <div class="md:col-span-1 space-y-4">
                                         <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md h-full flex flex-col">
-                                            <h3 class="font-orbitron text-md mb-2 text-fuchsia-300 flex items-center">
-                                                <i class="ti ti-armchair mr-2"></i>Équipement
-                                            </h3>
-                                            <div id="nanobot-equipment-slots" class="space-y-1.5 text-xs pr-1 flex-grow overflow-y-auto">
-                                                 <p class="text-xs text-gray-500 italic">Chargement équipement...</p>
-                                            </div>
+                                            <h3 class="font-orbitron text-md mb-2 text-fuchsia-300 flex items-center"><i class="ti ti-armchair mr-2"></i>Équipement</h3>
+                                            <div id="nanobot-equipment-slots" class="space-y-1.5 text-xs pr-1 flex-grow overflow-y-auto"><p class="text-xs text-gray-500 italic">Chargement équipement...</p></div>
                                         </div>
                                     </div>
                                 </div>
@@ -687,56 +564,36 @@
                         </div>
                         <div id="inventory-subtab" class="sub-content">
                             <h3 class="font-orbitron text-md mb-2 text-[var(--accent-blue)] border-b border-[var(--border-color)] pb-1">Inventaire des Objets</h3>
-                            <div id="inventory-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 flex-grow overflow-y-auto pr-1">
-                                <p class="text-xs text-gray-400 italic">Inventaire vide.</p>
-                            </div>
+                            <div id="inventory-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 flex-grow overflow-y-auto pr-1"><p class="text-xs text-gray-400 italic">Inventaire vide.</p></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Section Monde -->
                 <div id="world-section" class="content-section">
-                     <div class="panel">
+                     <div class="panel h-full"> <!-- panel h-full pour que le contenu remplisse -->
                         <div class="sub-nav-bar">
                             <button class="sub-nav-button active" data-subtab="exploration-subtab" data-parentsection="world-section">Exploration</button>
                             <button class="sub-nav-button" data-subtab="quests-subtab" data-parentsection="world-section">Quêtes</button>
                         </div>
                         <div id="exploration-subtab" class="sub-content active">
-                            <div id="exploration-content">
-                                <div id="exploration-layout" class="flex flex-col lg:flex-row gap-3">
-                                    <div id="exploration-map-container" class="lg:w-[60%] panel p-1 overflow-hidden">
-                                        <div id="exploration-actions-bar" class="mb-1 flex justify-between items-center">
-                                            <h3 id="exploration-title" class="font-orbitron text-sm text-[var(--accent-blue)]">Carte</h3>
-                                            <button id="scan-map-button" class="btn btn-info btn-xs">Scanner</button>
+                            <div id="world-section-content"> <!-- Conteneur pour floutage -->
+                                <div id="exploration-layout">
+                                    <div id="exploration-map-container">
+                                        <div id="exploration-actions-bar">
+                                            <h3 id="exploration-title" class="font-orbitron">Carte</h3>
+                                            <button id="scan-map-button" class="btn btn-info btn-xs">Scanner Carte</button>
                                         </div>
-                                        <div id="map-scroll-container" class="flex-grow relative">
+                                        <div id="map-scroll-container">
                                             <div id="map-grid"></div>
-                                            <button id="center-map-btn" class="btn btn-secondary btn-xs p-1">
-                                                <i class="ti ti-focus-centered" style="font-size: 1rem;"></i>
-                                            </button>
+                                            <button id="center-map-btn" class="btn btn-secondary btn-xs p-1"><i class="ti ti-focus-centered" style="font-size: 1rem;"></i></button>
                                         </div>
-                                        <div id="map-info" class="mt-1 text-center text-xs">Pos: <span id="nanobot-map-pos">N/A</span> | <span id="tile-info-display">...</span></div>
+                                        <div id="map-info">Pos: <span id="nanobot-map-pos">N/A</span> | <span id="tile-info-display">...</span></div>
                                     </div>
-                                    <div id="exploration-details-panels" class="lg:w-[40%] flex flex-col gap-2">
-                                        <div class="panel p-1.5 flex-shrink-0">
-                                            <h3 class="font-orbitron text-xs text-[var(--accent-blue)] mb-0.5">Zones</h3>
-                                            <div id="zone-list" class="max-h-20 overflow-y-auto text-xs">
-                                                 <p class="text-xs text-gray-400 italic">Chargement zones...</p>
-                                            </div>
-                                        </div>
-                                        <div class="panel p-1.5 flex-grow min-h-0">
-                                            <h3 class="font-orbitron text-xs text-[var(--accent-yellow)] mb-0.5">Journal Exploration</h3>
-                                            <div id="exploration-log" class="h-full overflow-y-auto text-xs">
-                                                 <p class="text-xs text-gray-400 italic">En attente...</p>
-                                            </div>
-                                        </div>
-                                        <div class="panel p-1.5 flex-grow min-h-0">
-                                            <h3 class="font-orbitron text-xs text-[var(--accent-blue)] mb-0.5">Détails Case</h3>
-                                            <div id="tile-interaction-panel" class="h-full overflow-y-auto text-xs">
-                                                <div id="tile-interaction-details"><p class="text-xs text-gray-400 italic">Cliquez une case.</p></div>
-                                                <div id="tile-interaction-actions" class="mt-1"></div>
-                                            </div>
-                                        </div>
+                                    <div id="exploration-details-panels">
+                                        <div class="panel p-1.5"><h3 class="font-orbitron text-xs text-[var(--accent-blue)] mb-0.5">Zones</h3><div id="zone-list" class="max-h-20 overflow-y-auto text-xs"></div></div>
+                                        <div class="panel p-1.5 flex-grow min-h-0"><h3 class="font-orbitron text-xs text-[var(--accent-yellow)] mb-0.5">Journal Exploration</h3><div id="exploration-log" class="h-full overflow-y-auto text-xs"></div></div>
+                                        <div class="panel p-1.5 flex-grow min-h-0"><h3 class="font-orbitron text-xs text-[var(--accent-blue)] mb-0.5">Aperçu Case</h3><div id="tile-interaction-panel" class="h-full overflow-y-auto text-xs"><div id="tile-interaction-details"></div><div id="tile-interaction-actions" class="mt-1"></div></div></div>
                                     </div>
                                 </div>
                             </div>
@@ -745,18 +602,8 @@
                              <div id="quests-content" class="flex-grow overflow-y-auto">
                                 <h2 class="font-orbitron text-md mb-2 text-blue-300 border-b border-[var(--border-color)] pb-1">Journal des Quêtes</h2>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <div class="panel p-2">
-                                        <h3 class="font-orbitron text-sm text-yellow-300 mb-1">Actives & Disponibles</h3>
-                                        <div id="active-quests-list" class="space-y-1 max-h-56 overflow-y-auto text-xs pr-1">
-                                             <p class="text-xs text-gray-400 italic">Aucune quête active.</p>
-                                        </div>
-                                    </div>
-                                    <div class="panel p-2">
-                                        <h3 class="font-orbitron text-sm text-gray-500 mb-1">Terminées</h3>
-                                        <div id="completed-quests-list" class="space-y-1 max-h-56 overflow-y-auto text-xs pr-1">
-                                             <p class="text-xs text-gray-400 italic">Aucune quête terminée.</p>
-                                        </div>
-                                    </div>
+                                    <div class="panel p-2"><h3 class="font-orbitron text-sm text-yellow-300 mb-1">Actives & Disponibles</h3><div id="active-quests-list" class="space-y-1 max-h-56 overflow-y-auto text-xs pr-1"></div></div>
+                                    <div class="panel p-2"><h3 class="font-orbitron text-sm text-gray-500 mb-1">Terminées</h3><div id="completed-quests-list" class="space-y-1 max-h-56 overflow-y-auto text-xs pr-1"></div></div>
                                 </div>
                             </div>
                         </div>
@@ -768,76 +615,122 @@
                     <div id="shop-content" class="panel">
                         <h2 class="font-orbitron text-md mb-2 text-[var(--accent-blue)] border-b border-[var(--border-color)] pb-1">Marché de Ravitaillement X-9</h2>
                         <p class="text-xs text-gray-400 mb-2">Stocks limités.</p>
-                        <div id="shop-items-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 flex-grow overflow-y-auto pr-1">
-                            <p class="text-xs text-gray-400 italic">Marché vide.</p>
-                        </div>
+                        <div id="shop-items-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 flex-grow overflow-y-auto pr-1"><p class="text-xs text-gray-400 italic">Marché vide.</p></div>
                     </div>
                 </div>
 
                  <div class="panel mt-2">
                     <h3 class="font-orbitron text-sm text-gray-400">Journal Principal</h3>
-                    <div id="event-log" class="h-16 overflow-y-auto text-xs">
-                         <p class="text-xs text-gray-400 italic">En attente d'événements...</p>
-                    </div>
+                    <div id="event-log" class="h-16 overflow-y-auto text-xs"><p class="text-xs text-gray-400 italic">En attente d'événements...</p></div>
                 </div>
             </main>
-        </div>
-    </div>
+        </div> <!-- Fin #main-layout-container -->
 
-    <!-- Modales -->
+        <!-- NOUVELLE UI D'EXPLORATION ACTIVE DE TUILE -->
+        <div id="active-tile-exploration-ui" class="hidden"> <!-- Sera affiché/caché par JS -->
+            <header id="active-exploration-header">
+                <h2 id="active-exploration-title" class="font-orbitron">Exploration Active</h2>
+                <button id="exit-active-exploration-btn" class="btn btn-danger btn-sm"><i class="ti ti-arrow-back-up mr-1"></i> Carte</button>
+            </header>
+
+            <div id="active-exploration-main-content">
+                <div id="preview-north" class="adjacent-preview-slot"></div>
+                <div id="preview-west" class="adjacent-preview-slot"></div>
+
+                <div id="current-tile-view-container">
+                    <div id="current-tile-view">
+                        <div id="current-tile-image"></div>
+                        <div id="current-tile-description"></div>
+                        <div id="current-tile-actions-grid"></div>
+                    </div>
+                </div>
+                <div id="preview-east" class="adjacent-preview-slot"></div>
+                <div id="active-tile-log-container">
+                    <h4 class="font-orbitron text-xs text-gray-400 mb-1">Journal de Case:</h4>
+                    <div id="active-tile-log"></div>
+                </div>
+                <!-- preview-south est remplacé par le log pour l'instant -->
+            </div>
+
+             <div id="active-exploration-navigation-buttons">
+                <button id="active-explore-nav-north" class="btn btn-primary"><i class="ti ti-arrow-up"></i></button>
+                <button id="active-explore-nav-west"  class="btn btn-primary"><i class="ti ti-arrow-left"></i></button>
+                <div class="flex items-center justify-center">
+                    <i class="ti ti-compass text-2xl text-gray-500"></i> <!-- Icône centrale -->
+                </div>
+                <button id="active-explore-nav-east"  class="btn btn-primary"><i class="ti ti-arrow-right"></i></button>
+                <button id="active-explore-nav-south" class="btn btn-primary"><i class="ti ti-arrow-down"></i></button>
+            </div>
+
+            <footer id="active-exploration-footer">
+                <div id="active-exploration-nanobot-status"></div>
+            </footer>
+        </div>
+        <!-- Fin NOUVELLE UI D'EXPLORATION ACTIVE -->
+
+    </div> <!-- Fin #game-container -->
+
+    <!-- Modales Standard -->
     <div id="modal" class="modal hidden"><div class="modal-content"><h3 id="modal-title" class="font-orbitron text-lg mb-2">Titre</h3><p id="modal-message" class="mb-3 text-sm">Message.</p><div class="flex justify-end space-x-2"><button id="modal-cancel" class="btn btn-secondary btn-sm">Annuler</button><button id="modal-confirm" class="btn btn-primary btn-sm">OK</button></div></div></div>
-    
     <div id="combat-modal" class="modal hidden">
         <div id="combat-modal-content" class="modal-content">
             <h2 class="font-orbitron text-xl mb-1 text-center text-[var(--accent-red)]">Affrontement!</h2>
-            
-            <div id="combat-turn-indicator" class="text-center font-semibold text-lg mb-2 text-sky-300">
-                Préparation...
-            </div>
-
+            <div id="combat-turn-indicator" class="text-center font-semibold text-lg mb-2 text-sky-300">Préparation...</div>
             <div class="combat-arena">
                 <div id="combat-nanobot" class="combatant">
-                    <div class="combatant-name">Nexus-7</div>
-                    <div class="combatant-sprite" id="combat-nanobot-sprite"></div>
-                    <div class="health-bar-container"><div id="combat-nanobot-healthbar" class="health-bar"></div></div>
-                    <div class="combatant-resources text-xs mt-1">
-                        <span title="Rage">🔥 <span id="combat-nanobot-rage">0</span></span>
-                        <span title="Énergie Globale" class="ml-2">⚡ <span id="combat-nanobot-global-energy">0</span></span>
-                    </div>
+                    <div class="combatant-name">Nexus-7</div><div class="combatant-sprite" id="combat-nanobot-sprite"></div><div class="health-bar-container"><div id="combat-nanobot-healthbar" class="health-bar"></div></div>
+                    <div class="combatant-resources text-xs mt-1"><span title="Rage">🔥 <span id="combat-nanobot-rage">0</span></span><span title="Énergie Globale" class="ml-2">⚡ <span id="combat-nanobot-global-energy">0</span></span></div>
                 </div>
                 <div id="combat-enemy" class="combatant">
-                    <div class="combatant-name" id="combat-enemy-name">Ennemi</div>
-                    <div class="combatant-sprite" id="combat-enemy-sprite"></div>
-                    <div class="health-bar-container"><div id="combat-enemy-healthbar" class="health-bar"></div></div>
+                    <div class="combatant-name" id="combat-enemy-name">Ennemi</div><div class="combatant-sprite" id="combat-enemy-sprite"></div><div class="health-bar-container"><div id="combat-enemy-healthbar" class="health-bar"></div></div>
                 </div>
             </div>
             <details id="combat-log-details-container" class="mt-0.5 mb-1 cursor-pointer bg-[var(--bg-primary)] border border-[var(--border-color)] rounded p-1 text-xs">
                 <summary class="font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] select-none">Afficher/Masquer Journal de Combat</summary>
                 <div id="combat-log-visual" class="mt-1 max-h-24 overflow-y-auto pr-1"><p class="text-gray-500 italic">Début du combat...</p></div>
             </details>
-            
-            <div id="combat-actions-container" class="mt-2 flex justify-center items-center gap-2 flex-wrap">
-                <!-- Boutons d'action générés par JS -->
-            </div>
-            
-            <div class="text-center mt-3"> 
-                <button id="combat-action-flee" class="btn btn-warning btn-sm">Fuir (-10 PV)</button>
-            </div>
+            <div id="combat-actions-container" class="mt-2 flex justify-center items-center gap-2 flex-wrap"></div>
+            <div class="text-center mt-3"><button id="combat-action-flee" class="btn btn-warning btn-sm">Fuir (-10 PV)</button></div>
         </div>
     </div>
-
     <div id="combat-end-modal" class="modal hidden"><div class="modal-content text-center"><h3 id="combat-end-title" class="font-orbitron text-md mb-1">Victoire!</h3><p id="combat-end-rewards" class="mb-1 text-xs"></p><h4 class="text-blue-300 mt-1 mb-0.5 font-orbitron text-xs">XP & Niveau</h4><p id="xp-gain" class="text-xs mb-0.5"></p><div class="w-full bg-gray-700 rounded-full h-1.5 mb-1"><div id="xp-bar" class="bg-blue-500 h-1.5 rounded-full" style="width: 0%"></div></div><h4 class="text-yellow-300 mt-1 mb-0.5 font-orbitron text-xs">Butin</h4><ul id="loot-list" class="text-xs text-gray-300 list-disc list-inside mb-1"></ul><button id="close-end-modal" class="btn btn-primary btn-xs mt-1">Fermer</button></div></div>
     <div id="night-assault-video-container" class="modal hidden"><div class="relative"><video id="night-assault-video" preload="auto" playsinline><source src="videos/night_assault_alert.mp4" type="video/mp4">Votre navigateur ne supporte pas la vidéo.</video><button id="close-night-assault-video-btn" class="btn btn-danger btn-xs">X</button></div></div>
-    <div id="tutorial-modal" class="modal hidden"> <!-- Contenu rempli par tutorialController.js --> </div>
+    <div id="tutorial-modal" class="modal hidden"></div>
+    <div id="tooltip" class="hidden absolute z-[1100] p-2 bg-gray-800 border border-gray-600 rounded-md shadow-lg text-xs text-gray-200 max-w-xs pointer-events-none"></div>
 
-    <div id="tooltip" class="hidden absolute z-[1100] p-2 bg-gray-800 border border-gray-600 rounded-md shadow-lg text-xs text-gray-200 max-w-xs pointer-events-none">
-    </div>
+          
+<!-- Scripts (Ordre important pour Option 2: Fichiers config séparés) -->
+    <script src="js/config_enums.js"></script>
+    <script src="js/config_general.js"></script>
+    <script src="js/config_lore.js"></script>
+    <script src="js/config_tile_exploration.js"></script>
+    <script src="js/config_gameplay.js"></script>
+    <script src="js/config_player.js"></script>
+    <script src="js/config_world.js"></script>
+    <script src="js/config_events.js"></script>
+    <script src="js/config.js"></script> <!-- Fichier config principal (minimaliste) -->
 
+    <script src="js/gameState.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/mapManager.js"></script>
+    <script src="js/explorationController.js"></script>
+    <script src="js/explorationUI.js"></script>
+    <script src="js/tutorialController.js"></script> <!-- Déplacé AVANT main.js -->
+    <script src="js/questController.js"></script>   <!-- Déplacé AVANT main.js -->
+    <script src="js/questUI.js"></script>
+    <script src="js/inventoryShop.js"></script>
+    <script src="js/combat.js"></script>
+    <script src="js/gameplayLogic.js"></script>
+    <script src="js/uiUpdates.js"></script>
+    <script src="js/main.js" defer></script>
+
+    
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const mainNavButtons = document.querySelectorAll('#main-navigation .nav-button');
             const contentSections = document.querySelectorAll('#main-content-area > .content-section');
+            const worldSectionContent = document.getElementById('world-section-content');
             let initialUpdateDone = false;
 
             function switchMainTab(targetSectionId, forceUpdate = false) {
@@ -848,8 +741,8 @@
                 });
                 contentSections.forEach(section => {
                     const isActive = section.id === targetSectionId;
-                    if (isActive && section.style.display !== 'flex') changed = true; 
-                    section.style.display = isActive ? 'flex' : 'none'; 
+                    if (isActive && section.style.display !== 'flex') changed = true;
+                    section.style.display = isActive ? 'flex' : 'none';
                     section.classList.toggle('active', isActive);
                 });
 
@@ -864,57 +757,46 @@
                     } else {
                          triggerUIUpdateForSection(targetSectionId);
                     }
-                    if (targetSectionId === 'world-section' && typeof explorationUI !== 'undefined' && typeof explorationUI.centerMapOnPlayer === 'function') {
-                        const activeWorldSubTab = activeMainSection?.querySelector('.sub-nav-button.active');
-                        if (activeWorldSubTab && activeWorldSubTab.dataset.subtab === 'exploration-subtab') {
-                             explorationUI.isFirstExplorationViewUpdate = true; 
-                             explorationUI.updateFullExplorationView(); 
-                        }
+                    if (targetSectionId !== 'world-section' && typeof explorationUI !== 'undefined' && typeof explorationUI.exitActiveTileExplorationMode === 'function' &&
+                        explorationUI.activeTileUiElements && explorationUI.activeTileUiElements.container && !explorationUI.activeTileUiElements.container.classList.contains('hidden')) {
+                        explorationUI.exitActiveTileExplorationMode();
+                    } else if (targetSectionId === 'world-section' && typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function'){
+                        explorationUI.isFirstExplorationViewUpdate = true;
+                        explorationUI.updateFullExplorationView();
                     }
                 }
             }
-            
+
             function switchSubTab(targetSubTabId, parentSectionId, forceUpdate = false) {
                 const parentSection = document.getElementById(parentSectionId);
                 if (!parentSection) return;
                 let changed = false;
-
                 parentSection.querySelectorAll('.sub-nav-button').forEach(btn => {
                     if (btn.dataset.subtab === targetSubTabId && !btn.classList.contains('active')) changed = true;
                     btn.classList.toggle('active', btn.dataset.subtab === targetSubTabId);
                 });
                 parentSection.querySelectorAll('.sub-content').forEach(subContent => {
                     const isActive = subContent.id === targetSubTabId;
-                     if (isActive && subContent.style.display !== 'flex') changed = true; 
-                    subContent.style.display = isActive ? 'flex' : 'none'; 
+                     if (isActive && subContent.style.display !== 'flex') changed = true;
+                    subContent.style.display = isActive ? 'flex' : 'none';
                     subContent.classList.toggle('active', isActive);
                 });
                  if (changed || forceUpdate) {
                     triggerUIUpdateForSubTab(targetSubTabId, parentSectionId);
                  }
-                if (parentSectionId === 'world-section' && targetSubTabId === 'exploration-subtab' && typeof explorationUI !== 'undefined' && typeof explorationUI.centerMapOnPlayer === 'function') {
-                     explorationUI.isFirstExplorationViewUpdate = true; 
-                     explorationUI.updateFullExplorationView(); 
+                  if (parentSectionId === 'world-section' && targetSubTabId === 'exploration-subtab' && typeof explorationUI !== 'undefined' && typeof explorationUI.updateFullExplorationView === 'function') {
+                     explorationUI.isFirstExplorationViewUpdate = true;
+                     explorationUI.updateFullExplorationView();
                 }
             }
+            mainNavButtons.forEach(button => { button.addEventListener('click', () => switchMainTab(button.dataset.section)); });
+            document.querySelectorAll('.sub-nav-button').forEach(button => { button.addEventListener('click', () => switchSubTab(button.dataset.subtab, button.dataset.parentsection)); });
 
-            mainNavButtons.forEach(button => {
-                button.addEventListener('click', () => switchMainTab(button.dataset.section));
-            });
-
-            document.querySelectorAll('.sub-nav-button').forEach(button => {
-                button.addEventListener('click', () => switchSubTab(button.dataset.subtab, button.dataset.parentsection));
-            });
-            
             function triggerUIUpdateForSection(sectionId) {
                 if (typeof gameState === 'undefined' || gameState === null) return;
-                if (sectionId === 'base-section' && typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateBaseStatusDisplay === 'function') {
-                    uiUpdates.updateBaseStatusDisplay();
-                } else if (sectionId === 'shop-section' && typeof updateShopDisplay === 'function'){
-                    updateShopDisplay();
-                }
+                if (sectionId === 'base-section' && typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateBaseStatusDisplay === 'function') uiUpdates.updateBaseStatusDisplay();
+                else if (sectionId === 'shop-section' && typeof updateShopDisplay === 'function') updateShopDisplay();
             }
-
             function triggerUIUpdateForSubTab(subTabId, parentSectionId) {
                 if (typeof gameState === 'undefined' || gameState === null) { return; }
                 if (parentSectionId === 'base-section') {
@@ -928,46 +810,28 @@
                     else if (subTabId === 'quests-subtab' && typeof questUI !== 'undefined' && typeof questUI.updateQuestDisplay === 'function') questUI.updateQuestDisplay();
                 }
             }
-
             if (mainNavButtons.length > 0) {
                 const firstMainButton = mainNavButtons[0]; const targetSectionId = firstMainButton.dataset.section;
                 mainNavButtons.forEach(btn => btn.classList.toggle('active', btn === firstMainButton));
-                contentSections.forEach(section => { const isActive = section.id === targetSectionId; section.style.display = isActive ? 'flex' : 'none'; section.classList.toggle('active', isActive);}); 
+                contentSections.forEach(section => { const isActive = section.id === targetSectionId; section.style.display = isActive ? 'flex' : 'none'; section.classList.toggle('active', isActive);});
                 const activeMainSection = document.getElementById(targetSectionId);
                 const firstSubNavButton = activeMainSection?.querySelector('.sub-nav-button');
                 if(firstSubNavButton) {
                     const targetSubTabId = firstSubNavButton.dataset.subtab;
                     activeMainSection.querySelectorAll('.sub-nav-button').forEach(btn => btn.classList.toggle('active', btn === firstSubNavButton));
-                    activeMainSection.querySelectorAll('.sub-content').forEach(subContent => { const isActive = subContent.id === targetSubTabId; subContent.style.display = isActive ? 'flex' : 'none'; subContent.classList.toggle('active', isActive);}); 
+                    activeMainSection.querySelectorAll('.sub-content').forEach(subContent => { const isActive = subContent.id === targetSubTabId; subContent.style.display = isActive ? 'flex' : 'none'; subContent.classList.toggle('active', isActive);});
                 }
             }
-
             window.forceInitialUIUpdate = function() {
                 if (initialUpdateDone) return;
                 const activeButton = document.querySelector('#main-navigation .nav-button.active');
                 if (activeButton) {
                     const activeSectionId = activeButton.dataset.section;
-                    switchMainTab(activeSectionId, true); 
+                    switchMainTab(activeSectionId, true);
                 }
                 initialUpdateDone = true;
             }
         });
     </script>
-
-    <script src="js/config.js"></script>
-    <script src="js/gameState.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/mapManager.js"></script>
-    <script src="js/explorationController.js"></script>
-    <script src="js/explorationUI.js"></script>
-    <script src="js/tutorialController.js"></script>
-    <script src="js/questController.js"></script>
-    <script src="js/questUI.js"></script>
-    <script src="js/inventoryShop.js"></script>
-    <script src="js/combat.js"></script>
-    <script src="js/gameplayLogic.js"></script>
-    <script src="js/uiUpdates.js"></script>
-    <script src="js/main.js" defer></script>
-
 </body>
 </html>
