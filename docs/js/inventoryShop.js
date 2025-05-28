@@ -1,165 +1,288 @@
 // js/inventoryShop.js
-// console.log("inventoryShop.js - Fichier chargé.");
+// console.log("inventoryShop.js - Fichier chargé."); // Peut être décommenté pour débogage
 
-function gainXP(amount) {
-    let stats = gameState.nanobotStats; 
-    if (!stats) { console.error("gameState.nanobotStats non défini dans gainXP"); return; }
-    if (stats.level === undefined) { stats.level = 1; stats.xp = 0; stats.xpToNext = 100; } 
-    stats.xp += amount; 
-    while (stats.xpToNext > 0 && stats.xp >= stats.xpToNext) { 
-        stats.xp -= stats.xpToNext; 
-        stats.level++; 
-        stats.xpToNext = Math.floor(stats.xpToNext * 1.5); 
-        if(stats.xpToNext === 0) stats.xpToNext = Infinity; 
-        addLogEntry("Niveau atteint: " + stats.level, "success", combatLogSummaryEl, gameState.combatLogSummary); 
-        stats.baseAttack += 2; stats.baseDefense += 1; stats.baseHealth += 10; 
-        if(typeof calculateNanobotStats === 'function') calculateNanobotStats(); 
-    } 
-    if(typeof updateXpBar === 'function') updateXpBar(); 
-    if(xpGainEl) xpGainEl.textContent = `+${amount} XP (Niv. ${stats.level})`; 
-}
-function generateLoot(enemyDetails) { const possibleLootItems = ['comp_av', 'crist_stock', 'mod_proto', 'frag_alien']; let results = []; if (Math.random() < 0.6) { results.push(possibleLootItems[Math.floor(Math.random() * possibleLootItems.length)]); } if (Math.random() < 0.15) { results.push('arte_rare'); } if (Math.random() < 0.05) { results.push('item_laser_mk1'); } if (Math.random() < 0.08) { results.push('item_plating_basic'); } return results; }
+// gainXP est maintenant dans gameplayLogic.js et devrait être global (window.gainXP)
+// generateLoot est maintenant dans gameplayLogic.js et devrait être global (window.generateLoot)
 
 function addToInventory(itemId) {
-    if (!itemsData[itemId]) { console.warn(`Tentative d'ajout d'un objet inconnu à l'inventaire: ${itemId}`); return; }
-    if(!gameState.inventory) gameState.inventory = [];
-    gameState.inventory.push(itemId);
-    if(typeof updateInventoryDisplay === 'function') updateInventoryDisplay();
-    addLogEntry(`Objet reçu: ${itemsData[itemId].name}`, "success", eventLogEl, gameState.eventLog); // Changé pour eventLogEl
+    if (!window.itemsData || !window.itemsData[itemId]) { // Vérifier window.itemsData
+        console.warn(`Tentative d'ajout d'un objet inconnu à l'inventaire: ${itemId}`);
+        return;
+    }
+    if(!window.gameState.inventory) window.gameState.inventory = [];
+    window.gameState.inventory.push(itemId);
+
+    if(typeof updateInventoryDisplay === 'function') updateInventoryDisplay(); // Supposant que c'est global
+    else if (typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.updateDisplays === 'function') window.uiUpdates.updateDisplays();
+
+
+    if (typeof addLogEntry === 'function' && window.itemsData && window.itemsData[itemId]) { // Vérifier addLogEntry et itemsData
+        addLogEntry(`Objet reçu: ${window.itemsData[itemId].name}`, "success", window.eventLogEl, window.gameState.eventLog);
+    }
 }
+window.addToInventory = addToInventory; // Rendre global
+
 function removeFromInventory(itemId) {
-    if(!gameState.inventory) return false;
-    const index = gameState.inventory.indexOf(itemId);
+    if(!window.gameState.inventory) return false;
+    const index = window.gameState.inventory.indexOf(itemId);
     if (index > -1) {
-        gameState.inventory.splice(index, 1);
+        window.gameState.inventory.splice(index, 1);
+        // Pas besoin d'appeler updateInventoryDisplay ici, c'est fait par la fonction appelante si nécessaire
         return true;
     }
     return false;
-} 
+}
+window.removeFromInventory = removeFromInventory;
 
-// MODIFIÉ pour inclure l'icône d'info
+
 function updateInventoryDisplay() {
-    if (!inventoryListEl) return; inventoryListEl.innerHTML = "";
-    if (!gameState.inventory || gameState.inventory.length === 0) { inventoryListEl.innerHTML = "<p class='text-gray-500 italic'>L'inventaire est vide.</p>"; return; }
-    const itemCounts = gameState.inventory.reduce((acc, itemId) => { acc[itemId] = (acc[itemId] || 0) + 1; return acc; }, {});
+    if (!window.inventoryListEl) { console.warn("inventoryListEl non trouvé."); return; }
+    window.inventoryListEl.innerHTML = "";
+    if (!window.gameState.inventory || window.gameState.inventory.length === 0) {
+        window.inventoryListEl.innerHTML = "<p class='text-gray-500 italic text-xs p-2'>L'inventaire est vide.</p>"; // Ajout padding et text-xs
+        return;
+    }
+    const itemCounts = window.gameState.inventory.reduce((acc, itemId) => { acc[itemId] = (acc[itemId] || 0) + 1; return acc; }, {});
+
     Object.entries(itemCounts).forEach(([itemId, count]) => {
-        const item = itemsData[itemId]; if (!item) return;
-        const li = document.createElement("li"); li.className = "inventory-item panel p-3";
-        li.dataset.tooltipType = 'inventory-item'; li.dataset.tooltipId = itemId;
+        if (!window.itemsData) { console.warn("itemsData non défini dans updateInventoryDisplay"); return; }
+        const item = window.itemsData[itemId];
+        if (!item) { console.warn(`Item ID ${itemId} non trouvé dans itemsData.`); return; }
+
+        const li = document.createElement("li");
+        li.className = "inventory-item panel p-2.5 rounded-md shadow border border-gray-700 bg-gray-800 bg-opacity-50"; // Styles améliorés
+        li.dataset.tooltipType = 'inventory-item';
+        li.dataset.tooltipId = itemId;
 
         const infoIconContainer = document.createElement('div');
         infoIconContainer.className = 'info-icon-container';
         const infoIcon = document.createElement('i');
-        infoIcon.className = 'ti ti-info-circle info-icon';
+        infoIcon.className = 'ti ti-info-circle info-icon text-sky-400 hover:text-sky-300'; // Style icône
         infoIcon.title = `Plus d'infos sur ${item.name}`;
-        infoIcon.onclick = (e) => {
-            e.stopPropagation(); 
-            showItemInfoModal('inventory-item', itemId, item.name);
-        };
+        // Pas besoin d'event.stopPropagation() ici car on attache au body dans main.js
+        // infoIcon.onclick = (e) => { showItemInfoModal('inventory-item', itemId, item.name); }; // Géré par le listener global
         infoIconContainer.appendChild(infoIcon);
         li.appendChild(infoIconContainer);
 
-        let content = `<div class="item-details"><span class="item-name">${item.name} ${count > 1 ? `(x${count})` : ''}</span><p class="item-stats">${item.description}</p>`;
-        if (item.statBoost) { content += `<p class="item-stats">Stats: ${Object.entries(item.statBoost).map(([s,v]) => `${s.charAt(0).toUpperCase()+s.slice(1)}: ${v > 0 ? '+' : ''}${v}`).join(', ')}</p>`; }
-        if (item.damageType) { content += `<p class="item-stats">Type Dégât: ${item.damageType.charAt(0).toUpperCase() + item.damageType.slice(1)}</p>`;}
+        let content = `<div class="item-details mb-1.5">`; // mb-1.5
+        content += `<span class="item-name text-sm font-semibold text-gray-100">${item.name} ${count > 1 ? `<span class="text-xs text-gray-400">(x${count})</span>` : ''}</span>`;
+        content += `<p class="item-stats text-xs text-gray-400 mt-0.5">${item.description}</p>`;
+        if (item.statBoost) { content += `<p class="item-stats text-xs text-green-300 mt-0.5">Stats: ${Object.entries(item.statBoost).map(([s,v]) => `${(window.STAT_NAMES && window.STAT_NAMES[s] || s.charAt(0).toUpperCase()+s.slice(1))}: ${v > 0 ? '+' : ''}${v}`).join(', ')}</p>`; }
+        if (item.damageType && window.DAMAGE_TYPES) { content += `<p class="item-stats text-xs text-cyan-300 mt-0.5">Type Dégât: ${window.DAMAGE_TYPES[item.damageType]?.charAt(0).toUpperCase() + window.DAMAGE_TYPES[item.damageType]?.slice(1) || item.damageType}</p>`;}
         content += `</div>`;
         
         const actionButtonsContainer = document.createElement('div');
-        actionButtonsContainer.className = "mt-2"; // Espace pour les boutons
+        actionButtonsContainer.className = "mt-auto flex gap-x-1.5"; // mt-auto pour pousser en bas, flex pour aligner
 
-        if (item.slot) {
+        if (item.slot && window.EQUIPMENT_SLOTS && window.EQUIPMENT_SLOTS[item.slot]) { // Vérifier EQUIPMENT_SLOTS
             const equipButton = document.createElement('button');
-            equipButton.className = "btn btn-primary btn-sm";
-            equipButton.textContent = "Équiper";
-            equipButton.onclick = (e) => { e.stopPropagation(); equipItem(item.id); };
+            equipButton.className = "btn btn-primary btn-xs flex-grow"; // flex-grow
+            equipButton.innerHTML = `<i class="ti ti-armor-2-filled mr-1"></i>Équiper`;
+            equipButton.onclick = (e) => { /*e.stopPropagation();*/ equipItem(item.id); }; // Le listener global info-icon ne devrait pas être affecté
             actionButtonsContainer.appendChild(equipButton);
-        } else if (item.consumable && typeof item.onUse === 'function') {
+        }
+        if (item.consumable && typeof item.effects_on_use === 'function') { // Avant c'était item.onUse
             const useButton = document.createElement('button');
-            useButton.className = "btn btn-info btn-sm";
-            useButton.textContent = "Utiliser";
-            useButton.onclick = (e) => { e.stopPropagation(); useConsumableItem(item.id, e); };
+            useButton.className = "btn btn-info btn-xs flex-grow";
+            useButton.innerHTML = `<i class="ti ti-arrow-capsule mr-1"></i>Utiliser`;
+            useButton.onclick = (e) => { /*e.stopPropagation();*/ useConsumableItem(item.id); };
             actionButtonsContainer.appendChild(useButton);
         }
+        // Ajouter un bouton Vendre si applicable
+        // if (item.value && item.type !== 'quest_item') {
+        //     const sellButton = document.createElement('button');
+        //     /* ... */
+        //     actionButtonsContainer.appendChild(sellButton);
+        // }
         
-        li.insertAdjacentHTML('beforeend', content); // Insère le contenu après l'icône
-        if (actionButtonsContainer.hasChildNodes()) { // Ajoute le conteneur de boutons seulement s'il y a des boutons
+        li.insertAdjacentHTML('beforeend', content);
+        if (actionButtonsContainer.hasChildNodes()) {
             li.appendChild(actionButtonsContainer);
         }
-        inventoryListEl.appendChild(li);
+        window.inventoryListEl.appendChild(li);
     });
 }
+window.updateInventoryDisplay = updateInventoryDisplay;
 
-function useConsumableItem(itemId, event) {
-    if (event) event.stopPropagation(); 
-    const item = itemsData[itemId]; if (!item || !item.consumable || typeof item.onUse !== 'function') { addLogEntry("Cet objet n'est pas un consommable ou ne peut être utilisé.", "warning", eventLogEl, gameState.eventLog); return; }
-    if (item.onUse(gameState)) { const wasRemoved = removeFromInventory(itemId); if (wasRemoved) updateInventoryDisplay(); else addLogEntry(`Erreur lors de la suppression de ${item.name} de l'inventaire après consommation.`, "error", eventLogEl, gameState.eventLog); }
+function useConsumableItem(itemId) {
+    if (!window.itemsData || !window.gameState) { console.error("Dépendances manquantes pour useConsumableItem."); return; }
+    const item = window.itemsData[itemId];
+    if (!item || !item.consumable || typeof item.effects_on_use !== 'function') { // Changé de onUse à effects_on_use
+        if (typeof addLogEntry === 'function') addLogEntry("Cet objet n'est pas un consommable ou ne peut être utilisé.", "warning", window.eventLogEl, window.gameState.eventLog);
+        return;
+    }
+    // La fonction effects_on_use devrait retourner true si l'item a été consommé avec succès
+    if (item.effects_on_use(window.gameState)) { // Passer gameState
+        const wasRemoved = removeFromInventory(itemId); // removeFromInventory est déjà global
+        if (wasRemoved) {
+            updateInventoryDisplay(); // Mettre à jour l'affichage
+            if (typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.updateNanobotDisplay === 'function') window.uiUpdates.updateNanobotDisplay(); // Pour les stats
+        } else {
+             if (typeof addLogEntry === 'function') addLogEntry(`Erreur lors de la suppression de ${item.name} de l'inventaire après consommation.`, "error", window.eventLogEl, window.gameState.eventLog);
+        }
+    }
 }
+window.useConsumableItem = useConsumableItem;
+
 function equipItem(itemId) {
-    const item = itemsData[itemId]; if (!item || !item.slot) { addLogEntry("Cet objet ne peut pas être équipé.", "warning", eventLogEl, gameState.eventLog); return; }
-    const currentEquippedItemId = gameState.nanobotEquipment[item.slot]; if (currentEquippedItemId) { addToInventory(currentEquippedItemId); }
-    gameState.nanobotEquipment[item.slot] = itemId; removeFromInventory(itemId);
-    addLogEntry(`${item.name} équipé sur ${EQUIPMENT_SLOTS[item.slot]}.`, "success", eventLogEl, gameState.eventLog);
-    if(typeof calculateNanobotStats === 'function') calculateNanobotStats();
-    if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateDisplays === 'function') uiUpdates.updateDisplays();
+    if (!window.itemsData || !window.EQUIPMENT_SLOTS || !window.gameState) { console.error("Dépendances manquantes pour equipItem."); return; }
+    const item = window.itemsData[itemId];
+    if (!item || !item.slot || !window.EQUIPMENT_SLOTS[item.slot]) {
+        if (typeof addLogEntry === 'function') addLogEntry("Cet objet ne peut pas être équipé ou l'emplacement est invalide.", "warning", window.eventLogEl, window.gameState.eventLog);
+        return;
+    }
+    const currentEquippedItemId = window.gameState.nanobotEquipment[item.slot];
+    if (currentEquippedItemId) {
+        addToInventory(currentEquippedItemId); // addToInventory est global
+    }
+    window.gameState.nanobotEquipment[item.slot] = itemId;
+    removeFromInventory(itemId); // removeFromInventory est global
+
+    if (typeof addLogEntry === 'function') addLogEntry(`${item.name} équipé sur ${window.EQUIPMENT_SLOTS[item.slot]}.`, "success", window.eventLogEl, window.gameState.eventLog);
+    
+    if(typeof calculateNanobotStats === 'function') calculateNanobotStats(); // Supposé global
+    if(typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.updateDisplays === 'function') window.uiUpdates.updateDisplays();
 }
+window.equipItem = equipItem;
+
 function unequipItem(slotId) {
-    const itemId = gameState.nanobotEquipment[slotId]; if (itemId && itemsData[itemId]) { const item = itemsData[itemId]; addToInventory(itemId);
-    gameState.nanobotEquipment[slotId] = null;
-    addLogEntry(`${item.name} retiré de ${EQUIPMENT_SLOTS[slotId]}.`, "info", eventLogEl, gameState.eventLog);
-    if(typeof calculateNanobotStats === 'function') calculateNanobotStats();
-    if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateDisplays === 'function') uiUpdates.updateDisplays(); }
-}
-
-// MODIFIÉ pour inclure l'icône d'info
-function updateShopDisplay() {
-    if(!shopItemsListEl) return; shopItemsListEl.innerHTML = ""; let displayedItems = 0;
-    if (!gameState.shopStock || gameState.shopStock.length === 0) { shopItemsListEl.innerHTML = "<p class='text-gray-500 italic'>La boutique est actuellement vide de nouveaux arrivages.</p>"; return; }
-    gameState.shopStock.forEach(itemId => { 
-        const item = itemsData[itemId]; if (!item || !item.cost) return; 
-        const isPurchased = gameState.purchasedShopItems.includes(itemId);
-        const shopItemDiv = document.createElement("div"); shopItemDiv.className = "shop-item panel" + (isPurchased ? " opacity-50" : ""); 
-        shopItemDiv.dataset.tooltipType = 'shop-item'; shopItemDiv.dataset.tooltipId = itemId;
-
-        const infoIconContainer = document.createElement('div');
-        infoIconContainer.className = 'info-icon-container';
-        const infoIcon = document.createElement('i');
-        infoIcon.className = 'ti ti-info-circle info-icon';
-        infoIcon.title = `Plus d'infos sur ${item.name}`;
-        infoIcon.onclick = (e) => {
-            e.stopPropagation();
-            showItemInfoModal('shop-item', itemId, item.name);
-        };
-        infoIconContainer.appendChild(infoIcon);
-        shopItemDiv.appendChild(infoIconContainer);
-
-        let canAfford = true; if (!isPurchased) { for (const resource in item.cost) { if ((gameState.resources[resource]||0) < item.cost[resource]) { canAfford = false; break; } } }
-        let content = `<div class="item-details"><h4 class="item-name text-lg ${isPurchased ? 'text-gray-500' : 'text-blue-300'}">${item.name} ${isPurchased ? '(Acquis)' : ''}</h4><p class="item-stats text-sm text-gray-400">${item.description}</p>`; 
-        if (item.statBoost) { content += `<p class="item-stats text-sm ${isPurchased ? 'text-gray-500' : 'text-green-300'}">Effets: ${Object.entries(item.statBoost).map(([s,v]) => `${s.charAt(0).toUpperCase()+s.slice(1)}: ${v > 0 ? '+' : ''}${v}`).join(', ')}</p>`; } 
-        if (item.damageType) { content += `<p class="item-stats text-sm ${isPurchased ? 'text-gray-500' : 'text-teal-300'}">Type Dégât: ${item.damageType.charAt(0).toUpperCase() + item.damageType.slice(1)}</p>`;}
-        content += `</div>`; shopItemDiv.insertAdjacentHTML('beforeend', content); 
+    if (!window.itemsData || !window.EQUIPMENT_SLOTS || !window.gameState) { console.error("Dépendances manquantes pour unequipItem."); return; }
+    const itemId = window.gameState.nanobotEquipment[slotId];
+    if (itemId && window.itemsData[itemId]) {
+        const item = window.itemsData[itemId];
+        addToInventory(itemId); // addToInventory est global
+        window.gameState.nanobotEquipment[slotId] = null;
+        if (typeof addLogEntry === 'function') addLogEntry(`${item.name} retiré de ${window.EQUIPMENT_SLOTS[slotId]}.`, "info", window.eventLogEl, window.gameState.eventLog);
         
-        const buyButton = document.createElement('button'); buyButton.className = `btn btn-sm mt-2`;
-        if (!isPurchased) { 
-            buyButton.classList.add(canAfford ? 'btn-success' : 'btn-disabled'); if (!canAfford) buyButton.disabled = true;
-            buyButton.onclick = (e) => { e.stopPropagation(); buyItem(itemId); };
-            let buttonHtmlContent = `Acheter (`;
-            buttonHtmlContent += Object.entries(item.cost).map(([res, val]) => { const resourceName = (typeof itemsData !== 'undefined' && itemsData[res]) ? itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1); return `<span class="cost-part" data-resource-id="${res}" data-required-amount="${val}">${val} ${resourceName}</span>`; }).join(', ');
-            buttonHtmlContent += `)`; buyButton.innerHTML = buttonHtmlContent;
-            if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') { buyButton.addEventListener('mouseover', () => highlightInsufficientCosts(buyButton, item.cost)); buyButton.addEventListener('mouseout', () => clearCostHighlights(buyButton)); }
-        } else { buyButton.classList.add('btn-disabled'); buyButton.disabled = true; buyButton.textContent = 'Déjà Acquis'; }
-        shopItemDiv.appendChild(buyButton); shopItemsListEl.appendChild(shopItemDiv); displayedItems++;
-    });
-    if(displayedItems === 0 && shopItemsListEl.innerHTML === "" && gameState.shopStock.length > 0){ shopItemsListEl.innerHTML = "<p class='text-gray-500 italic'>Tous les articles disponibles ont été acquis.</p>"; } 
-    else if (gameState.shopStock.length === 0 && displayedItems === 0) { shopItemsListEl.innerHTML = "<p class='text-gray-500 italic'>La boutique est actuellement vide de nouveaux arrivages.</p>"; }
+        if(typeof calculateNanobotStats === 'function') calculateNanobotStats(); // Supposé global
+        if(typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.updateDisplays === 'function') window.uiUpdates.updateDisplays();
+    }
 }
+window.unequipItem = unequipItem;
 
-function buyItem(itemId) {
-    const item = itemsData[itemId]; if (!item || !item.cost) { addLogEntry("Objet non disponible à l'achat.", "error", eventLogEl, gameState.eventLog); return; }
-    if (gameState.purchasedShopItems.includes(itemId)) { addLogEntry(`${item.name} a déjà été acquis.`, "info", eventLogEl, gameState.eventLog); return; }
-    for (const resource in item.cost) { if ((gameState.resources[resource]||0) < item.cost[resource]) { addLogEntry(`Ressources insuffisantes pour acheter ${item.name}.`, "error", eventLogEl, gameState.eventLog); return; } } 
-    for (const resource in item.cost) { gameState.resources[resource] -= item.cost[resource]; } 
-    addToInventory(itemId); addLogEntry(`${item.name} acheté !`, "success", eventLogEl, gameState.eventLog);
-    if (gameState.shopStock.includes(itemId)) { gameState.purchasedShopItems.push(itemId); }
-    if(typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateResourceDisplay === 'function') uiUpdates.updateResourceDisplay(); 
-    if(typeof updateShopDisplay === 'function') updateShopDisplay(); 
+
+function updateShopDisplay() {
+    if(!window.shopItemsListEl || !window.itemsData || !window.gameState) { console.warn("Éléments ou données manquants pour updateShopDisplay."); return; }
+    window.shopItemsListEl.innerHTML = "";
+    let displayedItems = 0;
+
+    const currentShopStock = window.gameState.shopStock || []; 
+    if (!Array.isArray(currentShopStock) || currentShopStock.length === 0) {
+        window.shopItemsListEl.innerHTML = "<p class='text-gray-500 italic text-xs p-2'>La boutique est actuellement vide de nouveaux arrivages.</p>";
+        return;
+    }
+
+    currentShopStock.forEach(shopEntryObject => {
+        if (typeof shopEntryObject !== 'object' || !shopEntryObject.itemId) {
+            console.warn("Format d'entrée de stock de magasin invalide:", shopEntryObject);
+            return;
+        }
+
+        const itemId = shopEntryObject.itemId;
+        const itemCost = shopEntryObject.cost;
+        let itemQuantity = shopEntryObject.quantity; // Quantité actuelle en stock
+        const isUniqueItem = shopEntryObject.isUnique;
+        
+        const item = window.itemsData[itemId];
+        if (!item || !itemCost) { 
+            console.warn(`Item ${itemId} ou son coût non trouvé pour le magasin.`);
+            return;
+        }
+
+        const isPurchasedOrOutOfStock = (isUniqueItem && window.gameState.purchasedShopItems && window.gameState.purchasedShopItems.includes(itemId)) || (!isUniqueItem && itemQuantity <= 0);
+
+        const shopItemDiv = document.createElement("div");
+        shopItemDiv.className = `shop-item panel p-3 rounded-md shadow border border-gray-700 bg-gray-800 bg-opacity-50 ${isPurchasedOrOutOfStock ? " opacity-60" : ""}`;
+        shopItemDiv.dataset.tooltipType = 'shop-item'; 
+        shopItemDiv.dataset.tooltipId = itemId;
+
+        const infoIconContainer = document.createElement('div'); infoIconContainer.className = 'info-icon-container';
+        const infoIcon = document.createElement('i'); infoIcon.className = 'ti ti-info-circle info-icon text-sky-400 hover:text-sky-300';
+        infoIcon.title = `Plus d'infos sur ${item.name}`;
+        infoIconContainer.appendChild(infoIcon); shopItemDiv.appendChild(infoIconContainer);
+
+        let content = `<div class="item-details mb-1.5">`;
+        content += `<h4 class="item-name text-md font-semibold ${isPurchasedOrOutOfStock ? 'text-gray-500' : 'text-blue-300'}">${item.name} ${isPurchasedOrOutOfStock ? (isUniqueItem ? '(Acquis)' : '(Épuisé)') : ''}</h4>`;
+        content += `<p class="item-stats text-xs text-gray-400 mt-0.5">${item.description}</p>`;
+        // ... (autres détails de l'item comme stats, type de dégât) ...
+        content += `<p class="item-stats text-xs text-yellow-300 mt-1">Prix: ${getCostString(itemCost, false, false)}</p>`; 
+        if (!isUniqueItem && typeof itemQuantity === 'number' && itemQuantity !== Infinity) {
+            content += `<p class="text-xs text-gray-500">Stock: ${itemQuantity}</p>`;
+        }
+        content += `</div>`;
+        shopItemDiv.insertAdjacentHTML('beforeend', content);
+        
+        const buyButton = document.createElement('button');
+        buyButton.className = `btn btn-sm mt-auto w-full`; 
+        if (!isPurchasedOrOutOfStock) {
+            let canAfford = true;
+            for (const resource in itemCost) { if ((window.gameState.resources[resource]||0) < itemCost[resource]) { canAfford = false; break; } }
+            
+            buyButton.classList.add(canAfford ? 'btn-success' : 'btn-disabled');
+            if (!canAfford) buyButton.disabled = true;
+            buyButton.onclick = (e) => { buyItem(itemId, itemCost, isUniqueItem, shopEntryObject); }; 
+            
+            let buttonHtmlContent = `<i class="ti ti-shopping-cart-plus mr-1"></i>Acheter`;
+            buyButton.innerHTML = buttonHtmlContent;
+            if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') {
+                buyButton.addEventListener('mouseover', () => highlightInsufficientCosts(buyButton, itemCost));
+                buyButton.addEventListener('mouseout', () => clearCostHighlights(buyButton));
+            }
+        } else {
+            buyButton.classList.add('btn-disabled'); buyButton.disabled = true;
+            buyButton.textContent = isUniqueItem ? 'Déjà Acquis' : 'Épuisé';
+        }
+        shopItemDiv.appendChild(buyButton);
+        window.shopItemsListEl.appendChild(shopItemDiv);
+        displayedItems++;
+    });
+
+    if(displayedItems === 0 && window.shopItemsListEl.innerHTML === "" && currentShopStock.length > 0){
+        window.shopItemsListEl.innerHTML = "<p class='text-gray-500 italic text-xs p-2'>Tous les articles disponibles ont été acquis ou sont épuisés.</p>";
+    } else if (currentShopStock.length === 0 && displayedItems === 0) { // Cas où gameState.shopStock est vide dès le début
+        window.shopItemsListEl.innerHTML = "<p class='text-gray-500 italic text-xs p-2'>La boutique est actuellement vide de nouveaux arrivages.</p>";
+    }
 }
+window.updateShopDisplay = updateShopDisplay;
+
+function buyItem(itemId, cost, isUniqueItem, shopEntryObjectRef) { // Ajout de shopEntryObjectRef
+    if (!window.itemsData || !window.gameState) { console.error("Dépendances manquantes pour buyItem."); return; }
+    const item = window.itemsData[itemId];
+    if (!item || !cost) {
+        if (typeof addLogEntry === 'function') addLogEntry("Objet ou coût non disponible à l'achat.", "error", window.eventLogEl, window.gameState.eventLog);
+        return;
+    }
+    if (isUniqueItem && window.gameState.purchasedShopItems && window.gameState.purchasedShopItems.includes(itemId)) {
+        if (typeof addLogEntry === 'function') addLogEntry(`${item.name} (unique) a déjà été acquis.`, "info", window.eventLogEl, window.gameState.eventLog);
+        return;
+    }
+    if (!isUniqueItem && shopEntryObjectRef && shopEntryObjectRef.quantity <= 0) {
+        if (typeof addLogEntry === 'function') addLogEntry(`${item.name} est en rupture de stock.`, "warning", window.eventLogEl, window.gameState.eventLog);
+        return;
+    }
+
+    for (const resource in cost) {
+        if ((window.gameState.resources[resource]||0) < cost[resource]) {
+            if (typeof addLogEntry === 'function') addLogEntry(`Ressources insuffisantes pour acheter ${item.name}.`, "error", window.eventLogEl, window.gameState.eventLog);
+            return;
+        }
+    }
+    for (const resource in cost) { window.gameState.resources[resource] -= cost[resource]; }
+    
+    addToInventory(itemId); 
+    if (typeof addLogEntry === 'function') addLogEntry(`${item.name} acheté !`, "success", window.eventLogEl, window.gameState.eventLog);
+
+    if (isUniqueItem) {
+        if (!window.gameState.purchasedShopItems) window.gameState.purchasedShopItems = [];
+        window.gameState.purchasedShopItems.push(itemId);
+    } else if (shopEntryObjectRef) { // Pour les items non uniques, décrémenter la quantité dans l'objet de référence
+        shopEntryObjectRef.quantity--;
+    }
+    
+    if(typeof window.uiUpdates !== 'undefined') {
+        if(typeof window.uiUpdates.updateResourceDisplay === 'function') window.uiUpdates.updateResourceDisplay();
+        // updateDisplays va rafraîchir le shop (pour montrer le stock mis à jour ou "Acquis") et l'inventaire
+        if(typeof window.uiUpdates.updateDisplays === 'function') window.uiUpdates.updateDisplays(); 
+    }
+}
+window.buyItem = buyItem;

@@ -3,103 +3,56 @@ console.log("tutorialController.js - Fichier chargé.");
 
 var tutorialController = {
     isActive: false,
-    currentStep: 0,
+    currentStepIndex: 0, // Renommé de currentStep pour clarté (index du tableau)
     highlightedElement: null,
-    originalOutline: '',
-    originalZIndex: '',
-    originalOutlineOffset: '', // Pour stocker l'outline-offset original
+    originalStyles: {}, // Pour stocker plusieurs styles originaux si besoin
 
-    steps: [
-        {
-            elementId: null, // Pas d'élément spécifique pour le message de bienvenue
-            title: "Bienvenue au Nexus-7 !",
-            text: "Ce bref tutoriel vous guidera à travers les bases. Vous pouvez le passer à tout moment.",
-            position: 'center',
-        },
-        {
-            elementId: 'persistent-header',
-            title: "Ressources et Statut",
-            text: "En haut, vous trouverez vos ressources principales (Biomasse, Nanites, Énergie), leur taux de production, ainsi que la santé de votre Noyau et le cycle jour/nuit actuel.",
-            highlightPadding: '5px', // Padding pour l'outline
-            position: 'bottom-center',
-        },
-        {
-            elementId: 'main-navigation',
-            title: "Navigation Principale",
-            text: "Utilisez ces boutons pour naviguer entre les différentes sections du jeu : Base, Nexus-7 (votre unité), Monde et Marché.",
-            highlightPadding: '5px',
-            position: 'top-center', // Positionner la modale au-dessus de la barre de nav sur desktop
-                                    // Pour mobile, 'bottom-center' serait mieux si la nav est en bas, ou 'center'
-        },
-        {
-            targetTab: { main: 'base-section', sub: 'engineering-subtab' },
-            elementId: 'buildings-section', // Surligner toute la section des bâtiments
-            title: "Ingénierie (Base)",
-            text: "Ici, vous pouvez construire et améliorer des bâtiments qui produisent des ressources, débloquent des technologies ou défendent votre base.",
-            highlightPadding: '10px',
-            position: 'right-center', // À droite de la section des bâtiments
-        },
-        {
-            targetTab: { main: 'nexus-section', sub: 'nanobot-config-subtab' },
-            elementId: 'nanobot-content', // Le conteneur de la config du nanobot
-            title: "Configuration du Nexus-7",
-            text: "Consultez les statistiques de votre Nanobot, améliorez ses modules et équipez des objets trouvés ou achetés.",
-            highlightPadding: '10px',
-            position: 'center',
-        },
-        {
-            targetTab: { main: 'world-section', sub: 'exploration-subtab' },
-            elementId: 'exploration-map-container', // Le conteneur de la carte
-            title: "Exploration du Monde",
-            text: "Cliquez sur les cases adjacentes à votre Nanobot (♦) pour explorer, collecter des ressources et découvrir des points d'intérêt. L'exploration coûte de l'énergie.",
-            highlightPadding: '10px',
-            position: 'center',
-        },
-        {
-            elementId: 'event-log',
-            title: "Journal des Événements",
-            text: "Le journal principal affiche les événements importants, les alertes et les récompenses.",
-            highlightPadding: '5px',
-            position: 'top-center',
-        },
-        {
-            elementId: null,
-            title: "Fin du Tutoriel",
-            text: "Vous avez terminé les bases ! Explorez, construisez et survivez. Bonne chance, Commandant !",
-            position: 'center',
-        }
-    ],
+    // Les étapes du tutoriel devraient être dans config_gameplay.js (tutorialSteps)
+    // On va supposer que window.tutorialSteps existe et contient le tableau d'étapes.
 
     checkAndOfferTutorial: function() {
-        if (gameState && !gameState.tutorialCompleted) {
-            showModal(
-                "Tutoriel de Prise en Main",
-                "Bienvenue ! Souhaitez-vous suivre un bref tutoriel pour apprendre les bases du jeu ?",
-                () => { // onConfirm
-                    this.startTutorial();
-                },
-                true, // showCancel
-                () => { // onCancel (ou si le joueur ferme la modale autrement)
-                    // Optionnel: Marquer comme "refusé une fois" pour ne pas redemander à chaque session
-                    // Pour l'instant, on ne fait rien, il sera reproposé au prochain chargement si non complété.
-                }
-            );
+        if (window.gameState && !window.gameState.tutorialCompleted && typeof window.tutorialSteps !== 'undefined' && Object.keys(window.tutorialSteps).length > 0) {
+            if (typeof showModal === 'function') { // Assurez-vous que showModal est global
+                showModal(
+                    "Tutoriel de Prise en Main",
+                    "Bienvenue ! Souhaitez-vous suivre un bref tutoriel pour apprendre les bases du jeu ?",
+                    () => { this.startTutorial(); }, // onConfirm
+                    true, // showCancelButton
+                    () => { console.log("Tutoriel refusé pour cette session."); } // onCancel
+                );
+            } else {
+                console.error("La fonction showModal n'est pas définie globalement.");
+            }
         }
     },
 
-    startTutorial: function() {
-        if (this.isActive) return;
+    startTutorial: function(stepId = null) { // stepId peut être le premier ID d'étape (ex: 'gameStart')
+        if (this.isActive || typeof window.tutorialSteps === 'undefined' || Object.keys(window.tutorialSteps).length === 0) return;
         console.log("Tutoriel démarré.");
         this.isActive = true;
-        this.currentStep = 0;
+        
+        this.stepsArray = Object.values(window.tutorialSteps); // Convertir l'objet en tableau si ce n'est pas déjà fait
+        if (!Array.isArray(this.stepsArray) || this.stepsArray.length === 0) {
+            console.error("tutorialSteps n'est pas un tableau valide ou est vide.");
+            this.isActive = false;
+            return;
+        }
+
+        if (stepId && window.tutorialSteps[stepId]) {
+            this.currentStepIndex = this.stepsArray.findIndex(s => s === window.tutorialSteps[stepId]);
+            if (this.currentStepIndex === -1) this.currentStepIndex = 0; // Fallback
+        } else {
+            this.currentStepIndex = 0;
+        }
+        
         this.showStep();
     },
 
     nextStep: function() {
         if (!this.isActive) return;
         this.clearHighlight();
-        this.currentStep++;
-        if (this.currentStep < this.steps.length) {
+        this.currentStepIndex++;
+        if (this.currentStepIndex < this.stepsArray.length) {
             this.showStep();
         } else {
             this.endTutorial(true); // true = complété
@@ -107,46 +60,52 @@ var tutorialController = {
     },
 
     prevStep: function() {
-        if (!this.isActive || this.currentStep === 0) return;
+        if (!this.isActive || this.currentStepIndex === 0) return;
         this.clearHighlight();
-        this.currentStep--;
+        this.currentStepIndex--;
         this.showStep();
     },
 
     showStep: function() {
         if (!this.isActive) return;
-        const step = this.steps[this.currentStep];
+        const step = this.stepsArray[this.currentStepIndex];
         if (!step) {
-            this.endTutorial(false); // Devrait pas arriver si la logique de nextStep est correcte
+            this.endTutorial(false);
             return;
         }
 
+        // Exécuter onStart si défini
+        if (step.onStart && typeof step.onStart === 'function') {
+            step.onStart(window.gameState);
+        }
+
+        // Gestion du changement d'onglet
         if (step.targetTab) {
-            // Logique pour s'assurer que les fonctions de navigation sont prêtes
-            const attemptSwitchTab = (retries = 5) => {
-                if (typeof switchMainTab === 'function' && typeof switchSubTab === 'function') {
+            const attemptSwitchTab = () => {
+                if (typeof window.uiNavigation !== 'undefined' && typeof window.uiNavigation.switchMainTab === 'function') {
+                    window.uiNavigation.switchMainTab(step.targetTab.main, true); // true pour forcer la MAJ et l'activation du sous-onglet
+                    if (step.targetTab.sub) {
+                         // switchMainTab devrait gérer l'activation du sous-onglet mémorisé ou du premier.
+                         // Si on veut forcer un sous-onglet spécifique:
+                         setTimeout(() => {
+                             window.uiNavigation.switchSubTab(step.targetTab.sub, step.targetTab.main, true);
+                             setTimeout(() => this.applyHighlightAndModal(step), 150); // Délai pour le rendu du sous-onglet
+                         }, 100);
+                    } else {
+                        setTimeout(() => this.applyHighlightAndModal(step), 100); // Délai pour le rendu de l'onglet principal
+                    }
+                } else { // Fallback si uiNavigation n'est pas disponible
                     const mainTabButton = document.querySelector(`#main-navigation .nav-button[data-section="${step.targetTab.main}"]`);
                     if (mainTabButton) mainTabButton.click();
-
                     if (step.targetTab.sub) {
-                        // Attendre un peu que la section principale soit rendue avant de cliquer sur le sous-onglet
                         setTimeout(() => {
                             const subTabButton = document.querySelector(`#${step.targetTab.main} .sub-nav-button[data-subtab="${step.targetTab.sub}"]`);
-                            if (subTabButton) {
-                                subTabButton.click();
-                                // Encore un petit délai pour s'assurer que le contenu du sous-onglet est là avant de surligner
-                                setTimeout(() => this.applyHighlightAndModal(step), 150);
-                            } else {
-                                console.warn(`Sous-onglet ${step.targetTab.sub} non trouvé pour le tutoriel.`);
-                                this.applyHighlightAndModal(step); // Surligner même si le sous-onglet n'est pas trouvé
-                            }
+                            if (subTabButton) subTabButton.click();
+                            setTimeout(() => this.applyHighlightAndModal(step), 150);
                         }, 100);
                     } else {
-                        setTimeout(() => this.applyHighlightAndModal(step), 50); // Délai pour le rendu de l'onglet principal
+                        setTimeout(() => this.applyHighlightAndModal(step), 100);
                     }
-                } else {
-                    console.warn("Fonctions switchMainTab ou switchSubTab non disponibles.");
-                    this.applyHighlightAndModal(step); // Continuer sans changer d'onglet
                 }
             };
             attemptSwitchTab();
@@ -156,60 +115,56 @@ var tutorialController = {
     },
     
     applyHighlightAndModal: function(step) {
-        this.clearHighlight(); // Assurer qu'il n'y a pas de surlignage précédent
+        this.clearHighlight();
 
-        if (step.elementId) {
-            const element = document.getElementById(step.elementId);
+        if (step.elementId || step.targetElementHighlight) {
+            const elementSelector = step.targetElementHighlight || `#${step.elementId}`;
+            const element = document.querySelector(elementSelector);
             if (element) {
                 this.highlightedElement = element;
-                this.originalOutline = element.style.outline;
-                this.originalZIndex = element.style.zIndex;
-                this.originalOutlineOffset = element.style.outlineOffset;
+                this.originalStyles = {
+                    outline: element.style.outline,
+                    zIndex: element.style.zIndex,
+                    position: element.style.position,
+                    outlineOffset: element.style.outlineOffset,
+                    boxShadow: element.style.boxShadow // Ajout pour le surlignage par ombre
+                };
 
                 element.style.outline = `3px dashed var(--accent-yellow)`;
-                element.style.zIndex = '1001'; // Inférieur à la modale du tutoriel
-                element.style.position = element.style.position || 'relative'; // Nécessaire pour que z-index s'applique correctement sur les éléments non positionnés
+                element.style.outlineOffset = step.highlightPadding || '2px';
+                // element.style.boxShadow = `0 0 0 9999px rgba(0,0,0,0.6), 0 0 15px 5px var(--accent-yellow)`; // Alternative de surlignage
+                element.style.position = element.style.position === 'static' || !element.style.position ? 'relative' : element.style.position;
+                element.style.zIndex = '1001';
                 
-                if (step.highlightPadding) {
-                     element.style.outlineOffset = step.highlightPadding;
-                }
-                
-                // Faire défiler l'élément dans la vue si nécessaire
-                // Mettre un léger délai pour s'assurer que l'élément est bien visible après changement d'onglet
-                setTimeout(() => {
+                setTimeout(() => { // Délai pour s'assurer que l'élément est bien "dessiné" avant de scroller
                     element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
                 }, 50);
 
             } else {
-                console.warn(`Élément du tutoriel non trouvé: ${step.elementId}`);
+                console.warn(`Élément du tutoriel non trouvé: ${elementSelector}`);
             }
         }
-        // Afficher la modale du tutoriel après avoir potentiellement surligné et scrollé
         this.showTutorialModal(step);
     },
 
     showTutorialModal: function(step) {
-        let tutorialModal = document.getElementById('tutorial-modal');
+        let tutorialModal = window.tutorialModalEl; // Utiliser la ref DOM globale
         if (!tutorialModal) {
-            tutorialModal = document.createElement('div');
-            tutorialModal.id = 'tutorial-modal';
-            tutorialModal.className = 'modal'; // La classe .modal doit avoir position:fixed et z-index:1000 (ou similaire)
-            // Le z-index spécifique pour la modale du tutoriel est appliqué ici
-            document.body.appendChild(tutorialModal);
+            console.error("Élément #tutorial-modal non trouvé dans le DOM.");
+            return;
         }
-        tutorialModal.style.zIndex = '1050'; // Assure qu'il est au-dessus de l'highlight (1001) et des autres modales
+        tutorialModal.style.zIndex = '1050'; // Au-dessus du surlignage
 
-        // Appliquer les classes Tailwind pour le style
-        let contentHtml = `<div class="modal-content bg-[var(--bg-tertiary)] border-2 border-[var(--accent-yellow)] shadow-xl p-4 rounded-lg" style="max-width: 400px; text-align: left; position: relative;">`;
+        let contentHtml = `<div class="modal-content bg-[var(--bg-secondary)] border-2 border-[var(--accent-yellow)] shadow-xl p-4 rounded-lg" style="max-width: 400px; text-align: left; position: relative;">`; // Couleur de fond modifiée
         contentHtml += `<h3 class="font-orbitron text-lg mb-2 text-[var(--accent-yellow)]">${step.title}</h3>`;
         contentHtml += `<p class="mb-3 text-sm text-gray-200">${step.text}</p>`;
-        contentHtml += `<p class="text-xs text-gray-400 mb-3">Étape ${this.currentStep + 1} / ${this.steps.length}</p>`;
-        contentHtml += `<div class="flex justify-between items-center mt-4">`; // mt-4 pour espacer les boutons
+        contentHtml += `<p class="text-xs text-gray-400 mb-3">Étape ${this.currentStepIndex + 1} / ${this.stepsArray.length}</p>`;
+        contentHtml += `<div class="flex justify-between items-center mt-4">`;
         contentHtml += `<div>`;
-        if (this.currentStep > 0) {
+        if (this.currentStepIndex > 0) {
             contentHtml += `<button id="tutorial-prev" class="btn btn-secondary btn-sm mr-2">Précédent</button>`;
         }
-        if (this.currentStep < this.steps.length - 1) {
+        if (this.currentStepIndex < this.stepsArray.length - 1) {
             contentHtml += `<button id="tutorial-next" class="btn btn-primary btn-sm">Suivant</button>`;
         } else {
             contentHtml += `<button id="tutorial-finish" class="btn btn-success btn-sm">Terminer</button>`;
@@ -219,58 +174,33 @@ var tutorialController = {
         contentHtml += `</div></div>`;
 
         tutorialModal.innerHTML = contentHtml;
-        tutorialModal.classList.remove('hidden'); // Important pour afficher
+        tutorialModal.classList.remove('hidden');
 
         const modalContentElement = tutorialModal.querySelector('.modal-content');
         const highlightedEl = this.highlightedElement;
 
-        // Positionnement de la modale
-        // Utiliser requestAnimationFrame pour obtenir les dimensions après le rendu du DOM
         requestAnimationFrame(() => {
             if (!modalContentElement) return;
-
             if (highlightedEl && step.position && step.position !== 'center') {
-                modalContentElement.style.position = 'fixed'; // Position par rapport au viewport
+                modalContentElement.style.position = 'fixed';
                 const rect = highlightedEl.getBoundingClientRect();
                 const modalRect = modalContentElement.getBoundingClientRect();
                 let top, left;
-
                 switch (step.position) {
-                    case 'bottom-center':
-                        top = rect.bottom + 10;
-                        left = rect.left + (rect.width / 2) - (modalRect.width / 2);
-                        break;
-                    case 'top-center':
-                        top = rect.top - modalRect.height - 10;
-                        left = rect.left + (rect.width / 2) - (modalRect.width / 2);
-                        break;
-                    case 'right-center':
-                        top = rect.top + (rect.height / 2) - (modalRect.height / 2);
-                        left = rect.right + 10;
-                        break;
-                    case 'left-center':
-                        top = rect.top + (rect.height / 2) - (modalRect.height / 2);
-                        left = rect.left - modalRect.width - 10;
-                        break;
-                    default: // 'center' ou inconnu
-                        modalContentElement.style.position = 'relative'; // Pour centrage dans .modal
-                        top = ''; left = '';
-                        break;
+                    case 'bottom-center': top = rect.bottom + 10; left = rect.left + (rect.width / 2) - (modalRect.width / 2); break;
+                    case 'top-center': top = rect.top - modalRect.height - 10; left = rect.left + (rect.width / 2) - (modalRect.width / 2); break;
+                    case 'right-center': top = rect.top + (rect.height / 2) - (modalRect.height / 2); left = rect.right + 10; break;
+                    case 'left-center': top = rect.top + (rect.height / 2) - (modalRect.height / 2); left = rect.left - modalRect.width - 10; break;
+                    default: modalContentElement.style.position = 'relative'; top = ''; left = ''; break;
                 }
-
                 if (top !== '' && left !== '') {
-                    // Contraindre à la fenêtre
                     left = Math.max(10, Math.min(left, window.innerWidth - modalRect.width - 10));
                     top = Math.max(10, Math.min(top, window.innerHeight - modalRect.height - 10));
-                    
                     modalContentElement.style.top = `${top}px`;
                     modalContentElement.style.left = `${left}px`;
                 }
             } else {
-                // Centrage standard de la modale si pas d'élément ou position 'center'
-                modalContentElement.style.position = 'relative';
-                modalContentElement.style.top = '';
-                modalContentElement.style.left = '';
+                modalContentElement.style.position = 'relative'; modalContentElement.style.top = ''; modalContentElement.style.left = '';
             }
         });
 
@@ -287,19 +217,19 @@ var tutorialController = {
 
     clearHighlight: function() {
         if (this.highlightedElement) {
-            this.highlightedElement.style.outline = this.originalOutline;
-            this.highlightedElement.style.zIndex = this.originalZIndex;
-            this.highlightedElement.style.outlineOffset = this.originalOutlineOffset;
-            this.highlightedElement.style.position = this.highlightedElement.dataset.originalPosition || ''; // Restaurer la position originale
-            delete this.highlightedElement.dataset.originalPosition;
+            this.highlightedElement.style.outline = this.originalStyles.outline || '';
+            this.highlightedElement.style.zIndex = this.originalStyles.zIndex || '';
+            this.highlightedElement.style.position = this.originalStyles.position || '';
+            this.highlightedElement.style.outlineOffset = this.originalStyles.outlineOffset || '';
+            this.highlightedElement.style.boxShadow = this.originalStyles.boxShadow || '';
             this.highlightedElement = null;
+            this.originalStyles = {};
         }
     },
 
     hideTutorialModal: function() {
-        const tutorialModal = document.getElementById('tutorial-modal');
-        if (tutorialModal) {
-            tutorialModal.classList.add('hidden');
+        if (window.tutorialModalEl) {
+            window.tutorialModalEl.classList.add('hidden');
         }
     },
 
@@ -308,11 +238,20 @@ var tutorialController = {
         this.isActive = false;
         this.clearHighlight();
         this.hideTutorialModal();
-        if (gameState) {
-            gameState.tutorialCompleted = true;
+        if (window.gameState) {
+            window.gameState.tutorialCompleted = true; // Marquer comme complété globalement
+            // Si vous voulez suivre quelle étape était en cours au moment où le joueur a quitté/passé:
+            // window.gameState.tutorialCurrentStepId = completed ? null : this.stepsArray[this.currentStepIndex]?.id;
         }
         if (typeof saveGame === 'function') saveGame();
+
+        // Exécuter onEnd si défini pour la dernière étape (ou l'étape actuelle si on skippe)
+        const step = this.stepsArray[this.currentStepIndex];
+        if (step && step.onEnd && typeof step.onEnd === 'function') {
+            step.onEnd(window.gameState, completed);
+        }
     }
 };
+window.tutorialController = tutorialController; // Rendre global
 
 console.log("tutorialController.js - Objet défini.");

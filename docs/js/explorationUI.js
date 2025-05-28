@@ -8,43 +8,54 @@ var explorationUI = {
     activeTileUiElements: {
         container: null, currentTileView: null, currentTileImage: null,
         currentTileDescription: null, currentTileActionsGrid: null, currentTileLog: null,
-        adjacentPreviewsContainer: null, previewNorth: null, previewSouth: null,
-        previewEast: null, previewWest: null, navNorthBtn: null, navSouthBtn: null,
-        navEastBtn: null, navWestBtn: null, nanobotStatusContainer: null,
-        exitActiveExplorationBtn: null,
+        previewNorth: null, previewSouth: null, previewEast: null, previewWest: null,
+        navNorthBtn: null, navSouthBtn: null, navEastBtn: null, navWestBtn: null,
+        nanobotStatusContainer: null, exitActiveExplorationBtn: null,
+        activeExplorationTitle: null,
     },
     isInitializedActiveUI: false,
 
     initializeActiveTileUIElements: function() {
         if (this.isInitializedActiveUI) return;
 
-        this.activeTileUiElements.container = document.getElementById('active-tile-exploration-ui');
-        this.activeTileUiElements.currentTileView = document.getElementById('current-tile-view');
-        this.activeTileUiElements.currentTileImage = document.getElementById('current-tile-image');
-        this.activeTileUiElements.currentTileDescription = document.getElementById('current-tile-description');
-        this.activeTileUiElements.currentTileActionsGrid = document.getElementById('current-tile-actions-grid');
-        this.activeTileUiElements.currentTileLog = document.getElementById('active-tile-log');
-        this.activeTileUiElements.adjacentPreviewsContainer = document.getElementById('adjacent-previews-container');
-        this.activeTileUiElements.previewNorth = document.getElementById('preview-north');
-        this.activeTileUiElements.previewSouth = document.getElementById('preview-south');
-        this.activeTileUiElements.previewEast = document.getElementById('preview-east');
-        this.activeTileUiElements.previewWest = document.getElementById('preview-west');
-        this.activeTileUiElements.navNorthBtn = document.getElementById('active-explore-nav-north');
-        this.activeTileUiElements.navSouthBtn = document.getElementById('active-explore-nav-south');
-        this.activeTileUiElements.navEastBtn = document.getElementById('active-explore-nav-east');
-        this.activeTileUiElements.navWestBtn = document.getElementById('active-explore-nav-west');
-        this.activeTileUiElements.nanobotStatusContainer = document.getElementById('active-exploration-nanobot-status');
-        this.activeTileUiElements.exitActiveExplorationBtn = document.getElementById('exit-active-exploration-btn');
+        this.activeTileUiElements.container = window.activeTileExplorationUIEl;
+        this.activeTileUiElements.activeExplorationTitle = window.activeExplorationTitleEl;
+        this.activeTileUiElements.currentTileView = window.currentTileViewEl;
+        this.activeTileUiElements.currentTileImage = window.currentTileImageEl;
+        this.activeTileUiElements.currentTileDescription = window.currentTileDescriptionEl;
+        this.activeTileUiElements.currentTileActionsGrid = window.currentTileActionsGridEl;
+        this.activeTileUiElements.currentTileLog = window.activeTileLogEl;
+        this.activeTileUiElements.previewNorth = window.previewNorthEl;
+        this.activeTileUiElements.previewSouth = window.previewSouthEl;
+        this.activeTileUiElements.previewEast = window.previewEastEl;
+        this.activeTileUiElements.previewWest = window.previewWestEl;
+        this.activeTileUiElements.navNorthBtn = window.activeExploreNavNorthBtn;
+        this.activeTileUiElements.navSouthBtn = window.activeExploreNavSouthBtn;
+        this.activeTileUiElements.navEastBtn = window.activeExploreNavEastBtn;
+        this.activeTileUiElements.navWestBtn = window.activeExploreNavWestBtn;
+        this.activeTileUiElements.nanobotStatusContainer = window.activeExplorationNanobotStatusEl;
+        this.activeTileUiElements.exitActiveExplorationBtn = window.exitActiveExplorationBtnEl;
 
         if (this.activeTileUiElements.exitActiveExplorationBtn && typeof this.exitActiveTileExplorationMode === 'function') {
-            this.activeTileUiElements.exitActiveExplorationBtn.addEventListener('click', () => this.exitActiveTileExplorationMode());
+            if (!this.activeTileUiElements.exitActiveExplorationBtn.dataset.listenerAttached) {
+                this.activeTileUiElements.exitActiveExplorationBtn.addEventListener('click', () => this.exitActiveTileExplorationMode());
+                this.activeTileUiElements.exitActiveExplorationBtn.dataset.listenerAttached = 'true';
+            }
         }
-        if (this.activeTileUiElements.navNorthBtn && typeof explorationController !== 'undefined') {
-            this.activeTileUiElements.navNorthBtn.addEventListener('click', () => explorationController.attemptMoveInActiveExploration('north'));
-        }
-        if (this.activeTileUiElements.navSouthBtn) this.activeTileUiElements.navSouthBtn.addEventListener('click', () => explorationController.attemptMoveInActiveExploration('south'));
-        if (this.activeTileUiElements.navEastBtn) this.activeTileUiElements.navEastBtn.addEventListener('click', () => explorationController.attemptMoveInActiveExploration('east'));
-        if (this.activeTileUiElements.navWestBtn) this.activeTileUiElements.navWestBtn.addEventListener('click', () => explorationController.attemptMoveInActiveExploration('west'));
+        const navButtons = [
+            { btn: this.activeTileUiElements.navNorthBtn, dir: 'north' },
+            { btn: this.activeTileUiElements.navSouthBtn, dir: 'south' },
+            { btn: this.activeTileUiElements.navEastBtn, dir: 'east' },
+            { btn: this.activeTileUiElements.navWestBtn, dir: 'west' }
+        ];
+        navButtons.forEach(item => {
+            if (item.btn && typeof window.explorationController !== 'undefined' && typeof window.explorationController.attemptMoveInActiveExploration === 'function') {
+                if (!item.btn.dataset.listenerAttached) {
+                    item.btn.addEventListener('click', () => window.explorationController.attemptMoveInActiveExploration(item.dir));
+                    item.btn.dataset.listenerAttached = 'true';
+                }
+            }
+        });
 
         this.isInitializedActiveUI = true;
         console.log("explorationUI: Éléments de l'UI d'exploration active initialisés.");
@@ -56,26 +67,30 @@ var explorationUI = {
             console.error("UI d'exploration active non trouvée dans le DOM !");
             return;
         }
+        if (!gameState || !gameState.map) {
+             console.error("enterActiveTileExplorationMode: gameState ou gameState.map non défini."); return;
+        }
 
         gameState.map.activeExplorationTileCoords = { x: tileX, y: tileY };
         this.activeTileUiElements.container.classList.remove('hidden');
-        const worldSectionContent = document.getElementById('world-section-content');
-        if(worldSectionContent) worldSectionContent.classList.add('blurred-background');
+        if(window.worldSectionContentEl) window.worldSectionContentEl.classList.add('blurred-background');
 
         if (this.activeTileUiElements.currentTileLog) this.activeTileUiElements.currentTileLog.innerHTML = "";
         this.addLogToActiveTileView("Analyse de la zone en cours...", "system");
 
-        this.updateActiveTileExplorationView(tileX, tileY);
+        this.updateActiveTileExplorationView(tileX, tileY, true);
         console.log(`Entrée en mode exploration active pour (${tileX}, ${tileY})`);
     },
 
     exitActiveTileExplorationMode: function() {
-        if (!this.activeTileUiElements.container) return;
+        if (!this.isInitializedActiveUI || !this.activeTileUiElements.container) return;
+         if (!gameState || !gameState.map) {
+             console.error("exitActiveTileExplorationMode: gameState ou gameState.map non défini."); return;
+        }
 
         this.activeTileUiElements.container.classList.add('hidden');
         gameState.map.activeExplorationTileCoords = null;
-        const worldSectionContent = document.getElementById('world-section-content');
-        if(worldSectionContent) worldSectionContent.classList.remove('blurred-background');
+        if(window.worldSectionContentEl) window.worldSectionContentEl.classList.remove('blurred-background');
 
         this.updateExplorationMapDisplay();
         this.centerMapOnPlayer(true);
@@ -84,91 +99,92 @@ var explorationUI = {
 
     updateActiveTileExplorationView: function(centerX, centerY, forceActionRefresh = false) {
         if (!this.isInitializedActiveUI) this.initializeActiveTileUIElements();
-        if (!gameState || !mapManager || !this.activeTileUiElements.container || this.activeTileUiElements.container.classList.contains('hidden')) {
+        if (!gameState || !window.mapManager || !this.activeTileUiElements.container || this.activeTileUiElements.container.classList.contains('hidden')) {
             return;
         }
-
-        const tile = mapManager.getTile(centerX, centerY);
+        const tile = window.mapManager.getTile(centerX, centerY);
         if (!tile) {
             console.error(`updateActiveTileExplorationView: Tuile non trouvée en (${centerX}, ${centerY})`);
             this.addLogToActiveTileView(`Erreur: Impossible de charger les données de la tuile (${centerX},${centerY}).`, "error");
             return;
         }
 
-        const tileViewConfig = activeTileViewData[tile.actualType] || activeTileViewData.default;
+        if (this.activeTileUiElements.activeExplorationTitle) {
+            this.activeTileUiElements.activeExplorationTitle.textContent = `Exploration: ${this.getTileContentName(tile.actualType, null)} (${centerX},${centerY})`;
+        }
+
+        const tileViewConfigKey = tile.actualType || 'default';
+        const tileViewConfig = (typeof window.activeTileViewData !== 'undefined' && window.activeTileViewData[tileViewConfigKey]) || 
+                               (typeof window.activeTileViewData !== 'undefined' ? window.activeTileViewData.default : {image: "images/tile_view/default_detail.png"});
+
         if (this.activeTileUiElements.currentTileImage) {
-            this.activeTileUiElements.currentTileImage.style.backgroundImage = `url('${tileViewConfig.image || activeTileViewData.default.image}')`;
+            this.activeTileUiElements.currentTileImage.style.backgroundImage = `url('${tileViewConfig.image || (typeof window.activeTileViewData !== 'undefined' ? window.activeTileViewData.default.image : "")}')`;
         }
         if (this.activeTileUiElements.currentTileDescription) {
             let desc = `<strong>${this.getTileContentName(tile.actualType, null)} (${centerX},${centerY})</strong><br>`;
-            desc += MAP_FEATURE_DATA[tile.actualType]?.description || "Une zone d'apparence ordinaire.";
-            if (tile.content) {
-                desc += `<br>Présence détectée: ${this.getTileContentName(tile.actualType, tile.content)}.`;
-            }
-            if (tile.isFullyExplored) {
-                 desc += "<br><em class='text-green-400'>Cette zone a été entièrement explorée.</em>";
+            desc += (typeof window.MAP_FEATURE_DATA !== 'undefined' && window.MAP_FEATURE_DATA[tile.actualType]?.description) || "Une zone d'apparence ordinaire.";
+            if (tile.content) { desc += `<br>Présence détectée: ${this.getTileContentName(tile.actualType, tile.content)}.`; }
+            if (tile.isFullyExplored) { desc += "<br><em class='text-green-400'>Cette zone a été entièrement explorée.</em>";
             } else if (tile.usedActions && tile.usedActions['scan_local_active'] && (!tile.hiddenFeatures || tile.hiddenFeatures.length === 0) && (!tile.revealedFeatures || tile.revealedFeatures.length === 0)) {
                  desc += "<br><em class='text-gray-400'>Le scan local n'a rien révélé de plus.</em>";
             }
-             if (tile.hasActiveTrap) {
-                desc += "<br><strong class='text-red-500'>DANGER: Piège actif détecté !</strong>";
-            }
+            if (tile.hasActiveTrap) { desc += "<br><strong class='text-red-500 animate-pulse'>DANGER: Piège actif détecté !</strong>"; }
             this.activeTileUiElements.currentTileDescription.innerHTML = desc;
         }
 
         if (this.activeTileUiElements.currentTileActionsGrid) {
             this.activeTileUiElements.currentTileActionsGrid.innerHTML = '';
-
             if (tile.isFullyExplored) {
                  this.activeTileUiElements.currentTileActionsGrid.innerHTML = `<p class="text-sm text-green-400 italic p-2 text-center">Rien de plus à faire ici.</p>`;
             } else {
                 let availableActions = [];
-                if (tile.baseActions) {
-                    tile.baseActions.forEach(actionId => {
-                        const actionDef = tileActiveExplorationOptions[actionId];
-                        if (actionDef && (!tile.usedActions || !tile.usedActions[actionId] || actionDef.canRepeat)) {
-                            if(actionDef.canRepeat && (tile.searchAttempts || 0) >= (actionDef.maxRepeats || 3) && actionId === 'search_area_active'){
-                                // Skip
-                            } else {
-                                availableActions.push({ ...actionDef });
+                const tileViewDataForType = window.activeTileViewData[tile.actualType] || window.activeTileViewData.default;
+                const baseActions = tile.baseActions || tileViewDataForType?.baseActions || [];
+
+                if (baseActions && typeof window.tileActiveExplorationOptions !== 'undefined') {
+                    baseActions.forEach(actionId => {
+                        const actionDef = window.tileActiveExplorationOptions[actionId];
+                        if (actionDef) {
+                            const isRepeatable = actionDef.canRepeat;
+                            const isMaxedOut = isRepeatable && actionId === 'search_area_active' && (tile.searchAttempts || 0) >= (actionDef.maxRepeats || 3);
+                            const isUsed = !isRepeatable && tile.usedActions && tile.usedActions[actionId];
+
+                            if (!isMaxedOut && !isUsed) {
+                                availableActions.push({ ...actionDef, id: actionId, originalActionId: actionId });
                             }
                         }
                     });
                 }
-                if (tile.content) {
+                if (tile.content && typeof window.tileActiveExplorationOptions !== 'undefined' && typeof window.TILE_TYPES_TO_RESOURCE_KEY !== 'undefined' && typeof window.MAP_FEATURE_DATA !== 'undefined') {
                     if (tile.content.type === 'resource' && tile.content.amount > 0) {
-                        const actionDef = tileActiveExplorationOptions['collect_visible_resource_active'];
-                        availableActions.push({ ...actionDef, name: actionDef.name.replace('{resourceName}', TILE_TYPES_TO_RESOURCE_KEY[tile.content.resourceType] || "Ressource"), originalActionId: 'collect_visible_resource_active' });
+                        const actionDef = window.tileActiveExplorationOptions['collect_visible_resource_active'];
+                        if(actionDef) availableActions.push({ ...actionDef, name: actionDef.name.replace('{resourceName}', (window.TILE_TYPES_TO_RESOURCE_KEY[tile.content.resourceType] || "Ressource Inconnue") ), originalActionId: 'collect_visible_resource_active' });
                     } else if (tile.content.type === 'enemy_patrol') {
-                        const actionDef = tileActiveExplorationOptions['engage_visible_enemy_active'];
-                        availableActions.push({ ...actionDef, name: actionDef.name.replace('{enemyName}', tile.content.details.name), originalActionId: 'engage_visible_enemy_active' });
+                        const actionDef = window.tileActiveExplorationOptions['engage_visible_enemy_active'];
+                        if(actionDef && tile.content.details) availableActions.push({ ...actionDef, name: actionDef.name.replace('{enemyName}', tile.content.details.name), originalActionId: 'engage_visible_enemy_active' });
                     } else if (tile.content.type === 'poi' && !tile.content.isInteracted) {
-                        const actionDef = tileActiveExplorationOptions['interact_poi_active'];
-                        availableActions.push({ ...actionDef, name: actionDef.name.replace('{poiName}', MAP_FEATURE_DATA[tile.content.poiType]?.name || "POI"), originalActionId: 'interact_poi_active'});
+                        const actionDef = window.tileActiveExplorationOptions['interact_poi_active'];
+                        if(actionDef && tile.content.poiType) availableActions.push({ ...actionDef, name: actionDef.name.replace('{poiName}', window.MAP_FEATURE_DATA[tile.content.poiType]?.name || "POI"), originalActionId: 'interact_poi_active'});
                     } else if (tile.content.type === 'enemy_base' && tile.content.currentHealth > 0) {
-                         const actionDef = tileActiveExplorationOptions['attack_enemy_base_active'];
-                        availableActions.push({ ...actionDef, name: actionDef.name.replace('{baseName}', tile.content.details.name), originalActionId: 'attack_enemy_base_active' });
+                         const actionDef = window.tileActiveExplorationOptions['attack_enemy_base_active'];
+                        if(actionDef && tile.content.details) availableActions.push({ ...actionDef, name: actionDef.name.replace('{baseName}', tile.content.details.name), originalActionId: 'attack_enemy_base_active' });
                     }
                 }
-                if(tile.revealedFeatures){
-                    tile.revealedFeatures.forEach((feature, index) => { // Ajouter un index pour un ID unique si besoin
-                        let actionDef;
-                        let actionName;
-                        let actionIdToUse;
-
+                if(tile.revealedFeatures && typeof window.tileActiveExplorationOptions !== 'undefined'){
+                    tile.revealedFeatures.forEach((feature, index) => {
+                        let actionDef, actionName, actionIdToUse, originalActionId;
                         if (feature.type === 'small_resource_cache') {
-                            actionDef = tileActiveExplorationOptions['collect_revealed_resource'];
-                            actionName = actionDef.name.replace('{resourceName}', feature.resourceType || 'Cache');
-                            actionIdToUse = `collect_revealed_resource_${index}`; // ID unique pour cette instance
+                            actionDef = window.tileActiveExplorationOptions['collect_revealed_resource'];
+                            if(actionDef) { actionName = actionDef.name.replace('{resourceName}', feature.resourceType || 'Cache'); originalActionId = 'collect_revealed_resource'; actionIdToUse = `${originalActionId}_feat_${index}`; }
                         } else if (feature.type === 'ancient_data_fragment') {
-                            actionDef = tileActiveExplorationOptions['decipher_data_fragment'];
-                            actionName = actionDef.name;
-                            actionIdToUse = `decipher_data_fragment_${index}`;
+                            actionDef = window.tileActiveExplorationOptions['decipher_data_fragment'];
+                            if(actionDef) { actionName = actionDef.name; originalActionId = 'decipher_data_fragment'; actionIdToUse = `${originalActionId}_feat_${index}`; }
+                        } else if (feature.type === 'hidden_trap' && tile.hasActiveTrap) {
+                            actionDef = window.tileActiveExplorationOptions['disarm_trap_active'];
+                            if(actionDef) { actionName = actionDef.name; originalActionId = 'disarm_trap_active'; actionIdToUse = `${originalActionId}_feat_${index}`; }
                         }
-                        // ... autres types de features révélées
-
                         if (actionDef) {
-                             availableActions.push({ ...actionDef, name: actionName, id: actionIdToUse, originalActionId: actionDef.id, dynamicData: feature });
+                             availableActions.push({ ...actionDef, name: actionName, id: actionIdToUse, originalActionId: originalActionId, dynamicData: feature });
                         }
                     });
                 }
@@ -176,23 +192,25 @@ var explorationUI = {
                 if (availableActions.length > 0) {
                     availableActions.forEach(action => {
                         const actionButton = document.createElement('button');
-                        actionButton.className = 'btn btn-secondary btn-sm w-full text-left p-2 flex items-center gap-2';
-                        let costString = "";
-                        if(action.cost){
-                            costString = ` (Coût: ${getCostString(action.cost, false)})`; // false pour ne pas vérifier l'affordabilité ici
-                        }
-                        actionButton.innerHTML = `<i class="${action.icon || 'ti-question-mark'} text-lg"></i> <div><strong class="text-sm">${action.name}</strong><p class="text-xs text-gray-400">${action.description}${costString}</p></div>`;
+                        actionButton.className = 'btn btn-secondary btn-sm w-full text-left p-2 flex items-center gap-x-2 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-accent-blue';
+                        let costString = ""; let canAfford = true; let meetsCondition = true;
 
-                        let canAfford = true;
-                        if (action.cost) {
+                        if(action.cost && typeof getCostString === 'function'){
+                            costString = ` (Coût: ${getCostString(action.cost, false, true)})`;
                             for(const res in action.cost){ if((gameState.resources[res] || 0) < action.cost[res]) canAfford = false; }
-                            if(!canAfford) {
-                                actionButton.classList.add('btn-disabled'); actionButton.disabled = true;
-                            }
+                        }
+                        if(action.condition && typeof action.condition === 'function'){
+                            if(!action.condition(gameState)) meetsCondition = false;
+                        }
+                        actionButton.innerHTML = `<i class="${action.icon || 'ti-question-mark'} text-lg text-blue-300 flex-shrink-0"></i><div class="flex-grow"><strong class="text-sm text-gray-100">${action.name}</strong><p class="text-xs text-gray-400">${action.description}${costString}</p></div>`;
+                        if(!canAfford || !meetsCondition) {
+                            actionButton.classList.add('btn-disabled', 'opacity-50'); actionButton.disabled = true;
+                            if(!canAfford && action.cost) actionButton.title = `Manque: ${Object.entries(action.cost).filter(([r,v]) => (gameState.resources[r]||0) < v).map(([r,v]) => `${v - (gameState.resources[r]||0)} ${r}`).join(', ')}`;
+                            else if(!meetsCondition) actionButton.title = "Conditions non remplies.";
                         }
                         actionButton.onclick = () => {
-                            if (typeof explorationController !== 'undefined' && typeof explorationController.handleActionOnActiveTile === 'function') {
-                                explorationController.handleActionOnActiveTile(action.originalActionId || action.id, centerX, centerY);
+                            if (!actionButton.disabled && typeof window.explorationController !== 'undefined' && typeof window.explorationController.handleActionOnActiveTile === 'function') {
+                                window.explorationController.handleActionOnActiveTile(action.originalActionId || action.id, centerX, centerY, action.dynamicData || null);
                             }
                         };
                         this.activeTileUiElements.currentTileActionsGrid.appendChild(actionButton);
@@ -209,68 +227,71 @@ var explorationUI = {
             { dir: 'east',  dx: 1, dy: 0, element: this.activeTileUiElements.previewEast, navBtn: this.activeTileUiElements.navEastBtn },
             { dir: 'west',  dx: -1,dy: 0, element: this.activeTileUiElements.previewWest, navBtn: this.activeTileUiElements.navWestBtn }
         ];
-
         directions.forEach(d => {
-            if (!d.element || !d.navBtn) return;
+            if (!d.element || !d.navBtn) { return; }
             d.element.innerHTML = ''; d.navBtn.classList.add('btn-disabled'); d.navBtn.disabled = true;
-            d.element.classList.remove('can-move', 'cursor-pointer', 'hover:bg-gray-700'); // Reset classes
+            d.element.classList.remove('can-move', 'cursor-pointer', 'hover:bg-gray-700', 'blocked-preview');
+            d.element.title = ""; d.element.onclick = null;
 
-            const adjX = centerX + d.dx;
-            const adjY = centerY + d.dy;
-            const currentZone = ZONE_DATA[gameState.currentZoneId];
+            const adjX = centerX + d.dx; const adjY = centerY + d.dy;
+            const currentZoneData = typeof window.WORLD_ZONES !== 'undefined' ? window.WORLD_ZONES[gameState.currentZoneId] : null; // MODIFIÉ
 
-            if (currentZone && adjX >= 0 && adjX < currentZone.mapSize.width && adjY >= 0 && adjY < currentZone.mapSize.height) {
-                const adjTile = mapManager.getTile(adjX, adjY);
+            if (currentZoneData && adjX >= 0 && adjX < currentZoneData.mapSize.width && adjY >= 0 && adjY < currentZoneData.mapSize.height) {
+                const adjTile = window.mapManager.getTile(adjX, adjY);
                 if (adjTile) {
-                    let previewHtml = `<strong class="text-xs">${d.dir.charAt(0).toUpperCase() + d.dir.slice(1)} (${adjX},${adjY})</strong><br>`;
-                    let terrainName;
-                    let terrainIcon = "ti-help-circle";
-
+                    let terrainName, contentName = "", contentClass = "", terrainIcon = "ti-help-circle";
                     if (adjTile.isExplored || (adjTile.isScannedFromMap && gameState.gameTime <= adjTile.scannedFromMapRevealTime)) {
                         const typeToDisplay = (adjTile.isScannedFromMap && gameState.gameTime <= adjTile.scannedFromMapRevealTime) ? adjTile.scannedFromMapActualType : adjTile.actualType;
-                        terrainName = this.getTileContentName(typeToDisplay, adjTile.content);
+                        terrainName = this.getTerrainTypeName(typeToDisplay);
                         terrainIcon = this.getTileIcon(typeToDisplay, adjTile.content);
-                        if (adjTile.content && adjTile.content.type === 'enemy_patrol') previewHtml += `<span class="text-red-400 text-xs block">${adjTile.content.details.name}</span>`;
-                        else if (adjTile.content && adjTile.content.type === 'resource') previewHtml += `<span class="text-green-400 text-xs block">${TILE_TYPES_TO_RESOURCE_KEY[adjTile.content.resourceType]}</span>`;
+                        if (adjTile.content) {
+                            contentName = this.getTileContentName(typeToDisplay, adjTile.content);
+                            if (contentName === terrainName) contentName = "";
+                            if (adjTile.content.type === 'enemy_patrol' || adjTile.content.type === 'enemy_base') contentClass = 'enemy';
+                            else if (adjTile.content.type === 'resource') contentClass = 'resource';
+                        }
                     } else {
                         terrainName = `Zone Inconnue (${this.getTerrainTypeName(adjTile.baseType)})`;
                         terrainIcon = this.getTileIcon(adjTile.baseType, null, true);
                     }
-                    previewHtml += `<i class="${terrainIcon} text-2xl my-1"></i><br><span class="text-[0.65rem] text-gray-300">${terrainName}</span>`;
+                    let previewHtml = `<strong class="text-xs">${d.dir.charAt(0).toUpperCase() + d.dir.slice(1)} (${adjX},${adjY})</strong>`;
+                    previewHtml += `<i class="${terrainIcon} text-xl my-1"></i>`;
+                    previewHtml += `<span class="terrain-name-preview">${terrainName}</span>`;
+                    if (contentName) previewHtml += `<span class="content-preview ${contentClass}">${contentName}</span>`;
                     d.element.innerHTML = previewHtml;
 
-                    let isTraversable = adjTile.actualType !== TILE_TYPES.IMPASSABLE_DEEP_WATER && adjTile.actualType !== TILE_TYPES.IMPASSABLE_HIGH_PEAK;
-                    if (adjTile.actualType === TILE_TYPES.DEBRIS_FIELD && typeof explorationController !== 'undefined' && !explorationController.nanobotHasModuleAbility('canTraverse', TILE_TYPES.DEBRIS_FIELD)) isTraversable = false;
-                    if (adjTile.actualType === TILE_TYPES.THICK_VINES && typeof explorationController !== 'undefined' && !explorationController.nanobotHasModuleAbility('canTraverse', TILE_TYPES.THICK_VINES)) isTraversable = false;
+                    let isTraversable = true; let traversalBlockReason = "";
+                    if (typeof window.TILE_TYPES !== 'undefined' && typeof window.explorationController !== 'undefined') {
+                        if (adjTile.actualType === window.TILE_TYPES.IMPASSABLE_DEEP_WATER || adjTile.actualType === window.TILE_TYPES.IMPASSABLE_HIGH_PEAK) {isTraversable = false;}
+                        else if (adjTile.actualType === window.TILE_TYPES.DEBRIS_FIELD && !window.explorationController.nanobotHasModuleAbility('canTraverse', window.TILE_TYPES.DEBRIS_FIELD)) {isTraversable = false; traversalBlockReason="Module Foreuse requis";}
+                        else if (adjTile.actualType === window.TILE_TYPES.THICK_VINES && !window.explorationController.nanobotHasModuleAbility('canTraverse', window.TILE_TYPES.THICK_VINES)) {isTraversable = false; traversalBlockReason="Module Découpeur requis";}
+                    } else { isTraversable = false; traversalBlockReason="Erreur config déplacement."; }
 
                     if (isTraversable) {
-                        d.navBtn.classList.remove('btn-disabled');
-                        d.navBtn.disabled = false;
+                        d.navBtn.classList.remove('btn-disabled'); d.navBtn.disabled = false;
                         d.element.classList.add('can-move', 'cursor-pointer', 'hover:bg-gray-700');
                         d.element.onclick = () => d.navBtn.click();
                     } else {
-                        d.element.onclick = null;
-                         previewHtml += `<br><span class="text-xs text-red-500 italic">Bloqué</span>`;
-                         d.element.innerHTML = previewHtml; // Mettre à jour avec le message bloqué
+                        d.element.classList.add('blocked-preview');
+                        if (traversalBlockReason) d.element.title = traversalBlockReason;
+                        else if(typeof window.TILE_TYPES !== 'undefined' && (adjTile.actualType === window.TILE_TYPES.IMPASSABLE_DEEP_WATER || adjTile.actualType === window.TILE_TYPES.IMPASSABLE_HIGH_PEAK)) d.element.title = "Terrain infranchissable";
                     }
-                } else {
-                     d.element.innerHTML = `<strong class="text-xs">${d.dir.charAt(0).toUpperCase() + d.dir.slice(1)}</strong><br><span class="text-xs text-gray-600 italic">Erreur</span>`;
-                }
-            } else {
-                 d.element.innerHTML = `<strong class="text-xs">${d.dir.charAt(0).toUpperCase() + d.dir.slice(1)}</strong><br><span class="text-xs text-gray-500 italic">Hors Limites</span>`;
-            }
+                } else { d.element.innerHTML = `<strong class="text-xs">${d.dir.charAt(0).toUpperCase() + d.dir.slice(1)}</strong><br><span class="text-xs text-gray-600 italic">Erreur données</span>`; }
+            } else { d.element.innerHTML = `<strong class="text-xs">${d.dir.charAt(0).toUpperCase() + d.dir.slice(1)}</strong><br><span class="text-xs text-gray-500 italic">Hors Limites</span>`; }
         });
 
-        if (this.activeTileUiElements.nanobotStatusContainer && gameState.nanobotStats) {
+        if (this.activeTileUiElements.nanobotStatusContainer && gameState.nanobotStats && typeof window.MAX_MOBILITY_POINTS !== 'undefined') {
             this.activeTileUiElements.nanobotStatusContainer.innerHTML =
                 `PV: <span class="font-semibold">${Math.floor(gameState.nanobotStats.currentHealth)}/${gameState.nanobotStats.health}</span> | ` +
                 `Énergie: <span class="font-semibold">${Math.floor(gameState.resources.energy)}</span> | ` +
-                `Mobilité: <span class="font-semibold">${Math.floor(gameState.resources.mobility)}/${MAX_MOBILITY_POINTS}</span>`;
+                `Mobilité: <span class="font-semibold">${Math.floor(gameState.resources.mobility)}/${window.MAX_MOBILITY_POINTS}</span>`;
         }
     },
 
     addLogToActiveTileView: function(message, type = "info") {
-        if (!this.activeTileUiElements.currentTileLog) return;
+        if (!this.activeTileUiElements.currentTileLog) this.initializeActiveTileUIElements();
+        if (!this.activeTileUiElements.currentTileLog) { console.warn("addLogToActiveTileView: Élément currentTileLog non trouvé."); return;}
+
         const entry = document.createElement('p');
         entry.className = 'text-xs mb-1';
         if (type === "error") entry.classList.add("text-red-400", "font-semibold");
@@ -284,206 +305,197 @@ var explorationUI = {
     },
 
     updateFullExplorationView: function() {
-        if (!gameState || !gameState.map) {
-            console.warn("explorationUI.updateFullExplorationView: gameState ou gameState.map non défini.");
-            return;
-        }
-        if (this.activeTileUiElements.container && !this.activeTileUiElements.container.classList.contains('hidden')) {
-            return;
+        if (!gameState || !gameState.map) { console.warn("explorationUI.updateFullExplorationView: gameState ou gameState.map non défini."); return; }
+        if (this.activeTileUiElements.container && !this.activeTileUiElements.container.classList.contains('hidden')) { return; }
+
+        if (typeof this.updateExplorationMapDisplay !== 'function' || typeof this.updateExplorationLogDisplay !== 'function' || 
+            typeof this.updateTileInteractionPanel !== 'function' || typeof this.updateZoneSelectionUI !== 'function') {
+            console.error("explorationUI.updateFullExplorationView: Fonctions de mise à jour manquantes."); return;
         }
         this.updateExplorationMapDisplay();
         this.updateExplorationLogDisplay();
-        if (gameState.map.selectedTile) {
-            this.updateTileInteractionPanel(gameState.map.selectedTile.x, gameState.map.selectedTile.y);
-        } else if (gameState.map.nanobotPos) {
-            this.updateTileInteractionPanel(gameState.map.nanobotPos.x, gameState.map.nanobotPos.y);
-        } else {
-            this.updateTileInteractionPanel();
-        }
-        if (this.isFirstExplorationViewUpdate && document.getElementById('exploration-subtab')?.classList.contains('active')) {
+        if (gameState.map.selectedTile) { this.updateTileInteractionPanel(gameState.map.selectedTile.x, gameState.map.selectedTile.y);
+        } else if (gameState.map.nanobotPos) { this.updateTileInteractionPanel(gameState.map.nanobotPos.x, gameState.map.nanobotPos.y);
+        } else { this.updateTileInteractionPanel(); }
+        
+        const explorationSubTab = document.getElementById('exploration-subtab');
+        if (this.isFirstExplorationViewUpdate && explorationSubTab?.classList.contains('active')) {
             setTimeout(() => { this.centerMapOnPlayer(true); }, 50);
             this.isFirstExplorationViewUpdate = false;
         }
     },
 
     updateExplorationMapDisplay: function() {
-        if(!mapGridEl || !nanobotMapPosEl || !tileInfoDisplayEl || !explorationTitleEl ) { return; }
-        if (typeof ZONE_DATA === 'undefined' || !gameState || !gameState.map || !gameState.currentZoneId || !ZONE_DATA[gameState.currentZoneId]) { return; }
+        const mapGrid = window.mapGridEl; const nanobotMapPos = window.nanobotMapPosEl;
+        const tileInfoDisp = window.tileInfoDisplayEl; const explorationTitle = window.explorationTitleEl;
+        if(!mapGrid || !nanobotMapPos || !tileInfoDisp || !explorationTitle ) { console.warn("explorationUI.updateExplorationMapDisplay: Eléments DOM carte manquants."); return; }
+        
+        // LOGS DE DÉBOGAGE AJOUTÉS ICI
+        console.log("DEBUG explorationUI.updateExplorationMapDisplay - typeof window.WORLD_ZONES:", typeof window.WORLD_ZONES);
+        if(typeof window.WORLD_ZONES !== 'undefined' && window.WORLD_ZONES !== null) { // Vérifier aussi null
+            console.log("DEBUG explorationUI.updateExplorationMapDisplay - window.WORLD_ZONES keys:", Object.keys(window.WORLD_ZONES));
+        }
+        console.log("DEBUG explorationUI.updateExplorationMapDisplay - gameState:", typeof gameState);
+        if(gameState) {
+            console.log("DEBUG explorationUI.updateExplorationMapDisplay - gameState.map:", typeof gameState.map);
+            console.log("DEBUG explorationUI.updateExplorationMapDisplay - gameState.currentZoneId:", gameState.currentZoneId);
+            if(typeof window.WORLD_ZONES !== 'undefined' && window.WORLD_ZONES !== null && gameState.currentZoneId) { // Vérifier aussi null pour WORLD_ZONES
+                console.log("DEBUG explorationUI.updateExplorationMapDisplay - window.WORLD_ZONES[gameState.currentZoneId]:", typeof window.WORLD_ZONES[gameState.currentZoneId], window.WORLD_ZONES[gameState.currentZoneId]);
+            }
+        }
+        // FIN DES LOGS DE DÉBOGAGE
 
+        if (typeof window.WORLD_ZONES === 'undefined' || !gameState || !gameState.map || !gameState.currentZoneId || !window.WORLD_ZONES[gameState.currentZoneId]) { // MODIFIÉ
+            mapGrid.innerHTML = "<p class='text-red-400 text-xs'>Erreur: Données de zone indisponibles.</p>"; return;
+        }
         if(typeof this.updateZoneSelectionUI === 'function') this.updateZoneSelectionUI();
 
-        const currentZone = ZONE_DATA[gameState.currentZoneId];
-        if(explorationTitleEl) explorationTitleEl.textContent = `Carte: ${currentZone.name}`;
-
-        const mapScrollContainer = document.getElementById('map-scroll-container');
-        if(mapGridEl && mapScrollContainer) {
-            mapGridEl.innerHTML = '';
-            const fixedTileSize = 22;
+        const currentZone = window.WORLD_ZONES[gameState.currentZoneId]; // MODIFIÉ
+        explorationTitle.textContent = `Carte: ${currentZone.name}`;
+        
+        const mapScrollContainer = window.mapScrollContainerEl;
+        if(mapGrid && mapScrollContainer) {
+            mapGrid.innerHTML = ''; const fixedTileSize = 22;
             document.documentElement.style.setProperty('--map-tile-effective-size', `${fixedTileSize}px`);
-            mapGridEl.style.gridTemplateRows = `repeat(${currentZone.mapSize.height}, ${fixedTileSize}px)`;
-            mapGridEl.style.gridTemplateColumns = `repeat(${currentZone.mapSize.width}, ${fixedTileSize}px)`;
-            mapGridEl.style.width = `${currentZone.mapSize.width * (fixedTileSize + 1) -1}px`;
-            mapGridEl.style.height = `${currentZone.mapSize.height * (fixedTileSize + 1) -1}px`;
+            mapGrid.style.gridTemplateRows = `repeat(${currentZone.mapSize.height}, ${fixedTileSize}px)`;
+            mapGrid.style.gridTemplateColumns = `repeat(${currentZone.mapSize.width}, ${fixedTileSize}px)`;
+            mapGrid.style.width = `${currentZone.mapSize.width * (fixedTileSize + 1) -1}px`;
+            mapGrid.style.height = `${currentZone.mapSize.height * (fixedTileSize + 1) -1}px`;
         } else { return; }
 
-
-        let scanButton = document.getElementById('scan-map-button');
-        if (scanButton && typeof SCAN_ENERGY_COST !== 'undefined' && typeof SCAN_COOLDOWN_DURATION_SECONDS !== 'undefined' && typeof TICK_SPEED !== 'undefined' && gameState && gameState.nanobotStats) {
-            const stats = gameState.nanobotStats;
-            const scanCost = SCAN_ENERGY_COST;
-            const scanCooldownTimeInTicks = SCAN_COOLDOWN_DURATION_SECONDS * (1000 / TICK_SPEED);
-            const onCooldown = gameState.gameTime < (stats.lastMapScanTime || 0) + scanCooldownTimeInTicks;
+        let scanButton = window.scanMapButtonEl;
+        if (scanButton && typeof window.SCAN_ENERGY_COST !== 'undefined' && typeof window.SCAN_COOLDOWN_DURATION_SECONDS !== 'undefined' && typeof window.TICK_SPEED !== 'undefined' && gameState && gameState.nanobotStats) {
+            const stats = gameState.nanobotStats; const scanCost = window.SCAN_ENERGY_COST;
+            const scanCooldownTimeInSeconds = window.SCAN_COOLDOWN_DURATION_SECONDS; // gameState.gameTime est en secondes
+            const onCooldown = gameState.gameTime < (stats.lastMapScanTime || 0) + scanCooldownTimeInSeconds;
             const canAffordScan = gameState.resources.energy >= scanCost;
             scanButton.disabled = onCooldown || !canAffordScan;
             scanButton.classList.toggle('btn-disabled', onCooldown || !canAffordScan);
             scanButton.classList.toggle('btn-info', !onCooldown && canAffordScan);
-
-            if (onCooldown) scanButton.textContent = `Scan Carte (CD: ${formatTime(Math.ceil(((stats.lastMapScanTime || 0) + scanCooldownTimeInTicks - gameState.gameTime) * (TICK_SPEED/1000))) })`;
+            if (onCooldown) scanButton.textContent = `Scan Carte (CD: ${formatTime(Math.ceil(((stats.lastMapScanTime || 0) + scanCooldownTimeInSeconds - gameState.gameTime))) })`;
             else if (!canAffordScan) scanButton.textContent = `Scan Carte (${scanCost} NRG) - Insuff.`;
             else scanButton.textContent = `Scanner Carte (${scanCost} NRG)`;
-
             if (!scanButton.dataset.listenerAttached) {
-                scanButton.addEventListener('click', () => {
-                    if (typeof explorationController !== 'undefined' && typeof explorationController.performScanOnWorldMap === 'function') {
-                        explorationController.performScanOnWorldMap();
-                    } else console.error("explorationController.performScanOnWorldMap non défini.");
-                });
+                scanButton.addEventListener('click', () => { if (typeof window.explorationController !== 'undefined' && typeof window.explorationController.performScanOnWorldMap === 'function') window.explorationController.performScanOnWorldMap(); });
                 scanButton.dataset.listenerAttached = 'true';
             }
         }
-
-        if (!Array.isArray(gameState.map.tiles) || gameState.map.tiles.length === 0 || !gameState.map.tiles[0] ) {
-            if(mapGridEl) mapGridEl.innerHTML = "<p class='text-yellow-400 italic text-xs'>Initialisation de la carte...</p>";
+        if (!gameState.map.tiles[gameState.currentZoneId] || !Array.isArray(gameState.map.tiles[gameState.currentZoneId]) || gameState.map.tiles[gameState.currentZoneId].length === 0 ) {
+            mapGrid.innerHTML = "<p class='text-yellow-400 italic text-xs'>Initialisation de la carte pour cette zone...</p>";
+             if(typeof window.mapManager !== 'undefined' && typeof window.mapManager.generateMap === 'function') {
+                 console.warn("Appel de generateMap depuis updateExplorationMapDisplay car la carte de zone n'existe pas.");
+                 window.mapManager.generateMap(gameState.currentZoneId);
+             }
             return;
         }
-
+        const zoneTiles = gameState.map.tiles[gameState.currentZoneId];
         for (let y = 0; y < currentZone.mapSize.height; y++) {
-            if (!Array.isArray(gameState.map.tiles[y]) || gameState.map.tiles[y].length !== currentZone.mapSize.width) continue;
+            if (!Array.isArray(zoneTiles[y]) || zoneTiles[y].length !== currentZone.mapSize.width) continue;
             for (let x = 0; x < currentZone.mapSize.width; x++) {
                 const tileDiv = document.createElement('div');
-                const tileData = this.getTile(x,y);
-                const tileClassesString = tileData ? this.getTileDisplayClassOnWorldMap(x, y) : 'unexplored unexplored-flat';
+                const tileDataFromManager = this.getTile(x,y);
+                const tileClassesString = tileDataFromManager ? this.getTileDisplayClassOnWorldMap(x, y) : 'unexplored unexplored-flat';
                 tileDiv.className = `map-tile ${tileClassesString}`;
                 tileDiv.dataset.x = x; tileDiv.dataset.y = y;
-                tileDiv.addEventListener('click', () => {
-                    if(typeof explorationController !== 'undefined' && typeof explorationController.handleTileClickOnWorldMap === 'function') {
-                        explorationController.handleTileClickOnWorldMap(x, y);
-                    } else { console.error("explorationController.handleTileClickOnWorldMap non défini.");}
-                });
-                tileDiv.addEventListener('mouseover', () => {
-                    if(tileInfoDisplayEl) tileInfoDisplayEl.textContent = `(${x},${y}) ${this.getTileInfoForWorldMap(x,y)}`;
-                });
-                tileDiv.addEventListener('mouseout', () => {
-                    if(tileInfoDisplayEl) tileInfoDisplayEl.textContent = "Survolez une case.";
-                });
-                if(mapGridEl) mapGridEl.appendChild(tileDiv);
+                tileDiv.addEventListener('click', () => { if(typeof window.explorationController !== 'undefined' && typeof window.explorationController.handleTileClickOnWorldMap === 'function') window.explorationController.handleTileClickOnWorldMap(x, y);});
+                tileDiv.addEventListener('mouseover', () => { if(tileInfoDisp) tileInfoDisp.textContent = `(${x},${y}) ${this.getTileInfoForWorldMap(x,y)}`; });
+                tileDiv.addEventListener('mouseout', () => { if(tileInfoDisp) tileInfoDisp.textContent = "Survolez une case."; });
+                mapGrid.appendChild(tileDiv);
             }
         }
-
-        if (nanobotMapPosEl && gameState && gameState.map && gameState.map.nanobotPos) {
-            nanobotMapPosEl.textContent = `(${gameState.map.nanobotPos.x}, ${gameState.map.nanobotPos.y}) / ${currentZone.name}`;
-        }
-
-        const centerBtn = document.getElementById('center-map-btn');
+        if (nanobotMapPos && gameState && gameState.map && gameState.map.nanobotPos) nanobotMapPos.textContent = `(${gameState.map.nanobotPos.x}, ${gameState.map.nanobotPos.y}) / ${currentZone.name}`;
+        
+        const centerBtn = window.centerMapBtnEl;
         if (centerBtn && !centerBtn.dataset.listenerAttached) {
             centerBtn.addEventListener('click', () => this.centerMapOnPlayer(false));
             centerBtn.dataset.listenerAttached = 'true';
         }
     },
 
-    getTileDisplayClassOnWorldMap: function(x,y) {
-        if (!gameState || !gameState.map || !this.getTile(x,y) || typeof TILE_TYPES === 'undefined') {
-            return 'unexplored unexplored-flat';
+    getTile: function(x, y) {
+        if (typeof window.mapManager !== 'undefined' && typeof window.mapManager.getTile === 'function') {
+            return window.mapManager.getTile(x, y);
         }
-        const tile = this.getTile(x,y);
-        let classes = [];
-        const isNanobotCurrentPos = gameState.map.nanobotPos.x === x && gameState.map.nanobotPos.y === y;
-
+        console.warn("explorationUI.getTile: mapManager ou mapManager.getTile non défini.");
+        return null;
+    },
+    
+    getTileDisplayClassOnWorldMap: function(x,y) {
+        if (!gameState || !gameState.map || !this.getTile(x,y) || typeof window.TILE_TYPES === 'undefined') return 'unexplored unexplored-flat';
+        const tile = this.getTile(x,y); let classes = [];
+        const isNanobotCurrentPos = gameState.map.nanobotPos && gameState.map.nanobotPos.x === x && gameState.map.nanobotPos.y === y;
         if (isNanobotCurrentPos) classes.push('nanobot');
 
         if (tile.isExplored) {
-            classes.push('explored');
-            const actualType = tile.actualType;
+            classes.push('explored'); const actualType = tile.actualType;
             switch (actualType) {
-                case TILE_TYPES.EMPTY_GRASSLAND: classes.push('grassland'); break;
-                case TILE_TYPES.EMPTY_DESERT: classes.push('desert'); break;
-                case TILE_TYPES.EMPTY_WATER: classes.push('water'); break;
-                case TILE_TYPES.FOREST: classes.push('forest'); break;
-                case TILE_TYPES.MOUNTAIN: classes.push('mountain'); break;
-                case TILE_TYPES.RUINS: classes.push('ruins'); break;
-                case TILE_TYPES.PLAYER_BASE: classes.push('base'); break;
-                case TILE_TYPES.RESOURCE_BIOMASS_PATCH: classes.push('resource-biomass'); if(tile.content) classes.push('has-active-resource'); break;
-                case TILE_TYPES.RESOURCE_NANITE_DEPOSIT: classes.push('resource-nanites'); if(tile.content) classes.push('has-active-resource'); break;
-                case TILE_TYPES.RESOURCE_CRYSTAL_VEIN: classes.push('resource-crystal'); if(tile.content) classes.push('has-active-resource'); break;
-                case TILE_TYPES.UPGRADE_CACHE: classes.push(tile.content && tile.content.isOpened ? 'ruins' : 'upgrade'); break;
-                case TILE_TYPES.POI_ANCIENT_STRUCTURE: classes.push('poi-structure'); break;
-                case TILE_TYPES.ENEMY_OUTPOST_TILE: classes.push(tile.content && tile.content.currentHealth > 0 ? 'enemy-base' : 'ruins'); break;
-                case TILE_TYPES.MERCHANT_WRECKAGE: classes.push('poi-wreckage'); break;
-                case TILE_TYPES.ENEMY_PATROL_WEAK: case TILE_TYPES.ENEMY_PATROL_MEDIUM: classes.push('enemy'); break;
-                case TILE_TYPES.IMPASSABLE_DEEP_WATER: classes.push('impassable-water explored-impassable'); break;
-                case TILE_TYPES.IMPASSABLE_HIGH_PEAK: classes.push('impassable-mountain explored-impassable'); break;
-                case TILE_TYPES.DEBRIS_FIELD: classes.push('debris-field'); break;
-                case TILE_TYPES.THICK_VINES: classes.push('thick-vines'); break;
+                case window.TILE_TYPES.EMPTY_GRASSLAND: classes.push('grassland'); break;
+                case window.TILE_TYPES.EMPTY_DESERT: classes.push('desert'); break;
+                case window.TILE_TYPES.EMPTY_WATER: classes.push('water'); break;
+                case window.TILE_TYPES.FOREST: classes.push('forest'); break;
+                case window.TILE_TYPES.MOUNTAIN: classes.push('mountain'); break;
+                case window.TILE_TYPES.RUINS: classes.push('ruins'); break;
+                case window.TILE_TYPES.DEBRIS_FIELD: classes.push('debris-field'); break;
+                case window.TILE_TYPES.THICK_VINES: classes.push('thick-vines'); break;
+                case window.TILE_TYPES.IMPASSABLE_DEEP_WATER: classes.push('impassable-water', 'explored-impassable'); break;
+                case window.TILE_TYPES.IMPASSABLE_HIGH_PEAK: classes.push('impassable-mountain', 'explored-impassable'); break;
+                case window.TILE_TYPES.PLAYER_BASE: classes.push('player-base-tile'); break; // Classe spécifique pour la tuile de base
+                // ... autres cas ...
                 default: classes.push(this.getBaseTerrainClass(actualType) || 'grassland'); break;
             }
             if (tile.isFullyExplored && !isNanobotCurrentPos) classes.push('fully-explored-overlay');
         } else {
             classes.push('unexplored');
             switch (tile.baseType) {
-                case TILE_TYPES.PRE_EMPTY: classes.push('unexplored-flat'); break;
-                case TILE_TYPES.PRE_WATER: classes.push('unexplored-water'); break;
-                case TILE_TYPES.PRE_ROUGH_TERRAIN: classes.push('unexplored-rough'); break;
-                case TILE_TYPES.PRE_HIGH_MOUNTAIN: classes.push('unexplored-impassable'); break;
-                case TILE_TYPES.PLAYER_BASE: classes.push('base'); break;
-                case TILE_TYPES.PRE_DEBRIS_FIELD: classes.push('unexplored-debris'); break;
-                case TILE_TYPES.PRE_THICK_VINES: classes.push('unexplored-vines'); break;
+                case window.TILE_TYPES.PRE_EMPTY: classes.push('unexplored-flat'); break;
+                case window.TILE_TYPES.PRE_WATER: classes.push('unexplored-water'); break;
+                case window.TILE_TYPES.PRE_ROUGH_TERRAIN: classes.push('unexplored-rough'); break;
+                case window.TILE_TYPES.PRE_HIGH_MOUNTAIN: classes.push('unexplored-impassable'); break;
+                case window.TILE_TYPES.PRE_DEBRIS_FIELD: classes.push('unexplored-debris'); break;
+                case window.TILE_TYPES.PRE_THICK_VINES: classes.push('unexplored-vines'); break;
+                case window.TILE_TYPES.PRE_RUIN_SILHOUETTE: classes.push('unexplored-ruin-outline'); break;
+                case window.TILE_TYPES.PRE_HOSTILE_STRUCTURE: classes.push('unexplored-enemy-base-outline'); break;
+                // ... autres cas ...
                 default: classes.push('unexplored-flat'); break;
-            }
-            if (tile.structureType) {
-                switch (tile.structureType) {
-                    case TILE_TYPES.PRE_RUIN_SILHOUETTE: classes.push('unexplored-ruin-outline'); break;
-                    case TILE_TYPES.PRE_LARGE_CRYSTAL_CLUSTER: classes.push('unexplored-large-crystal'); break;
-                    case TILE_TYPES.PRE_HOSTILE_STRUCTURE: classes.push('unexplored-enemy-base-outline'); break;
-                    case TILE_TYPES.PRE_DISTRESS_SIGNAL: classes.push('unexplored-distress-signal'); break;
-                }
             }
             if (tile.isScannedFromMap && tile.scannedFromMapActualType !== null && gameState.gameTime <= tile.scannedFromMapRevealTime) {
                 classes.push('scanned-on-map');
-                switch(tile.scannedFromMapActualType) {
-                    case TILE_TYPES.RESOURCE_BIOMASS_PATCH: classes.push('scanned-map-actual-biomass'); break;
-                    case TILE_TYPES.RESOURCE_NANITE_DEPOSIT: classes.push('scanned-map-actual-nanites'); break;
-                    case TILE_TYPES.RESOURCE_CRYSTAL_VEIN: classes.push('scanned-map-actual-crystal'); break;
-                    case TILE_TYPES.ENEMY_PATROL_WEAK: case TILE_TYPES.ENEMY_PATROL_MEDIUM: classes.push('scanned-map-actual-enemy'); break;
-                    case TILE_TYPES.UPGRADE_CACHE: classes.push('scanned-map-actual-upgrade'); break;
-                    case TILE_TYPES.ENEMY_OUTPOST_TILE: classes.push('scanned-map-actual-enemy-base'); break;
-                    case TILE_TYPES.IMPASSABLE_DEEP_WATER: classes.push('scanned-map-actual-impassable-water'); break;
-                    case TILE_TYPES.IMPASSABLE_HIGH_PEAK: classes.push('scanned-map-actual-impassable-mountain'); break;
+                 switch(tile.scannedFromMapActualType) {
+                    case window.TILE_TYPES.RESOURCE_BIOMASS_PATCH: classes.push('scanned-map-actual-biomass'); break;
+                    case window.TILE_TYPES.RESOURCE_NANITE_DEPOSIT: classes.push('scanned-map-actual-nanites'); break;
+                    case window.TILE_TYPES.RESOURCE_CRYSTAL_VEIN: classes.push('scanned-map-actual-crystal'); break;
+                    case window.TILE_TYPES.ENEMY_PATROL_WEAK: case window.TILE_TYPES.ENEMY_PATROL_MEDIUM: classes.push('scanned-map-actual-enemy'); break;
+                    case window.TILE_TYPES.UPGRADE_CACHE: classes.push('scanned-map-actual-upgrade'); break;
+                    case window.TILE_TYPES.ENEMY_OUTPOST_TILE: classes.push('scanned-map-actual-enemy-base'); break;
+                    case window.TILE_TYPES.IMPASSABLE_DEEP_WATER: classes.push('scanned-map-actual-impassable-water'); break;
+                    case window.TILE_TYPES.IMPASSABLE_HIGH_PEAK: classes.push('scanned-map-actual-impassable-mountain'); break;
                     default: classes.push('scanned-map-actual-empty'); break;
-                }
+                 }
             }
         }
+        if (tile.content?.type === 'resource') classes.push('has-active-resource', `resource-${(window.TILE_TYPES_TO_RESOURCE_KEY && window.TILE_TYPES_TO_RESOURCE_KEY[tile.actualType]) || 'unknown'}`);
+        if (tile.content?.type === 'enemy_base') classes.push('enemy-base');
+        if (tile.content?.type === 'poi' && window.MAP_FEATURE_DATA && window.MAP_FEATURE_DATA[tile.content.poiType]) classes.push(`poi-${tile.content.poiType.toLowerCase().replace(/[^a-z0-9]/gi, '-')}`);
+
+
         return classes.join(' ');
     },
 
     getTileInfoForWorldMap: function(x,y) {
-        if (!gameState || !gameState.map || !this.getTile(x,y) || typeof TILE_TYPES === 'undefined' || typeof MAP_FEATURE_DATA === 'undefined') {
-            return "Données indisponibles.";
-        }
-        const tile = this.getTile(x,y);
-        let info = "";
+        if (!gameState || !gameState.map || !this.getTile(x,y) || typeof window.TILE_TYPES === 'undefined' || typeof window.MAP_FEATURE_DATA === 'undefined') return "Données indisponibles.";
+        const tile = this.getTile(x,y); let info = "";
         if (tile.isExplored) {
             info = this.getTileContentName(tile.actualType, tile.content);
-            if (tile.isFullyExplored) info += " (Explorée)";
-            else info += " (Visitée)";
+            if (tile.isFullyExplored) info += " (Explorée)"; else info += " (Visitée)";
             if (tile.content) {
                 if (tile.content.type === 'resource' && tile.content.amount > 0) info += ` - ${tile.content.amount} u.`;
-                else if (tile.content.type === 'enemy_patrol') info += ` - ${tile.content.details.name}`;
-                else if (tile.content.type === 'enemy_base') info += ` - PV: ${tile.content.currentHealth}/${tile.content.details.health}`;
+                else if (tile.content.type === 'enemy_patrol' && tile.content.details) info += ` - ${tile.content.details.name}`;
+                else if (tile.content.type === 'enemy_base' && tile.content.details) info += ` - PV: ${tile.content.currentHealth}/${tile.content.details.health}`;
             }
         } else {
             info = "Zone Inconnue";
             if (tile.baseType) info += ` (${this.getTerrainTypeName(tile.baseType)})`;
-            if (tile.structureType) info += ` | Struct: ${this.getStructureTypeName(tile.structureType)}`;
+            if (tile.structureType && typeof window.MAP_FEATURE_DATA !== 'undefined' && window.MAP_FEATURE_DATA[tile.structureType]?.name) info += ` | Struct: ${window.MAP_FEATURE_DATA[tile.structureType].name}`;
             if (tile.isScannedFromMap && tile.scannedFromMapActualType !== null && gameState.gameTime <= tile.scannedFromMapRevealTime) {
                 info += ` | Scan: ${this.getTileContentName(tile.scannedFromMapActualType, null) || "Signal?"}`;
             }
@@ -492,196 +504,163 @@ var explorationUI = {
     },
 
     getTerrainTypeName: function(baseOrActualType) {
-        return TILE_TYPES ? ({
-            [TILE_TYPES.PRE_EMPTY]:"Plaines", [TILE_TYPES.EMPTY_GRASSLAND]:"Prairie",
-            [TILE_TYPES.PRE_WATER]:"Zone Humide", [TILE_TYPES.EMPTY_WATER]:"Eau Peu Profonde", [TILE_TYPES.IMPASSABLE_DEEP_WATER]: "Eau Profonde",
-            [TILE_TYPES.PRE_ROUGH_TERRAIN]:"Terrain Accidenté", [TILE_TYPES.MOUNTAIN]:"Montagne",
-            [TILE_TYPES.PRE_HIGH_MOUNTAIN]:"Hauts Sommets", [TILE_TYPES.IMPASSABLE_HIGH_PEAK]:"Pic Infranchissable",
-            [TILE_TYPES.PLAYER_BASE]:"Votre Base",
-            [TILE_TYPES.FOREST]: "Forêt", [TILE_TYPES.EMPTY_DESERT]: "Désert", [TILE_TYPES.RUINS]: "Ruines",
-            [TILE_TYPES.PRE_DEBRIS_FIELD]: "Champ de Débris (pré)", [TILE_TYPES.DEBRIS_FIELD]: "Champ de Débris",
-            [TILE_TYPES.PRE_THICK_VINES]: "Végétation Dense (pré)", [TILE_TYPES.THICK_VINES]: "Vignes Épaisses",
-        })[baseOrActualType] || "Terrain Inconnu" : "Terrain Inconnu";
+        if (typeof window.tileData === 'undefined' || !window.tileData[baseOrActualType]) return "Terrain Inconnu";
+        return window.tileData[baseOrActualType].name || "Terrain Inconnu";
     },
-    getStructureTypeName: function(structureType) { return (TILE_TYPES && MAP_FEATURE_DATA) ? MAP_FEATURE_DATA[structureType]?.name || "Struct. Non Ident." : "Struct. Inconnue";},
+
+    getStructureTypeName: function(structureType) { // Cette fonction n'est plus directement utilisée par getTileInfoForWorldMap
+        return (typeof window.MAP_FEATURE_DATA !== 'undefined' && window.MAP_FEATURE_DATA[structureType]) ? window.MAP_FEATURE_DATA[structureType].name || "Struct. Non Ident." : "Struct. Inconnue";
+    },
 
     getTileContentName: function(actualType, content) {
-        if (!TILE_TYPES || !MAP_FEATURE_DATA) { return "Erreur Config"; }
         if (content?.details?.name) return content.details.name;
-        if (content?.type === 'resource' && content.resourceType && TILE_TYPES_TO_RESOURCE_KEY) {
-            const resourceName = TILE_TYPES_TO_RESOURCE_KEY[content.resourceType];
-            return resourceName ? resourceName.charAt(0).toUpperCase() + resourceName.slice(1) : "Ressource Inconnue";
+        if (content?.type === 'resource' && content.resourceType && typeof window.TILE_TYPES_TO_RESOURCE_KEY !== 'undefined' && window.TILE_TYPES_TO_RESOURCE_KEY[content.resourceType]) {
+            const rn = window.TILE_TYPES_TO_RESOURCE_KEY[content.resourceType];
+            return rn ? rn.charAt(0).toUpperCase() + rn.slice(1) : "Ressource Inconnue";
         }
-        if (MAP_FEATURE_DATA[actualType]?.name) return MAP_FEATURE_DATA[actualType].name;
-        const genericNames = {
-            [TILE_TYPES.EMPTY_GRASSLAND]: "Prairie", [TILE_TYPES.EMPTY_DESERT]: "Désert",
-            [TILE_TYPES.EMPTY_WATER]: "Eau peu prof.", [TILE_TYPES.FOREST]: "Forêt",
-            [TILE_TYPES.MOUNTAIN]: "Montagne", [TILE_TYPES.PLAYER_BASE]: "Noyau Nexus-7",
-            [TILE_TYPES.UPGRADE_CACHE]: "Cache", [TILE_TYPES.ENEMY_PATROL_WEAK]: "Patrouille faible",
-            [TILE_TYPES.ENEMY_PATROL_MEDIUM]: "Patrouille moy.",
-            [TILE_TYPES.IMPASSABLE_DEEP_WATER]: "Eau Profonde (X)", [TILE_TYPES.IMPASSABLE_HIGH_PEAK]: "Pic Infranch.(X)",
-            [TILE_TYPES.DEBRIS_FIELD]: "Champ de Débris", [TILE_TYPES.THICK_VINES]: "Vignes Épaisses"
-        };
-        if (genericNames[actualType]) return genericNames[actualType];
-        const terrainName = this.getTerrainTypeName(actualType);
-        if (terrainName && terrainName !== "Terrain Inconnu") return terrainName;
-        return "Type Inconnu";
+        if (content?.type === 'poi' && content.poiType && typeof window.MAP_FEATURE_DATA !== 'undefined' && window.MAP_FEATURE_DATA[content.poiType]?.name) return window.MAP_FEATURE_DATA[content.poiType].name;
+        
+        // Fallback sur le nom du type de terrain si aucun contenu spécifique
+        return this.getTerrainTypeName(actualType);
     },
 
-     getTileIcon: function(type, content, isUnexploredBase = false) {
+    getTileIcon: function(type, content, isUnexploredBase = false) {
         if (isUnexploredBase) {
-            switch(type) {
-                case TILE_TYPES.PRE_EMPTY: return "ti-map-pin-question";
-                case TILE_TYPES.PRE_WATER: return "ti-droplet-question";
-                case TILE_TYPES.PRE_ROUGH_TERRAIN: return "ti-mountain-question";
-                case TILE_TYPES.PRE_HIGH_MOUNTAIN: return "ti-error-404";
-                case TILE_TYPES.PRE_DEBRIS_FIELD: return "ti-components-off";
-                case TILE_TYPES.PRE_THICK_VINES: return "ti-plant-off";
-                default: return "ti-question-mark";
-            }
+            if (typeof window.tileData !== 'undefined' && window.tileData[type]?.icon) return window.tileData[type].icon; // Utiliser l'icône de tileData pour les PRE_ types
+            return "ti ti-help-circle";
         }
         if (content) {
-            switch(content.type) {
-                case 'resource': return "ti-basket";
-                case 'enemy_patrol': return "ti-sword";
-                case 'enemy_base': return "ti-castle";
-                case 'poi':
-                    if(content.poiType === TILE_TYPES.UPGRADE_CACHE) return "ti-treasure-chest";
-                    return "ti-zoom-question";
-                default: break;
+            if (content.type === 'resource') return "ti ti-package";
+            if (content.type === 'enemy_patrol') return "ti ti-skull";
+            if (content.type === 'enemy_base') return "ti ti-castle";
+            if (content.type === 'poi') {
+                if(typeof window.MAP_FEATURE_DATA !== 'undefined' && window.MAP_FEATURE_DATA[content.poiType]?.icon) return window.MAP_FEATURE_DATA[content.poiType].icon;
+                return "ti ti-flag-question";
             }
         }
-        switch(type) {
-            case TILE_TYPES.EMPTY_GRASSLAND: return "ti-barley";
-            case TILE_TYPES.FOREST: return "ti-plant-2";
-            case TILE_TYPES.MOUNTAIN: return "ti-mountain";
-            case TILE_TYPES.EMPTY_DESERT: return "ti-cactus";
-            case TILE_TYPES.EMPTY_WATER: return "ti-wave-sine";
-            case TILE_TYPES.RUINS: return "ti-building-ruin";
-            case TILE_TYPES.PLAYER_BASE: return "ti-home-shield";
-            case TILE_TYPES.DEBRIS_FIELD: return "ti-components";
-            case TILE_TYPES.THICK_VINES: return "ti-plant";
-            case TILE_TYPES.IMPASSABLE_DEEP_WATER: case TILE_TYPES.IMPASSABLE_HIGH_PEAK: return "ti-ban";
-            default: return "ti-map-pin";
-        }
+        if (typeof window.tileData !== 'undefined' && window.tileData[type]?.icon) return window.tileData[type].icon;
+        return "ti ti-map-pin";
     },
 
     centerMapOnPlayer: function(instant = false) {
-        const mapScrollContainer = document.getElementById('map-scroll-container');
-        const mapGrid = document.getElementById('map-grid');
-        if (!mapScrollContainer || !mapGrid || !gameState || !gameState.map.nanobotPos) { return; }
-        requestAnimationFrame(() => {
-            const tileSizeString = getComputedStyle(document.documentElement).getPropertyValue('--map-tile-effective-size');
-            const tileSize = parseFloat(tileSizeString) || 22;
-            const gap = 1;
-            const playerTileX = gameState.map.nanobotPos.x;
-            const playerTileY = gameState.map.nanobotPos.y;
-            const playerPixelX = playerTileX * (tileSize + gap);
-            const playerPixelY = playerTileY * (tileSize + gap);
-            const playerCenterX = playerPixelX + tileSize / 2;
-            const playerCenterY = playerPixelY + tileSize / 2;
-            const targetScrollLeft = playerCenterX - mapScrollContainer.clientWidth / 2;
-            const targetScrollTop = playerCenterY - mapScrollContainer.clientHeight / 2;
-            mapScrollContainer.scrollTo({ top: targetScrollTop, left: targetScrollLeft, behavior: instant ? 'auto' : 'smooth' });
+        if (!window.mapScrollContainerEl || !gameState || !gameState.map || !gameState.map.nanobotPos) return;
+        const mapGrid = window.mapGridEl;
+        if(!mapGrid) return;
+
+        const nanobotX = gameState.map.nanobotPos.x;
+        const nanobotY = gameState.map.nanobotPos.y;
+        const tileEffectiveSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--map-tile-effective-size')) || 22;
+        const gap = 1;
+
+        const targetScrollX = nanobotX * (tileEffectiveSize + gap) + (tileEffectiveSize / 2) - (window.mapScrollContainerEl.offsetWidth / 2);
+        const targetScrollY = nanobotY * (tileEffectiveSize + gap) + (tileEffectiveSize / 2) - (window.mapScrollContainerEl.offsetHeight / 2);
+
+        window.mapScrollContainerEl.scrollTo({
+            left: Math.max(0, targetScrollX),
+            top: Math.max(0, targetScrollY),
+            behavior: instant ? 'auto' : 'smooth'
         });
     },
+
     updateExplorationLogDisplay: function() {
-        if (!explorationLogEl || !gameState || !gameState.explorationLog) { return; }
-        explorationLogEl.innerHTML = '';
-        const logPlaceholder = '<p class="text-gray-500 italic text-xs">Aucun événement récent...</p>';
-        if (gameState.explorationLog.length === 0 || (gameState.explorationLog.length === 1 && gameState.explorationLog[0].includes("initialisé"))) {
-            if (!explorationLogEl.querySelector('p.text-gray-500.italic')) explorationLogEl.innerHTML = logPlaceholder;
-        } else {
-            const logToDisplay = gameState.explorationLog.slice(-30);
-            logToDisplay.forEach(msgHtml => {
-                const entry = document.createElement('p');
-                entry.className = 'text-xs'; // Les classes de couleur sont supposées être dans msgHtml
-                if (msgHtml.toLowerCase().includes("collecté") || msgHtml.toLowerCase().includes("trouvé")) entry.classList.add("text-green-400");
-                else if (msgHtml.toLowerCase().includes("danger") || msgHtml.toLowerCase().includes("erreur") || msgHtml.toLowerCase().includes("impossible")) entry.classList.add("text-red-400");
-                else if (msgHtml.toLowerCase().includes("déplacement") || msgHtml.toLowerCase().includes("scan") || msgHtml.toLowerCase().includes("arriv")) entry.classList.add("text-blue-300");
-                else entry.classList.add("text-gray-300");
-                entry.innerHTML = msgHtml;
-                explorationLogEl.appendChild(entry);
-            });
-        }
-        if (explorationLogEl) explorationLogEl.scrollTop = explorationLogEl.scrollHeight;
+        if (!window.explorationLogEl || !gameState || !Array.isArray(gameState.explorationLog)) return;
+        window.explorationLogEl.innerHTML = '';
+        const logToDisplay = gameState.explorationLog.slice(-50);
+        logToDisplay.forEach(entryText => {
+            const p = document.createElement('p');
+            p.innerHTML = entryText; 
+            window.explorationLogEl.appendChild(p);
+        });
+        window.explorationLogEl.scrollTop = window.explorationLogEl.scrollHeight;
     },
+
     updateTileInteractionPanel: function(x, y) {
-        const panel = tileInteractionPanelEl; const detailsDiv = tileInteractionDetailsEl; const actionsDiv = tileInteractionActionsEl;
-        if (!panel || !detailsDiv || !actionsDiv) return;
-        if (x === undefined || y === undefined || !gameState || !gameState.map || !this.getTile(x,y) ) {
-            detailsDiv.innerHTML = `<h4 class="font-orbitron text-sm text-blue-300 mb-1">Interaction Rapide</h4><p class="text-gray-500 italic text-xs">Survolez ou cliquez une case sur la carte du monde.</p>`; actionsDiv.innerHTML = ''; return;
+        if (!window.tileInteractionDetailsEl || !window.tileInteractionActionsEl) return;
+        window.tileInteractionDetailsEl.innerHTML = ''; window.tileInteractionActionsEl.innerHTML = '';
+
+        if (x === undefined || y === undefined || !gameState || !gameState.map) {
+            window.tileInteractionDetailsEl.innerHTML = '<p class="text-gray-500 italic">Sélectionnez une case sur la carte.</p>';
+            return;
         }
         const tile = this.getTile(x,y);
-        let detailsHtml = `<h4 class="font-orbitron text-sm text-blue-300 mb-1">Aperçu Case (${x}, ${y})</h4>`;
-        detailsHtml += `<p class="text-xs"><b>Statut:</b> ${tile.isExplored ? (tile.isFullyExplored ? 'Explorée (Total.)' : 'Explorée (Partiel.)') : 'Non explorée'}</p>`;
-        detailsHtml += `<p class="text-xs"><b>Terrain:</b> ${this.getTerrainTypeName(tile.isExplored || tile.isScannedFromMap ? tile.actualType : tile.baseType)}</p>`;
-        if (!tile.isExplored && tile.structureType) detailsHtml += `<p class="text-xs"><b>Structure (Est.):</b> ${this.getStructureTypeName(tile.structureType)}</p>`;
-
-        if (tile.isExplored || (tile.isScannedFromMap && gameState.gameTime <= tile.scannedFromMapRevealTime)) {
-            const typeToDisplay = (tile.isScannedFromMap && gameState.gameTime <= tile.scannedFromMapRevealTime && !tile.isExplored) ? tile.scannedFromMapActualType : tile.actualType;
-            detailsHtml += `<p class="text-xs"><b>Contenu Identifié:</b> ${this.getTileContentName(typeToDisplay, tile.content)}</p>`;
-            if (tile.content && tile.content.type === 'resource') detailsHtml += `<p class="text-xs">Quantité: ${tile.content.amount}</p>`;
-        } else if (tile.isScannedFromMap && gameState.gameTime > tile.scannedFromMapRevealTime) {
-            detailsHtml += `<p class="text-xs text-yellow-500 italic">Données du scan expirées.</p>`;
+        if (!tile) {
+            window.tileInteractionDetailsEl.innerHTML = '<p class="text-red-500">Erreur: Données de case invalides.</p>';
+            return;
         }
-
-        actionsDiv.innerHTML = '';
-        const isCurrentPos = gameState.map.nanobotPos.x === x && gameState.map.nanobotPos.y === y;
-        if (isCurrentPos) {
-            const enterActiveModeButton = document.createElement('button');
-            enterActiveModeButton.className = 'btn btn-primary btn-xs mt-1 w-full';
-            enterActiveModeButton.innerHTML = `<i class="ti ti-target-arrow mr-1"></i> Explorer Activement`;
-            enterActiveModeButton.onclick = () => { if (typeof this.enterActiveTileExplorationMode === 'function') this.enterActiveTileExplorationMode(x,y); };
-            actionsDiv.appendChild(enterActiveModeButton);
-        } else {
-             actionsDiv.innerHTML = `<p class="text-xs text-gray-500 italic">Cliquez sur votre case pour l'explorer activement.</p>`;
+        let detailsHtml = `<h4 class="text-sm font-semibold mb-1">${this.getTileContentName(tile.actualType, tile.content)} (${x},${y})</h4>`;
+        detailsHtml += `<p class="text-xs text-gray-400 mb-1">Type: ${this.getTerrainTypeName(tile.actualType)}</p>`;
+        if(tile.isExplored) detailsHtml += `<p class="text-xs text-green-400">Statut: Visitée ${tile.isFullyExplored ? '(Complètement explorée)' : ''}</p>`;
+        else detailsHtml += `<p class="text-xs text-yellow-400">Statut: Non visitée ${tile.isScannedFromMap ? '(Scannée)' : ''}</p>`;
+        if (tile.content) {
+            detailsHtml += `<p class="text-xs">Contenu: ${this.getTileContentName(tile.actualType, tile.content)}`;
+            if (tile.content.type === 'resource') detailsHtml += ` (${tile.content.amount} unités)`;
+            if (tile.content.type === 'enemy_base' && tile.content.details) detailsHtml += ` (PV: ${tile.content.currentHealth}/${tile.content.details.health})`;
+            detailsHtml += `</p>`;
         }
-        detailsDiv.innerHTML = detailsHtml;
-    },
-    updateZoneSelectionUI: function() {
-        const zoneListContainer = zoneListContainerEl; if (!zoneListContainer) return;
-        if (typeof ZONE_DATA === 'undefined' || !gameState || !gameState.unlockedZones || typeof researchData === 'undefined' || typeof QUEST_DATA === 'undefined') { zoneListContainer.innerHTML = "<p class='text-red-400 italic text-xs'>Erreur zones.</p>"; return;}
-        zoneListContainer.innerHTML = '';
-        for (const zoneId in ZONE_DATA) {
-            const zone = ZONE_DATA[zoneId]; let isUnlocked = gameState.unlockedZones.includes(zoneId);
-            if (!isUnlocked && zone.unlockCondition?.research && gameState.research[zone.unlockCondition.research]) {
-                isUnlocked = true; if (!gameState.unlockedZones.includes(zoneId)) gameState.unlockedZones.push(zoneId);
-            }
-            const zoneDiv = document.createElement('div'); zoneDiv.className = 'p-1 rounded text-xs ';
-            if (isUnlocked) {
-                zoneDiv.classList.add('hover:bg-gray-600', 'cursor-pointer');
-                if (gameState.currentZoneId === zoneId) {
-                    zoneDiv.classList.add('bg-blue-700', 'font-semibold'); zoneDiv.innerHTML = `<h5 class="text-xs text-white">${zone.name}</h5>`; zoneDiv.title = "Zone actuelle";
-                } else {
-                    zoneDiv.classList.add('bg-gray-800'); zoneDiv.innerHTML = `<h5 class="text-xs text-blue-300">${zone.name}</h5>`; zoneDiv.title = `Voyager vers ${zone.name}`;
-                    if (zone.travelCost) { let costStr = Object.entries(zone.travelCost).map(([res,val]) => `${val} ${res.charAt(0).toUpperCase() + res.slice(1)}`).join(', '); zoneDiv.title += ` (Coût: ${costStr})`;}
-                    zoneDiv.onclick = () => { if(typeof explorationController !== 'undefined' && typeof explorationController.attemptTravelToZone === 'function') explorationController.attemptTravelToZone(zoneId); };
+        if (tile.revealedFeatures && tile.revealedFeatures.length > 0) {
+            detailsHtml += `<p class="text-xs mt-1">Découvertes (<i class="ti ti-radar-2"></i>):</p><ul class="list-disc list-inside text-xs pl-2">`;
+            tile.revealedFeatures.forEach(feat => { detailsHtml += `<li>${feat.name || feat.type}</li>`;});
+            detailsHtml += `</ul>`;
+        }
+        window.tileInteractionDetailsEl.innerHTML = detailsHtml;
+
+        const isNanobotCurrentPos = gameState.map.nanobotPos && x === gameState.map.nanobotPos.x && y === gameState.map.nanobotPos.y;
+        if (isNanobotCurrentPos) {
+            const enterExplorationBtn = document.createElement('button');
+            enterExplorationBtn.className = 'btn btn-primary btn-xs w-full';
+            enterExplorationBtn.innerHTML = `<i class="ti ti-target mr-1"></i> Explorer Activement`;
+            enterExplorationBtn.onclick = () => this.enterActiveTileExplorationMode(x,y);
+            window.tileInteractionActionsEl.appendChild(enterExplorationBtn);
+        } else if (tile.isExplored && tile.content && tile.content.type === 'enemy_base' && tile.content.currentHealth > 0) {
+            const attackBaseBtn = document.createElement('button');
+            attackBaseBtn.className = 'btn btn-danger btn-xs w-full';
+            attackBaseBtn.innerHTML = `<i class="ti ti-sword mr-1"></i> Attaquer Base`;
+            attackBaseBtn.onclick = () => {
+                if (typeof window.explorationController !== 'undefined' && typeof window.explorationController.attemptAttackEnemyBase === 'function') {
+                    window.explorationController.attemptAttackEnemyBase(x, y);
                 }
-            } else {
-                zoneDiv.classList.add('bg-gray-900', 'opacity-60');
-                let unlockText = "Condition déblocage inconnue.";
-                if (zone.unlockCondition?.research && researchData[zone.unlockCondition.research]) unlockText = `Recherche: ${researchData[zone.unlockCondition.research].name}`;
-                else if (zone.unlockCondition?.quest && QUEST_DATA[zone.unlockCondition.quest]) unlockText = `Quête: ${QUEST_DATA[zone.unlockCondition.quest].title}`;
-                zoneDiv.innerHTML = `<h5 class="text-xs text-gray-600">${zone.name} (Verrouillé)</h5><p class="text-xs text-gray-500">${unlockText}</p>`;
-            }
-            zoneListContainer.appendChild(zoneDiv);
+            };
+            window.tileInteractionActionsEl.appendChild(attackBaseBtn);
+        } else {
+             window.tileInteractionActionsEl.innerHTML = '<p class="text-xs text-gray-500 italic text-center">Placez Nexus-7 ici pour plus d\'options.</p>';
         }
     },
-    getTile: function(x, y) {
-        if (mapManager && typeof mapManager.getTile === 'function') return mapManager.getTile(x, y);
-        return null;
+
+    updateZoneSelectionUI: function() {
+        if (!window.zoneListEl || typeof window.WORLD_ZONES === 'undefined' || !gameState) return; // MODIFIÉ
+        window.zoneListEl.innerHTML = '';
+        for (const zoneId in window.WORLD_ZONES) { // MODIFIÉ
+            const zone = window.WORLD_ZONES[zoneId]; // MODIFIÉ
+            const button = document.createElement('button');
+            button.className = `btn btn-xs mr-1 mb-1 ${gameState.currentZoneId === zoneId ? 'btn-primary' : (gameState.unlockedZones.includes(zoneId) ? 'btn-secondary' : 'btn-disabled')}`;
+            if (!gameState.unlockedZones.includes(zoneId)) button.disabled = true;
+            button.textContent = zone.name;
+            button.title = zone.description || zone.name;
+            if (gameState.unlockedZones.includes(zoneId) && gameState.currentZoneId !== zoneId) {
+                button.onclick = () => {
+                    if (typeof window.explorationController !== 'undefined' && typeof window.explorationController.attemptTravelToZone === 'function') {
+                        window.explorationController.attemptTravelToZone(zoneId);
+                    }
+                };
+            }
+            window.zoneListEl.appendChild(button);
+        }
     },
+
     getBaseTerrainClass: function(actualType) {
-        switch(actualType) {
-            case TILE_TYPES.EMPTY_GRASSLAND: return 'grassland';
-            case TILE_TYPES.EMPTY_DESERT: return 'desert';
-            case TILE_TYPES.EMPTY_WATER: return 'water';
-            case TILE_TYPES.FOREST: return 'forest';
-            case TILE_TYPES.MOUNTAIN: return 'mountain';
-            case TILE_TYPES.RUINS: return 'ruins';
-            default: return 'unknown-terrain';
+        if (typeof window.TILE_TYPES === 'undefined') return 'grassland';
+        switch (actualType) {
+            case window.TILE_TYPES.EMPTY_GRASSLAND: case window.TILE_TYPES.FOREST: case window.TILE_TYPES.RESOURCE_BIOMASS_PATCH: return 'grassland';
+            case window.TILE_TYPES.EMPTY_DESERT: return 'desert';
+            case window.TILE_TYPES.EMPTY_WATER: return 'water';
+            case window.TILE_TYPES.MOUNTAIN: case window.TILE_TYPES.RESOURCE_CRYSTAL_VEIN: return 'mountain';
+            case window.TILE_TYPES.RUINS: case window.TILE_TYPES.POI_ANCIENT_STRUCTURE: return 'ruins';
+            case window.TILE_TYPES.DEBRIS_FIELD: return 'debris-field';
+            case window.TILE_TYPES.THICK_VINES: return 'thick-vines';
+            default: return 'grassland';
         }
     }
 };
+window.explorationUI = explorationUI;
+
 console.log("explorationUI.js - Objet explorationUI défini.");
