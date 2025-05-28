@@ -24,7 +24,7 @@ function getInitialGameState() {
         critChance: 0.05, critDamage: 1.5, energyRegen: 0.5, rageMax: 100,
         resistances: {}, // Initialiser les résistances
         lastMapScanTime: 0, // Pour le cooldown du scan de carte
-        isDefendingBase: false,
+        isDefendingBase: true, // MODIFIÉ: Défense activée par défaut
         baseDefensePosition: null, // { row, col }
         baseDefenseTargetEnemyId: null,
         baseDefensePatrolIndex: 0,
@@ -92,7 +92,6 @@ function getInitialGameState() {
             nanobotPos: { x: 0, y: 0 },
             selectedTile: null, // {x, y} de la tuile sélectionnée sur la carte du monde
             activeExplorationTileCoords: null, // {x, y} pour l'UI d'exploration active
-            // discoveredTiles et scannedTiles pourraient être gérés par les propriétés des tuiles elles-mêmes (isExplored, isScannedFromMap)
         },
         currentZoneId: (typeof window.EXPLORATION_SETTINGS !== 'undefined' ? window.EXPLORATION_SETTINGS.initialZoneId : 'verdant_archipelago'),
         unlockedZones: [(typeof window.EXPLORATION_SETTINGS !== 'undefined' ? window.EXPLORATION_SETTINGS.initialZoneId : 'verdant_archipelago')], // Zone de départ est débloquée
@@ -108,7 +107,6 @@ function getInitialGameState() {
             deficitWarningLogged: 0, // Pour éviter spam de log de déficit énergétique
             lastAttackTime: 0 // Pour NIGHT_ASSAULT_TICK_INTERVAL
         },
-        // nanobotAssistingBase: false, // Remplacé par nanobotStats.isDefendingBase
 
         quests: {},
         activeStoryEvents: [],
@@ -169,7 +167,6 @@ function calculateInitialGameState() {
     }
     console.log("gameState.js: calculateInitialGameState CALLED");
 
-    // Appeler les fonctions avec les noms corrects et s'assurer qu'elles existent
     if (typeof calculateProductionAndConsumption === 'function') calculateProductionAndConsumption(); else console.warn("calculateProductionAndConsumption non défini");
     if (typeof calculateResourceCapacities === 'function') calculateResourceCapacities(); else console.warn("calculateResourceCapacities non défini");
     if (typeof calculateNanobotStats === 'function') calculateNanobotStats(); else console.warn("calculateNanobotStats non défini");
@@ -178,13 +175,11 @@ function calculateInitialGameState() {
 
     if (gameState.nanobotStats) {
         gameState.nanobotStats.currentHealth = Math.min(gameState.nanobotStats.currentHealth, gameState.nanobotStats.health);
-        // Assurer xpToNext est correct au cas où il aurait été mal sauvegardé
         if (typeof window.LEVEL_XP_THRESHOLDS !== 'undefined' && gameState.nanobotStats.level > 0 && gameState.nanobotStats.level <= window.LEVEL_XP_THRESHOLDS.length) {
             gameState.nanobotStats.xpToNext = window.LEVEL_XP_THRESHOLDS[gameState.nanobotStats.level - 1];
         } else if (typeof window.LEVEL_XP_THRESHOLDS !== 'undefined' && gameState.nanobotStats.level > window.LEVEL_XP_THRESHOLDS.length) {
-            gameState.nanobotStats.xpToNext = Infinity; // Niveau max atteint
+            gameState.nanobotStats.xpToNext = Infinity; 
         }
-        // Initialiser les skills débloqués au niveau 1 si la config existe
         if (typeof window.NANOBOT_SKILLS_CONFIG !== 'undefined' && gameState.nanobotStats.level === 1) {
             for (const skillId in window.NANOBOT_SKILLS_CONFIG) {
                 const skillConfig = window.NANOBOT_SKILLS_CONFIG[skillId];
@@ -195,13 +190,68 @@ function calculateInitialGameState() {
                 }
             }
         }
-        // S'assurer que les nouvelles propriétés de défense de base du nanobot sont là
-        if (typeof gameState.nanobotStats.baseDefensePosition === 'undefined') gameState.nanobotStats.baseDefensePosition = null;
+        
+        // S'assurer que la défense de base du Nanobot est bien configurée si activée
+        if (gameState.nanobotStats.isDefendingBase) {
+            if (!gameState.nanobotStats.baseDefensePosition && typeof window.NANOBOT_BASE_PATROL_POINTS !== 'undefined' && window.NANOBOT_BASE_PATROL_POINTS.length > 0 && typeof window.BASE_GRID_SIZE !== 'undefined') {
+                // Logique pour trouver une position initiale (similaire à toggleNanobotDefendBase)
+                let initialPatrolPoint = window.NANOBOT_BASE_PATROL_POINTS[0];
+                let r = initialPatrolPoint.row;
+                let c = initialPatrolPoint.col;
+
+                if (gameState.baseGrid && gameState.baseGrid[r] && 
+                    r >= 0 && r < window.BASE_GRID_SIZE.rows && 
+                    c >= 0 && c < window.BASE_GRID_SIZE.cols &&
+                    !gameState.baseGrid[r][c]) {
+                    gameState.nanobotStats.baseDefensePosition = { ...initialPatrolPoint };
+                } else {
+                    const coreRow = Math.floor(window.BASE_GRID_SIZE.rows / 2);
+                    const coreCol = Math.floor(window.BASE_GRID_SIZE.cols / 2);
+                    const adjacents = [
+                        {r: coreRow-1, c: coreCol}, {r: coreRow+1, c: coreCol}, 
+                        {r: coreRow, c: coreCol-1}, {r: coreRow, c: coreCol+1}
+                    ];
+                    let foundSpot = false;
+                    for (const spot of adjacents) {
+                        if (gameState.baseGrid && gameState.baseGrid[spot.r] &&
+                            spot.r >= 0 && spot.r < window.BASE_GRID_SIZE.rows && 
+                            spot.c >= 0 && spot.c < window.BASE_GRID_SIZE.cols &&
+                            !gameState.baseGrid[spot.r][spot.c]) {
+                            gameState.nanobotStats.baseDefensePosition = { row: spot.r, col: spot.c };
+                            foundSpot = true;
+                            break;
+                        }
+                    }
+                    if (!foundSpot) {
+                        console.warn("Impossible de trouver une case vide pour placer le Nanobot en défense automatiquement.");
+                        gameState.nanobotStats.baseDefensePosition = null; // Ou une position par défaut sûre
+                    }
+                }
+                gameState.nanobotStats.baseDefensePatrolIndex = 0;
+                gameState.nanobotStats.baseDefenseLastActionTime = gameState.gameTime || 0;
+                gameState.nanobotStats.baseDefenseTargetEnemyId = null;
+            }
+            // Mise à jour de l'UI du bouton (si ce n'est pas déjà géré par uiUpdates)
+            const btn = window.toggleNanobotDefendBaseBtn;
+            if (btn) {
+                btn.innerHTML = `<i class="ti ti-home-shield mr-2"></i>Nexus-7 Déf. Noyau`;
+                btn.classList.add('btn-success');
+                btn.classList.remove('btn-secondary');
+            }
+        } else { // Si isDefendingBase est false, s'assurer que le bouton est correct
+             const btn = window.toggleNanobotDefendBaseBtn;
+            if (btn) {
+                btn.innerHTML = `<i class="ti ti-home-shield mr-2"></i>Nexus-7 Autonome`;
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-secondary');
+            }
+        }
+
         if (typeof gameState.nanobotStats.baseDefenseTargetEnemyId === 'undefined') gameState.nanobotStats.baseDefenseTargetEnemyId = null;
         if (typeof gameState.nanobotStats.baseDefensePatrolIndex === 'undefined') gameState.nanobotStats.baseDefensePatrolIndex = 0;
         if (typeof gameState.nanobotStats.baseDefenseLastActionTime === 'undefined') gameState.nanobotStats.baseDefenseLastActionTime = 0;
-
     }
+
     if (gameState.baseStats) {
         gameState.baseStats.currentHealth = Math.min(gameState.baseStats.currentHealth, gameState.baseStats.maxHealth);
     }
@@ -217,12 +267,10 @@ function calculateInitialGameState() {
         gameState.map.nanobotPos = zoneConf && zoneConf.entryPoint ? { ...zoneConf.entryPoint } : defaultStartPos;
         console.warn(`Position du nanobot non définie pour la zone ${gameState.currentZoneId}, réinitialisée à (${gameState.map.nanobotPos.x}, ${gameState.map.nanobotPos.y})`);
     }
-    // Assurer que `tiles` est un objet (qui contiendra des sous-objets par zoneId)
     if (gameState.map && typeof gameState.map.tiles !== 'object') {
         gameState.map.tiles = {};
     }
 
-    // Assurer l'existence des tableaux de logs pour éviter les erreurs si `addLogEntry` est appelé avant
     if (!Array.isArray(gameState.explorationLog)) gameState.explorationLog = [];
     if (!Array.isArray(gameState.eventLog)) gameState.eventLog = [];
     if (!Array.isArray(gameState.combatLogSummary)) gameState.combatLogSummary = [];

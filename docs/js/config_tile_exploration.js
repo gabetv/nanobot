@@ -1,8 +1,21 @@
 // js/config_tile_exploration.js
 console.log("config_tile_exploration.js - Fichier chargé et en cours d'analyse...");
 
-// Assurez-vous que TILE_TYPES, gameState (pour les actions), addToInventory, unlockLoreEntry, etc.
-// sont accessibles. L'accès via window. est plus sûr pour les configs globales.
+// Fonction utilitaire (peut être dans utils.js et rendue globale)
+if (typeof getRandomElement !== 'function') {
+    window.getRandomElement = function(array) {
+        if (!array || array.length === 0) return undefined;
+        return array[Math.floor(Math.random() * array.length)];
+    }
+}
+if (typeof getRandomInt !== 'function') {
+    window.getRandomInt = function(min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+}
+
 
 var tileActiveExplorationOptions = {
     'scan_local_active': {
@@ -12,14 +25,12 @@ var tileActiveExplorationOptions = {
         icon: "ti-radar-2",
         cost: { energy: 5 },
         canRepeat: false,
-        action: function(tile, currentGameState) { // Renommé gameState en currentGameState pour éviter confusion avec window.gameState
+        action: function(tile, currentGameState) { 
             let findingsText = "";
             let tileLogUpdates = [];
-
             if (tile.usedActions && tile.usedActions['scan_local_active']) {
                  return { forMainLog: "Scan local déjà effectué sur cette case.", forTileLog: "Scan déjà effectué." };
             }
-
             let newDiscoveries = false;
             if (tile.hiddenFeatures && tile.hiddenFeatures.length > 0) {
                 tile.revealedFeatures = tile.revealedFeatures || [];
@@ -40,7 +51,6 @@ var tileActiveExplorationOptions = {
             } else {
                 findingsText = "Scan local terminé. Aucun élément notable dissimulé détecté.";
             }
-
             tile.usedActions = tile.usedActions || {};
             tile.usedActions['scan_local_active'] = true;
             return { forMainLog: findingsText, forTileLog: tileLogUpdates.length > 0 ? tileLogUpdates.join("<br>") : findingsText, newActionsAvailable: newDiscoveries, refreshActions: true };
@@ -51,17 +61,15 @@ var tileActiveExplorationOptions = {
         name: "Fouiller la Zone",
         description: "Recherche manuelle de ressources ou d'indices. Peut être risqué.",
         icon: "ti-search",
-        cost: { mobility: 0.2 }, // Utiliser les constantes de coût globales si définies
+        cost: { mobility: 0.2 }, 
         canRepeat: true,
         maxRepeats: 3,
         action: function(tile, currentGameState) {
             tile.searchAttempts = (tile.searchAttempts || 0) + 1;
             let mainLogMsg = ""; let tileLogMsg = "";
-
             if (tile.searchAttempts > (this.maxRepeats || 3)) {
                 return { forMainLog: "Zone déjà fouillée intensivement.", forTileLog: "Plus rien à trouver ici." };
             }
-
             if (tile.hasActiveTrap && Math.random() < 0.4) {
                 const damage = Math.floor(Math.random() * 8) + 5;
                 currentGameState.nanobotStats.currentHealth -= damage;
@@ -72,14 +80,10 @@ var tileActiveExplorationOptions = {
                 if (typeof window.uiUpdates !== 'undefined') window.uiUpdates.updateNanobotDisplay();
                 return { forMainLog: mainLogMsg, forTileLog: tileLogMsg, logType: "error", refreshActions: true };
             }
-
-            // Chance de trouver quelque chose, décroissante. Ajuster les chances et les butins.
             if (Math.random() < (0.5 / tile.searchAttempts)) {
                 const amount = Math.floor(Math.random() * 10) + 5;
-                // S'assurer que itemsData est disponible pour 'frag_alien'
                 const resTypes = ['biomass', 'nanites', (window.itemsData && window.itemsData['frag_alien'] ? 'frag_alien' : 'biomass')];
-                const foundRes = resTypes[Math.floor(Math.random() * resTypes.length)];
-
+                const foundRes = getRandomElement(resTypes);
                 if (foundRes === 'frag_alien' && window.itemsData && window.itemsData['frag_alien']) {
                     if(typeof window.addToInventory === 'function') window.addToInventory('frag_alien');
                     else console.error("addToInventory n'est pas une fonction");
@@ -123,7 +127,7 @@ var tileActiveExplorationOptions = {
             const loreIdToUnlock = featureData.loreId || getRandomElement(Object.keys(window.loreData?.codex_entries || {})) || 'unknown_lore';
 
             if (typeof window.unlockLoreEntry === 'function' && window.loreData && window.loreData.codex_entries && window.loreData.codex_entries.find(e => e.id === loreIdToUnlock) ) {
-                window.unlockLoreEntry(loreIdToUnlock); // unlockLoreEntry est global
+                window.unlockLoreEntry(loreIdToUnlock); 
                 tile.revealedFeatures = tile.revealedFeatures.filter(f => f !== featureData);
                 const loreEntry = window.loreData.codex_entries.find(e => e.id === loreIdToUnlock);
                 const msg = `Données déchiffrées : "${loreEntry.title}". Nouvelle entrée de Lore.`;
@@ -138,7 +142,7 @@ var tileActiveExplorationOptions = {
         isDynamic: true, cost: { mobility: 0.5, energy: 3 },
         action: function(tile, currentGameState, featureData) {
             if (!tile.hasActiveTrap) return { forMainLog: "Aucun piège actif.", forTileLog: "Pas de piège."};
-            if (Math.random() < 0.75) { // 75% succès
+            if (Math.random() < 0.75) { 
                 tile.hasActiveTrap = false;
                 if(featureData && featureData.type === 'hidden_trap'){ tile.revealedFeatures = tile.revealedFeatures.filter(f => f !== featureData); }
                 return { forMainLog: "Piège désamorcé avec succès !", forTileLog: "Piège neutralisé.", logType: "success", refreshActions: true };
@@ -167,8 +171,6 @@ var tileActiveExplorationOptions = {
                 const msg = `Collecté ${amountCollected} ${resourceKey}.`;
                 if (typeof window.questController !== 'undefined') window.questController.checkQuestProgress({ type: "collect_resource", resource: resourceKey, amount: amountCollected });
                 tile.content = null;
-                // Revenir au type de base de la tuile (ex: grassland si c'était un patch de biomasse)
-                // TILE_TYPES.PRE_WATER n'est pas un type "actual". Il faut mapper vers le bon type vide.
                 tile.actualType = tile.baseType === (window.TILE_TYPES?.PRE_WATER) ? (window.TILE_TYPES?.EMPTY_WATER) : (window.TILE_TYPES?.EMPTY_GRASSLAND || "empty_grassland");
                 if (typeof window.uiUpdates !== 'undefined') window.uiUpdates.updateResourceDisplay();
                 return { forMainLog: msg, forTileLog: msg, logType: "success", refreshActions: true };
@@ -180,25 +182,23 @@ var tileActiveExplorationOptions = {
         id: 'engage_visible_enemy_active', name: "Engager {enemyName}",
         description: "Attaquer l'ennemi patrouillant dans cette zone.", icon: "ti-sword",
         isDynamic: true,
-        action: async function(tile, currentGameState) { // async car simulateCombat est async
+        action: async function(tile, currentGameState) { 
             if (tile.content && tile.content.type === 'enemy_patrol' && tile.content.details) {
                 const enemyDetails = tile.content.details;
                 if(typeof addLogEntry === 'function') addLogEntry(`Engagement contre ${enemyDetails.name}...`, "combat", window.eventLogEl, currentGameState.eventLog);
                 
-                const combatResult = await window.simulateCombat(enemyDetails); // simulateCombat est global
+                const combatResult = await window.simulateCombat(enemyDetails); 
                 
                 if (combatResult && combatResult.outcome === "victory") {
                     if(typeof addLogEntry === 'function') addLogEntry(`${enemyDetails.name} vaincu !`, "success", window.eventLogEl, currentGameState.eventLog);
-                    tile.content = null; // Ennemi retiré
+                    tile.content = null; 
                     tile.actualType = tile.baseType === (window.TILE_TYPES?.PRE_WATER) ? (window.TILE_TYPES?.EMPTY_WATER) : (window.TILE_TYPES?.EMPTY_GRASSLAND || "empty_grassland");
-                    // Gérer le loot et l'XP est fait par simulateCombat/endCombat
                     if (typeof window.questController !== 'undefined' && enemyDetails.id) {
                         window.questController.checkQuestProgress({ type: "defeat_enemy_type", enemyId: enemyDetails.id, count: 1 });
                     }
                     return { forMainLog: `${enemyDetails.name} vaincu.`, forTileLog: "Zone sécurisée.", logType: "success", refreshActions: true };
                 } else if (combatResult && combatResult.outcome === "defeat") {
                     if(typeof addLogEntry === 'function') addLogEntry(`Nexus-7 vaincu par ${enemyDetails.name}. Repli nécessaire.`, "error", window.eventLogEl, currentGameState.eventLog);
-                    // Gérer les conséquences de la défaite (ex: retour base, perte de ressources)
                     return { forMainLog: `Défaite contre ${enemyDetails.name}.`, forTileLog: "Repli !", logType: "error", refreshActions: true };
                 } else {
                      if(typeof addLogEntry === 'function') addLogEntry(`Le combat contre ${enemyDetails.name} s'est terminé de manière inattendue.`, "warning", window.eventLogEl, currentGameState.eventLog);
@@ -208,64 +208,107 @@ var tileActiveExplorationOptions = {
             return {forMainLog:"Aucun ennemi à engager.", forTileLog:"Zone calme."};
         }
     },
-    'interact_poi_active': {
+    'interact_poi_active': { 
         id: 'interact_poi_active', name: "Examiner {poiName}",
         description: "Interagir avec le point d'intérêt.", icon: "ti-zoom-question",
         isDynamic: true,
         action: function(tile, currentGameState) {
-            if (tile.content && tile.content.type === 'poi' && !tile.content.isInteracted && window.MAP_FEATURE_DATA) {
-                const poiName = (window.MAP_FEATURE_DATA[tile.content.poiType]?.name) || "Point d'intérêt";
+            if (tile.content && tile.content.type === 'poi' && 
+                (!tile.content.isInteracted || (tile.content.poiType === window.TILE_TYPES.POI_ANCIENT_STRUCTURE && !tile.content.isFullyExploited) ) && // Permettre ré-interaction si POI complexe pas fini
+                window.MAP_FEATURE_DATA) {
+                
+                const poiConfig = window.MAP_FEATURE_DATA[tile.content.poiType];
+                const poiName = poiConfig?.name || "Point d'intérêt";
                 let interactionMessage = `Vous examinez ${poiName}.<br>`;
                 let logType = "info";
 
                 if (tile.content.poiType === (window.TILE_TYPES?.UPGRADE_CACHE) && window.itemsData) {
-                    const loot = tile.content.lootTable || ['repair_kit_basic']; // Fallback loot
+                    const loot = tile.content.lootTable || ['repair_kit_basic']; 
                     loot.forEach(itemId => { if(typeof window.addToInventory === 'function' && window.itemsData[itemId]) window.addToInventory(itemId); else console.warn("addToInventory non défini ou item inconnu:", itemId)});
                     interactionMessage += `Vous trouvez : ${loot.map(id => window.itemsData[id]?.name || id).join(', ')}.`;
                     logType = "success";
+                    tile.content.isInteracted = true; 
+                    tile.content.isFullyExploited = true; 
                 } else if (tile.content.poiType === (window.TILE_TYPES?.POI_ANCIENT_STRUCTURE)) {
-                    interactionMessage += window.MAP_FEATURE_DATA[tile.content.poiType]?.description || "Une aura étrange émane de la structure.";
-                    if(Math.random() < 0.5 && typeof window.unlockLoreEntry === 'function' && window.loreData && window.loreData.codex_entries) {
-                        const codexKeys = Object.keys(window.loreData.codex_entries);
-                        if (codexKeys.length > 0) {
-                            const randomCodexIndex = Math.floor(Math.random() * codexKeys.length);
-                            const randomLoreId = window.loreData.codex_entries[randomCodexIndex].id;
-                            window.unlockLoreEntry(randomLoreId);
-                            interactionMessage += `<br>Une inscription ancienne révèle un fragment d'histoire : "${window.loreData.codex_entries[randomCodexIndex].title}".`;
-                            logType = "success";
-                        }
+                    interactionMessage += poiConfig?.description || "Une aura étrange émane de la structure.";
+                    // Première interaction, ne fait que décrire et préparer pour les étapes suivantes
+                    if (!tile.content.interactionStep) {
+                        tile.content.interactionStep = 1; 
+                        interactionMessage += "<br>Une interface semble s'activer...";
+                        logType = "system";
+                    } else {
+                        interactionMessage += "<br>La structure semble attendre une autre action."
                     }
+                    // isInteracted n'est mis à true que lorsque le POI est "isFullyExploited" pour ce type
                 } else {
-                     interactionMessage += window.MAP_FEATURE_DATA[tile.content.poiType]?.description || "Rien de particulier à noter après un examen plus approfondi.";
+                     interactionMessage += poiConfig?.description || "Rien de particulier à noter après un examen plus approfondi.";
+                     tile.content.isInteracted = true;
+                     tile.content.isFullyExploited = true;
                 }
-
-                tile.content.isInteracted = true;
-                if (typeof window.questController !== 'undefined') {
+                
+                if (typeof window.questController !== 'undefined' && tile.content.isFullyExploited) { 
                     window.questController.checkQuestProgress({ type: "interact_poi_type", poiType: tile.content.poiType, count: 1, x:tile.x, y:tile.y });
                 }
                 return { forMainLog: interactionMessage, forTileLog: interactionMessage, logType: logType, refreshActions: true };
-            } else if (tile.content && tile.content.type === 'poi' && tile.content.isInteracted) {
-                return { forMainLog: "Vous avez déjà examiné ce point d'intérêt.", forTileLog: "Déjà examiné."};
+            } else if (tile.content && tile.content.type === 'poi' && tile.content.isFullyExploited) {
+                return { forMainLog: "Vous avez déjà examiné et exploité ce point d'intérêt.", forTileLog: "Déjà exploité."};
             }
             return { forMainLog: "Aucun point d'intérêt notable ici.", forTileLog: "Rien à examiner."};
         }
      },
+    'ancient_structure_analyze_energy': {
+        id: 'ancient_structure_analyze_energy', name: "Analyser Signature Énergétique",
+        description: "Utiliser les senseurs pour comprendre les flux d'énergie de la structure. Nécessite un Laboratoire (Niv.1).",
+        icon: "ti ti-atom-2",
+        cost: { energy: 15 },
+        condition: (gs, tile) => tile.content?.poiType === window.TILE_TYPES.POI_ANCIENT_STRUCTURE && tile.content?.interactionStep === 1 && (gs.buildings?.researchLab || 0) >= 1,
+        action: function(tile, currentGameState) {
+            tile.content.interactionStep = 2;
+            let msg = "L'analyse révèle un mécanisme de verrouillage complexe. Il semble nécessiter un catalyseur cristallin pour être activé.";
+            if(typeof window.unlockLoreEntry === 'function' && window.loreData?.codex_entries) {
+                const loreId = "ancient_structure_protocol"; 
+                const loreEntry = window.loreData.codex_entries.find(e => e.id === loreId);
+                if (loreEntry && typeof window.unlockLoreEntry === 'function') {
+                    window.unlockLoreEntry(loreId); // Assurez-vous que unlockLoreEntry est défini globalement
+                    msg += `<br>Nouvelle entrée de Lore: "${loreEntry.title}"`;
+                }
+            }
+            return { forMainLog: msg, forTileLog: msg, logType: "system", refreshActions: true };
+        }
+    },
+    'ancient_structure_insert_crystal': {
+        id: 'ancient_structure_insert_crystal', name: "Insérer Éclat de Cristal",
+        description: "Tenter d'activer la structure en utilisant un Éclat de Cristal Brut.",
+        icon: "ti ti-diamond",
+        cost: { items: { "crystal_shard_raw": 1 } }, 
+        condition: (gs, tile) => tile.content?.poiType === window.TILE_TYPES.POI_ANCIENT_STRUCTURE && tile.content?.interactionStep === 2,
+        action: function(tile, currentGameState) {
+            tile.content.interactionStep = 3; 
+            tile.content.isInteracted = true; 
+            tile.content.isFullyExploited = true;
+
+            const rewards = ["blueprint_shield_module_mk1", "alloy_plates", "nanite_cluster_small"];
+            const foundItem = getRandomElement(rewards);
+            if (typeof window.addToInventory === 'function' && window.itemsData && window.itemsData[foundItem]) {
+                window.addToInventory(foundItem);
+                 if (typeof window.questController !== 'undefined') { 
+                    window.questController.checkQuestProgress({ type: "interact_poi_type", poiType: tile.content.poiType, count: 1, x:tile.x, y:tile.y });
+                }
+                const msg = `La structure s'anime brièvement et libère : ${window.itemsData[foundItem].name} !`;
+                return { forMainLog: msg, forTileLog: msg, logType: "success", refreshActions: true };
+            }
+            return { forMainLog: "La structure réagit mais rien de tangible n'est produit.", forTileLog: "Activation partielle.", logType: "info", refreshActions: true };
+        }
+    },
     'attack_enemy_base_active': {
         id: 'attack_enemy_base_active', name: "Attaquer Base: {baseName}",
         description: "Lancer un assaut sur la base ennemie.", icon: "ti-home-bolt",
         isDynamic: true,
         action: async function(tile, currentGameState) {
             if (tile.content && tile.content.type === 'enemy_base' && tile.content.currentHealth > 0) {
-                // La logique d'attaque est gérée par explorationController.attemptAttackEnemyBase
-                // Ici, on ne fait que signaler que l'action a été invoquée.
-                // explorationController.attemptAttackEnemyBase est déjà appelée depuis handleTileClickOnWorldMap
-                // si la tuile est la position actuelle et que le contenu est une base.
-                // Si on veut un bouton spécifique dans l'UI d'exploration active:
                 if (typeof window.explorationController !== 'undefined' && typeof window.explorationController.attemptAttackEnemyBase === 'function') {
                     await window.explorationController.attemptAttackEnemyBase(tile.x, tile.y);
-                    // Le résultat de l'action (logs, etc.) sera géré par attemptAttackEnemyBase lui-même.
-                    // Il faut s'assurer que attemptAttackEnemyBase retourne quelque chose ou que l'UI est rafraîchie.
-                    return { refreshActions: true }; // Indiquer de rafraîchir les actions de la tuile
+                    return { refreshActions: true }; 
                 } else {
                     return {forMainLog:"Fonction d'attaque de base non trouvée.", forTileLog:"Erreur système."};
                 }
@@ -276,56 +319,127 @@ var tileActiveExplorationOptions = {
 };
 window.tileActiveExplorationOptions = tileActiveExplorationOptions;
 
-var activeTileViewData = { // Utiliser window.TILE_TYPES pour les clés
+var activeTileViewData = { 
     [window.TILE_TYPES?.EMPTY_GRASSLAND || "empty_grassland"]: {
         image: "images/tile_view/grassland_detail.png",
+        descriptions: [ 
+            "De vastes plaines herbeuses s'étendent à perte de vue.",
+            "Une brise légère fait onduler les hautes herbes. L'horizon semble dégagé.",
+            "Quelques formations rocheuses parsèment cette étendue verdoyante.",
+            "Le sol est ferme sous les senseurs du Nexus-7, idéal pour la manœuvre."
+        ],
         baseActions: ['scan_local_active', 'search_area_active'],
         possibleHiddenFeatures: [
             { type: 'small_resource_cache', resourceType: 'biomass', amount: 15, chance: 0.2 },
             { type: 'ancient_data_fragment', name: "Relais de données endommagé", loreId: 'origin_signal_01', chance: 0.1 },
         ]
     },
-    [window.TILE_TYPES?.FOREST || "forest"]: { // Clé générique pour forêt si FOREST_LIGHT/DENSE ne sont pas explicitement définis
+    [window.TILE_TYPES?.FOREST || "forest"]: { 
         image: "images/tile_view/forest_detail.png",
+        descriptions: [
+            "La canopée dense bloque une grande partie de la lumière. Des bruits étranges proviennent des fourrés.",
+            "Des arbres aux formes bizarres s'élèvent, leurs racines s'enfonçant profondément dans le sol riche.",
+            "L'air est lourd et humide. La progression est ralentie par une végétation exubérante.",
+            "Des traces de créatures inconnues sillonnent le sol forestier."
+        ],
         baseActions: ['scan_local_active', 'search_area_active'],
         possibleHiddenFeatures: [
             { type: 'small_resource_cache', resourceType: 'biomass', amount: 25, chance: 0.25 },
-            { type: 'hidden_trap', name: "Piège à fosse", chance: 0.1 },
-            { type: 'small_resource_cache', resourceType: 'frag_alien', amount: 1, chance: 0.05 } // Assurer que frag_alien existe dans itemsData
+            { type: 'hidden_trap', name: "Piège à fosse végétale", chance: 0.12 },
+            { type: 'small_resource_cache', resourceType: 'frag_alien', amount: 1, chance: 0.05 } 
         ]
     },
-     [window.TILE_TYPES?.FOREST_LIGHT || "forest_light"]: { // Spécifique
-        image: "images/tile_view/forest_light_detail.png", // Image spécifique
+     [window.TILE_TYPES?.FOREST_LIGHT || "forest_light"]: { 
+        image: "images/tile_view/forest_light_detail.png", 
+        descriptions: [
+            "Une forêt clairsemée où la lumière du soleil atteint le sol par intermittence.",
+            "Des bosquets d'arbres alternent avec des clairières herbeuses.",
+            "Le chant d'oiseaux inconnus se fait entendre, mais une certaine vigilance reste de mise."
+        ],
         baseActions: ['scan_local_active', 'search_area_active'],
-        possibleHiddenFeatures: [ /* ... */ ]
+        possibleHiddenFeatures: [ 
+             { type: 'small_resource_cache', resourceType: 'biomass', amount: 20, chance: 0.22 },
+             { type: 'hidden_trap', name: "Filet suspendu", chance: 0.08 },
+        ]
     },
     [window.TILE_TYPES?.RUINS || "ruins"]: {
         image: "images/tile_view/ruins_detail.png",
+        descriptions: [
+            "Des structures érodées par le temps témoignent d'une civilisation disparue.",
+            "Des fragments de technologie inconnue jonchent le sol, recouverts de poussière.",
+            "Un silence de mort règne sur ces vestiges, comme si le temps s'y était arrêté."
+        ],
         baseActions: ['scan_local_active', 'search_area_active'],
-        possibleHiddenFeatures: [ /* ... */ ]
+        possibleHiddenFeatures: [ 
+            { type: 'ancient_data_fragment', name: "Console de données brisée", loreId: 'ruins_log_01', chance: 0.15 },
+            { type: 'small_resource_cache', resourceType: 'nanites', amount: 12, chance: 0.18 },
+            { type: 'hidden_trap', name: "Plaque de pression instable", chance: 0.1 },
+        ]
+    },
+    [window.TILE_TYPES?.POI_ANCIENT_STRUCTURE || "poi_ancient_structure"]: { 
+        image: "images/tile_view/ruins_ancient_detail.png", 
+        descriptions: [
+            "Une structure monolithique d'origine inconnue se dresse devant vous, émettant une faible pulsation énergétique.",
+            "Des gravures complexes recouvrent la surface de cet édifice antique. Leur signification reste un mystère.",
+            "Malgré les âges, cette construction extraterrestre semble remarquablement préservée."
+        ],
+        baseActions: ['scan_local_active'], 
     },
     [window.TILE_TYPES?.EMPTY_DESERT || "empty_desert"]: {
         image: "images/tile_view/desert_detail.png",
+         descriptions: [
+            "Le sable brûlant s'étend à l'infini, sous un soleil de plomb.",
+            "Des dunes sculptées par le vent créent un paysage désolé et mouvant.",
+            "La chaleur est accablante. Peu de signes de vie sont visibles."
+        ],
         baseActions: ['scan_local_active', 'search_area_active'],
-        possibleHiddenFeatures: [ /* ... */ ]
+        possibleHiddenFeatures: [
+            { type: 'small_resource_cache', resourceType: 'crystal_shard_raw', amount: 5, chance: 0.15 },
+            { type: 'ancient_data_fragment', name: "Balise météo ensablée", loreId: 'desert_climate_data', chance: 0.08 },
+        ]
     },
     [window.TILE_TYPES?.MOUNTAIN || "mountain"]: {
         image: "images/tile_view/mountain_detail.png",
+        descriptions: [
+            "Des pics rocheux se dressent vers le ciel, rendant la progression difficile.",
+            "Des éboulis instables menacent de dévaler les pentes abruptes.",
+            "Le vent siffle à travers les cols étroits, portant des échos lointains."
+        ],
         baseActions: ['scan_local_active', 'search_area_active'],
-        possibleHiddenFeatures: [ /* ... */ ]
+        possibleHiddenFeatures: [
+            { type: 'small_resource_cache', resourceType: 'crystal_shard_raw', amount: 8, chance: 0.2 },
+            { type: 'hidden_trap', name: "Chute de pierres", chance: 0.1 },
+        ]
     },
     [window.TILE_TYPES?.DEBRIS_FIELD || "debris_field"]: {
         image: "images/tile_view/debris_detail.png",
+        descriptions: [
+            "Un enchevêtrement de métal tordu et de composants électroniques brisés recouvre la zone.",
+            "Les restes d'un ancien crash ou d'une bataille spatiale jonchent le sol.",
+            "La navigation est périlleuse au milieu de ces débris acérés."
+        ],
         baseActions: ['scan_local_active', 'search_area_active'],
-        possibleHiddenFeatures: [ /* ... */ ]
+        possibleHiddenFeatures: [
+             { type: 'small_resource_cache', resourceType: 'alloy_plates', amount: 3, chance: 0.15 },
+             { type: 'small_resource_cache', resourceType: 'nanites', amount: 10, chance: 0.1 },
+        ]
     },
     [window.TILE_TYPES?.THICK_VINES || "thick_vines"]: {
         image: "images/tile_view/vines_detail.png",
+        descriptions: [
+            "Des lianes épaisses comme des câbles forment un mur végétal quasi impénétrable.",
+            "Une odeur âcre et organique flotte dans l'air.",
+            "Des mouvements suspects se font sentir au cœur de cette jungle de vignes."
+        ],
         baseActions: ['scan_local_active', 'search_area_active'],
-        possibleHiddenFeatures: [ /* ... */ ]
+        possibleHiddenFeatures: [
+             { type: 'small_resource_cache', resourceType: 'biomass', amount: 30, chance: 0.25 },
+             { type: 'hidden_trap', name: "Lianes constrictrices", chance: 0.15 },
+        ]
     },
     'default': {
         image: "images/tile_view/default_detail.png",
+        descriptions: [ "Zone d'apparence ordinaire, mais l'exploration pourrait révéler des surprises." ],
         baseActions: ['scan_local_active', 'search_area_active'],
         possibleHiddenFeatures: [ { type: 'small_resource_cache', resourceType: 'biomass', amount: 10, chance: 0.1 }, ]
     }

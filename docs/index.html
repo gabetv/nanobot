@@ -153,38 +153,53 @@
         #center-map-btn { position: absolute; bottom: 8px; right: 8px; z-index: 20; }
 
         /* Styles UI Exploration Active - Refonte */
-        #active-tile-exploration-ui { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(var(--bg-primary-rgb), 0.98); z-index: 100; display: flex; flex-direction: column; padding: 0.5rem; box-sizing: border-box; overflow: hidden; }
+        #active-tile-exploration-ui { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background-color: rgba(var(--bg-primary-rgb), 0.98); 
+            z-index: 100; 
+            display: flex; flex-direction: column; 
+            padding: 0.5rem; box-sizing: border-box; overflow: hidden; 
+        }
         #active-tile-exploration-ui.hidden { display: none !important; }
-        #active-exploration-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-shrink: 0; }
-        #active-exploration-header h2 { font-family: 'Orbitron'; font-size: 1.1rem; color: var(--accent-blue); }
+        #active-exploration-header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 0.5rem; flex-shrink: 0; 
+        }
+        #active-exploration-header h2 { 
+            font-family: 'Orbitron'; font-size: 1.1rem; color: var(--accent-blue); 
+        }
         
-        #active-exploration-content-wrapper { flex-grow: 1; display: flex; flex-direction: column; md:flex-row; gap: 0.5rem; overflow: hidden; }
+        #active-exploration-content-wrapper { 
+            flex-grow: 1; display: flex; flex-direction: column; 
+            gap: 0.5rem; overflow: hidden; 
+        }
 
         #active-exploration-main-grid-view { 
-            flex-grow: 1; display: grid; 
+            flex-shrink: 0; 
+            display: grid; 
             grid-template-columns: repeat(3, 1fr); 
             grid-template-rows: repeat(3, 1fr); 
             gap: 0.25rem; 
-            aspect-ratio: 1 / 1; /* Pour une grille carrée */
-            max-width: 45vh; /* Limiter la taille de la grille pour ne pas être trop grande */
-            max-height: 45vh;
-            margin: 0 auto; /* Centrer la grille */
-            align-self: center; /* Centrer verticalement dans le flex column */
+            aspect-ratio: 1 / 1; 
+            width: clamp(150px, 70vw, 200px); 
+            max-height: 35vh; 
+            margin: 0 auto; 
+            align-self: center; 
         }
         
         .active-explore-grid-cell {
             background-color: rgba(var(--bg-secondary-rgb), 0.7);
             border: 1px solid var(--border-color);
             border-radius: 0.25rem;
-            padding: 0.2rem; /* Réduire padding pour plus de place */
+            padding: 0.2rem;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
             transition: background-color 0.2s, transform 0.1s;
-            overflow: hidden; /* Pour les textes longs */
-            position: relative; /* Pour les overlays (ex: Nanobot) */
+            overflow: hidden;
+            position: relative;
         }
         .active-explore-grid-cell.current-nanobot-pos {
             border: 2px solid var(--accent-blue);
@@ -203,35 +218,85 @@
             background-color: rgba(var(--bg-secondary-rgb), 0.7); transform: scale(1);
         }
 
-        .active-explore-grid-cell i { font-size: 1.2rem; /* Ajuster pour la taille de la cellule */ color: var(--text-primary); margin-bottom: 0.1rem; }
+        .active-explore-grid-cell i { font-size: 1.2rem; color: var(--text-primary); margin-bottom: 0.1rem; }
         .active-explore-grid-cell .terrain-name-preview { font-size: 0.5rem; color: var(--text-secondary); line-height: 1; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
         .active-explore-grid-cell .content-preview { font-size: 0.45rem; font-style: italic; line-height: 1; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;}
         .active-explore-grid-cell .content-preview.enemy { color: var(--accent-red); font-weight: bold; }
         .active-explore-grid-cell .content-preview.resource { color: var(--accent-green); }
-
-        /* Nanobot icon in grid view */
         .nanobot-grid-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5rem; color: var(--accent-blue); z-index: 5; animation: idle-breath 3s infinite ease-in-out; }
+
+        /* Styles pour la Mini-Carte en Exploration Active */
+        #active-exploration-minimap-container {
+            background-color: rgba(var(--bg-secondary-rgb), 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 0.25rem;
+            padding: 0.3rem;
+            flex-shrink: 0; 
+            align-self: center; 
+            margin-bottom: 0.5rem; 
+        }
+
+        #active-exploration-minimap-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 2px; 
+            width: 75px;  
+            height: 75px; 
+            background-color: var(--bg-primary);
+        }
+
+        .minimap-cell {
+            background-color: var(--bg-tertiary); 
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem; 
+            transition: background-color 0.2s;
+        }
+        .minimap-cell i {
+            font-size: 0.8rem; 
+            line-height: 1;
+        }
+        .minimap-cell.nanobot-pos-minimap { background-color: var(--accent-blue) !important; color: white; box-shadow: 0 0 3px var(--accent-blue); z-index: 2; }
+        .minimap-cell.grassland-minimap { background-color: #2f855a; }
+        .minimap-cell.desert-minimap { background-color: #b7791f; }
+        .minimap-cell.water-minimap { background-color: #2c5282; }
+        .minimap-cell.forest-minimap { background-color: #276749; }
+        .minimap-cell.mountain-minimap { background-color: #4a5568; }
+        .minimap-cell.ruins-minimap { background-color: #2d3748; }
+        .minimap-cell.debris-minimap { background-color: #374151; }
+        .minimap-cell.vines-minimap { background-color: #166534; }
+        .minimap-cell.impassable-minimap { background-color: #1a202c; }
+        .minimap-cell.resource-minimap i { color: var(--accent-green); }
+        .minimap-cell.enemy-minimap i { color: var(--accent-red); }
+        .minimap-cell.poi-minimap i { color: var(--accent-yellow); }
+        .minimap-cell.base-minimap i { color: var(--accent-blue); }
+        .minimap-cell.unexplored-minimap { background-color: #383838; opacity: 0.7; }
 
 
         #active-exploration-detail-panel {
-            /* md:w-1/3; Pour desktop, panneau à côté */
             background-color: var(--bg-tertiary);
             border: 1px solid var(--border-color);
             border-radius: 0.375rem;
             padding: 0.5rem;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Important pour que les enfants avec overflow-y scrollent */
-            margin-top: 0.5rem; /* Espace entre grille et panneau détails en mode mobile */
-            flex-shrink: 0; /* Pour éviter qu'il ne rétrécisse trop en mobile */
-            height: 40vh; /* Hauteur pour mobile, sera ajusté pour desktop */
+            overflow: hidden; 
+            margin-top: 0.5rem; /* Modifié de 0.5rem au lieu de 0 pour espacer de la minimap sur mobile */
+            flex-grow: 1; 
+            min-height: 0; 
         }
         
-        #current-tile-view-details { flex-grow: 1; overflow-y: auto; /* Contenu principal des détails */ }
-        #current-tile-image { width: 100%; height: 100px; background-color: var(--bg-primary); background-size: cover; background-position: center; border-radius: 0.25rem; margin-bottom: 0.5rem; border: 1px solid var(--border-color); }
-        #current-tile-description { font-size: 0.75rem; margin-bottom: 0.5rem; color: var(--text-secondary); max-height:50px; overflow-y:auto;}
+        #current-tile-view-details { flex-grow: 1; overflow-y: auto; }
+        #current-tile-image { width: 100%; height: 100px; background-color: var(--bg-primary); background-size: cover; background-position: center; border-radius: 0.25rem; margin-bottom: 0.5rem; border: 1px solid var(--border-color); flex-shrink: 0; }
+        #current-tile-description { font-size: 0.75rem; margin-bottom: 0.5rem; color: var(--text-secondary); max-height:50px; overflow-y:auto; flex-shrink:0;}
         #current-tile-description strong { color: var(--text-primary); }
-        #current-tile-actions-grid { overflow-y: auto; display: flex; flex-direction: column; gap: 0.3rem; padding-right:0.2rem; max-height: calc(40vh - 160px); /* Ajuster selon hauteur image + description + log */ }
+        #current-tile-actions-grid { 
+            overflow-y: auto; display: flex; flex-direction: column; gap: 0.3rem; 
+            padding-right:0.2rem; flex-grow: 1; 
+        }
         #current-tile-actions-grid .btn { justify-content: flex-start; background-color: var(--bg-secondary); border: 1px solid var(--border-color); transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out; padding: 0.4rem; align-items: flex-start; }
         #current-tile-actions-grid .btn:not(.btn-disabled):hover { background-color: var(--border-color); border-color: var(--text-secondary); }
         #current-tile-actions-grid .btn i { font-size: 1.1rem; margin-right: 0.4rem; color: var(--accent-blue); flex-shrink: 0; margin-top: 0.05rem; }
@@ -247,30 +312,48 @@
 
         /* Responsive pour la nouvelle UI d'exploration active */
         @media (min-width: 768px) { /* md et plus */
-            #active-exploration-content-wrapper { flex-direction: row; }
+            #active-exploration-content-wrapper { 
+                flex-direction: row; 
+                align-items: flex-start; /* Aligner les enfants en haut */
+            }
             #active-exploration-main-grid-view { 
-                max-width: none; max-height: none; /* Permettre à la grille de prendre plus de place */
-                width: 200px; /* Fixer une largeur pour la grille */
-                height: 200px; /* Fixer une hauteur pour la grille */
-                align-self: flex-start; /* Aligner en haut */
+                width: 200px; 
+                height: 200px; 
+                align-self: flex-start; 
                 margin: 0;
+                max-height: none; 
             }
             .active-explore-grid-cell i { font-size: 1.5rem; }
             .active-explore-grid-cell .terrain-name-preview { font-size: 0.6rem; }
             .active-explore-grid-cell .content-preview { font-size: 0.55rem; }
             .nanobot-grid-icon { font-size: 2rem; }
+            
+            #active-exploration-minimap-container {
+                align-self: flex-start;
+                margin-bottom: 0; 
+                margin-left: 0.5rem; /* Espace entre grille et minimap */
+            }
 
             #active-exploration-detail-panel { 
-                flex-grow: 1; margin-top: 0; height: auto; /* Prend le reste de la hauteur */
+                flex-grow: 1; margin-top: 0; 
+                margin-left: 0.5rem; /* Espace entre minimap et panneau détails */
+                height: auto; /* Hauteur automatique pour s'adapter au contenu */
+                max-height: calc(100vh - 80px); /* Ex: 100vh moins hauteur header/footer */
             }
             #current-tile-image { height: 150px; }
-            #current-tile-actions-grid { max-height: none; /* Permettre plus d'espace pour les actions */ }
-             #active-tile-log-container { height: 80px; }
+            #active-tile-log-container { height: 80px; }
         }
         @media (min-width: 1024px) { /* lg */
             #active-exploration-main-grid-view { width: 250px; height: 250px; }
             .active-explore-grid-cell i { font-size: 1.75rem; }
             .nanobot-grid-icon { font-size: 2.5rem; }
+            
+            #active-exploration-minimap-grid {
+                width: 90px; 
+                height: 90px;
+            }
+            .minimap-cell i { font-size: 1rem; }
+
             #current-tile-image { height: 180px; }
         }
 
@@ -298,8 +381,6 @@
 
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 0.5rem; }
         .modal-content { background-color: var(--bg-secondary); padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); min-width: 280px; max-width: 95%; width: auto; max-height: 90vh; overflow-y: auto; }
-        /* .modal-content h2, .modal-content h3 { margin-bottom: 0.5rem; } */
-        /* .modal-content p { margin-bottom: 0.75rem; } */
 
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-secondary); border-radius: 10px; }
@@ -324,7 +405,6 @@
         .item-weapon-laser { width: 45%; height: 25%; top: 35%; right: -15%; transform: rotate(20deg) translateY(-50%); transform-origin: 0% 50%; z-index: 10;}
         .item-armor-plating { width: 105%; height: 105%; border-radius: 10%; top: -2.5%; left: -2.5%; box-sizing: border-box; z-index: 0; }
 
-        /* Combat Modal: min-w-90vw or fallback md:min-w-[500px] */
         #combat-modal-content { min-width: 90vw; min-height: 50vh; }
         @media (min-width: 768px) { /* md */
             #combat-modal-content { min-width: 500px; } 
@@ -338,39 +418,34 @@
         .combatant-sprite { width: 60px; height: 80px; margin: 0 auto; position: relative; background-size: contain; background-repeat: no-repeat; background-position: center bottom; animation: idle-breath 3s infinite ease-in-out; transition: box-shadow 0.2s, filter 0.2s; }
         .combatant-sprite.is-acting { animation: none; }
         .sprite-hit-flash { animation: hit-flash-effect 0.2s ease-out; }
-        #combat-enemy-sprite { /* background-color: var(--accent-red); */ /* Couleur si pas de sprite */ }
         .combatant-name { font-weight: bold; margin-bottom: 3px; font-size: 0.7rem; }
         .health-bar-container { width: 60px; height: 7px; background-color: #718096; border-radius: 3px; margin: 3px auto 0; overflow: hidden; border: 1px solid var(--border-color);}
         .health-bar { height: 100%; background-color: var(--accent-green); width: 100%; transition: width 0.5s ease; }
-        .health-bar.low { background-color: #f56565; /* red-500 */ } .health-bar.medium { background-color: #faf089; /* yellow-300 */ }
-        .health-bar.shielded { background-color: var(--accent-blue) !important; } /* Style pour barre avec bouclier */
+        .health-bar.low { background-color: #f56565; } .health-bar.medium { background-color: #faf089; }
+        .health-bar.shielded { background-color: var(--accent-blue) !important; } 
         
-        .combatant-effects-display { display: flex; gap: 0.25rem; margin-top: 0.25rem; justify-content: center; flex-wrap: wrap; min-height: 18px; /* Pour éviter saut de layout */}
+        .combatant-effects-display { display: flex; gap: 0.25rem; margin-top: 0.25rem; justify-content: center; flex-wrap: wrap; min-height: 18px; }
         .effect-badge { font-size: 0.6rem; padding: 0.1rem 0.3rem; border-radius: 0.75rem; border-width: 1px; white-space: nowrap; }
         .effect-badge i { font-size: 0.7rem; vertical-align: middle; }
 
-
         .damage-float { position: absolute; top: -15px; left: 50%; font-size: 1rem; font-weight: bold; color: var(--accent-red); animation: floatUpBase 1s ease-out forwards; opacity: 0; white-space: nowrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.7); z-index: 20; }
         .damage-float.critical { color: var(--accent-yellow) !important; font-size: 1.3rem; animation: floatUpCritical 1.5s ease-out forwards;}
-        .damage-float[style*="color: rgb(72, 187, 120)"] { animation: floatUpHeal 1.2s ease-out forwards; } /* Soin (vert) */
-        .damage-float[style*="color: rgb(160, 174, 192)"] { animation: floatMiss 0.8s ease-in forwards; } /* Raté (gris) */
-        .damage-float[style*="color: var(--accent-blue)"] { color: var(--accent-blue) !important; animation: floatUpShieldHit 1s ease-out forwards; } /* Dégât sur bouclier */
-
+        .damage-float[style*="color: rgb(72, 187, 120)"] { animation: floatUpHeal 1.2s ease-out forwards; } 
+        .damage-float[style*="color: rgb(160, 174, 192)"] { animation: floatMiss 0.8s ease-in forwards; } 
+        .damage-float[style*="color: var(--accent-blue)"] { color: var(--accent-blue) !important; animation: floatUpShieldHit 1s ease-out forwards; } 
 
         #combat-actions-container { margin-top: 0.5rem; display:flex; flex-wrap:wrap; gap:0.5rem; justify-content: center; align-items: stretch;}
         #combat-actions-container button { min-width: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0.4rem 0.6rem; height: auto; }
         #combat-actions-container button i { font-size: 1.1rem; margin-bottom: 0.1rem; }
-        #combat-actions-container button .skill-name { font-size: 0.75rem; line-height: 1.1; display: block; } /* Classe ajoutée si besoin via JS */
-        #combat-actions-container button .skill-details { font-size: 0.6rem; color: var(--text-secondary); line-height: 1; display: block; margin-top: 0.1rem; } /* Classe ajoutée si besoin via JS */
-
+        #combat-actions-container button .skill-name { font-size: 0.75rem; line-height: 1.1; display: block; } 
+        #combat-actions-container button .skill-details { font-size: 0.6rem; color: var(--text-secondary); line-height: 1; display: block; margin-top: 0.1rem; } 
         #combat-actions-container button.skill-button.on-cooldown { background-color: var(--border-color) !important; color: var(--text-secondary) !important; cursor: not-allowed; opacity: 0.6; }
         #combat-actions-container button.skill-button.insufficient-resources { background-color: rgba(var(--accent-red-rgb),0.7) !important; color: white !important; opacity: 0.8; cursor: not-allowed; border: 1px solid var(--accent-red); }
         #combat-actions-container button.skill-button.insufficient-resources .skill-details { color: #fed7d7 !important; }
 
-
         .quest-item { background-color: var(--bg-secondary); padding: 0.5rem; border-radius: 0.25rem; margin-bottom: 0.5rem; border-left: 4px solid transparent; }
         .quest-item h4 { font-size: 0.875rem; margin-bottom: 0.1rem;} .quest-item p { font-size: 0.75em; }
-        .quest-item .objectives-list { list-style-type: disc; margin-left: 1rem; color: #90cdf4; /* blue-300 */ font-size:0.7em; }
+        .quest-item .objectives-list { list-style-type: disc; margin-left: 1rem; color: #90cdf4; font-size:0.7em; }
         .quest-item .objectives-list li.completed { text-decoration: line-through; color: var(--accent-green); }
         .quest-item .rewards { margin-top: 0.25rem; font-size: 0.7em; color: var(--accent-yellow); }
         .quest-status-AVAILABLE { border-left-color: var(--accent-yellow); } .quest-status-ACTIVE { border-left-color: var(--accent-blue); }
@@ -386,7 +461,7 @@
 
         #base-status-section { padding: 0.5rem; } #base-health-bar-container { height: 10px; }
         #base-status-section.night-assault-active { border: 2px dashed var(--accent-red) !important; animation: pulse-danger 1s infinite alternate; }
-        #night-assault-enemies-display { min-height:18px; /* Tailwind: min-h-[18px] */ }
+        #night-assault-enemies-display { min-height:18px; }
         #night-assault-log { padding: 0.4rem; height: 80px; font-size: 0.7rem; }
         #night-assault-log p { margin-bottom: 0.2rem; word-break: break-word; }
 
@@ -401,7 +476,7 @@
         .skill-effect { color: var(--text-secondary); font-style: italic;}
 
         #base-preview-container { max-width: 100%; aspect-ratio: calc(var(--base-grid-cols, 13) / var(--base-grid-rows, 9)); background-color: var(--bg-secondary); display: grid; gap: 1px; border: 1px solid var(--border-color); position: relative; overflow: hidden; }
-        .base-preview-cell { background-color: var(--bg-primary); display: flex; align-items: center; justify-content: center; box-sizing: border-box; font-size: 0.5rem; position:relative; /* Pour positionner le nanobot */ }
+        .base-preview-cell { background-color: var(--bg-primary); display: flex; align-items: center; justify-content: center; box-sizing: border-box; font-size: 0.5rem; position:relative; }
         .base-preview-cell.core .base-core-visual { width: 60%; height: 60%; background-color: var(--accent-green); border: 1px solid #38a169; border-radius: 2px; color: var(--bg-primary); font-weight: bold; display: flex; align-items: center; justify-content: center; }
         .base-preview-cell.occupied { background-color: var(--bg-tertiary); }
         .base-preview-cell.placement-blocked { cursor: not-allowed; background-color: rgba(var(--accent-red-rgb),0.2) !important; }
@@ -412,9 +487,8 @@
         .defense-visual-on-grid.gatlingTurret { background-color: rgba(160, 174, 192, 0.7); border: 1px solid #A0AEC0; color: black; }
         .defense-visual-on-grid.reinforcedWall { background-color: rgba(113, 128, 150, 0.7); border: 1px solid  #718096; font-size: 0.5rem !important; writing-mode: vertical-rl; text-orientation: mixed; color: white; }
         
-        .base-nanobot-visual { /* background-color: rgba(var(--accent-blue-rgb), 0.5); */ display: flex; align-items: center; justify-content: center; font-size: 1rem; width: 100%; height: 100%; }
+        .base-nanobot-visual { display: flex; align-items: center; justify-content: center; font-size: 1rem; width: 100%; height: 100%; }
         .base-nanobot-visual i { animation: idle-breath 2.5s infinite ease-in-out; }
-
 
         .base-enemy-visual { width: 10px; height: 10px; background-color: var(--accent-red); border: 1px solid white; border-radius: 50%; position: absolute; transition: transform 0.5s ease-out, left 0.5s linear, top 0.5s linear; box-shadow: 0 0 4px var(--accent-red); z-index: 15; background-size: contain; background-repeat: no-repeat; background-position: center; }
         .base-enemy-visual.drone { background-color: #e53e3e; } .base-enemy-visual.bot { background-color: #dd6b20; } .base-enemy-visual.crawler { background-color: #d69e2e; }
@@ -423,7 +497,7 @@
         .enemy-health-bar-on-grid-container { background-color: #555; border: 1px solid #333; border-radius: 1px; overflow: hidden; box-sizing: border-box; z-index: 16; position: absolute; }
         .enemy-health-bar-on-grid-fill { background-color: var(--accent-red); height: 100%; transition: width 0.3s ease-out; }
         #tutorial-modal .modal-content { box-shadow: 0 0 15px var(--accent-yellow); border: 2px solid var(--accent-yellow); }
-        #tooltip { transition: opacity 0.1s ease-out, visibility 0.1s ease-out; pointer-events: none; } /* Ajout visibility */
+        #tooltip { transition: opacity 0.1s ease-out, visibility 0.1s ease-out; pointer-events: none; } 
         #tooltip.hidden { opacity: 0; visibility: hidden; }
         #tooltip strong { color: var(--accent-yellow); }
         #tooltip .resource-cost { color: var(--accent-yellow); }
@@ -433,12 +507,11 @@
         .info-icon-container { position: absolute; top: 2px; right: 2px; z-index: 5; }
         .info-icon { font-size: 1rem; color: var(--accent-blue); cursor: pointer; padding: 2px; background-color: rgba(var(--bg-primary-rgb), 0.6); border-radius: 50%; line-height: 1; }
         .info-icon:hover { color: #63b3ed; background-color: rgba(var(--bg-secondary-rgb), 0.8); }
-        .module-card, .panel[data-tooltip-type="building-card"], .panel[data-tooltip-type="research-card"] { position: relative; } /* Pour info-icon */
+        .module-card, .panel[data-tooltip-type="building-card"], .panel[data-tooltip-type="research-card"] { position: relative; } 
 
         @keyframes insufficient-resource-flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         @keyframes idle-breath { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-3px) scale(1.03); } }
         @keyframes pulse-shield { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
-        /* @keyframes floatUp { 0% { opacity: 1; top: -12px; } 100% { opacity: 0; top: -40px; } } */ /* Déprécié, utiliser floatUpBase */
         @keyframes pulse-signal { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
         @keyframes pulse-scan-border { from { outline-color: var(--accent-yellow); } to { outline-color: orange; } }
         @keyframes pulse-resource-highlight { from { box-shadow: 0 0 3px 0.5px gold; } to { box-shadow: 0 0 6px 1px orange; } }
@@ -450,7 +523,7 @@
         @keyframes floatMiss { 0% { opacity: 1; transform: translate(-50%, 0px) translateX(0); } 50% { opacity: 0.8; transform: translate(-50%, -10px) translateX(10px); } 100% { opacity: 0; transform: translate(-50%, -15px) translateX(-15px); } }
         @keyframes floatUpShieldHit { 0% { opacity: 1; transform: translate(-50%, 0px) scale(0.9); } 100% { opacity: 0; transform: translate(-50%, -35px) scale(1); } }
 
-        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; } /* Tailwind's pulse */
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; } 
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 
     </style>
@@ -493,7 +566,7 @@
                     <div class="flex flex-col lg:flex-row gap-3 h-full">
                         <div class="lg:w-1/3 flex flex-col gap-3">
                             <div class="panel">
-                                <h2 class="font-orbitron text-md mb-2 text-[color:var(--accent-blue)]">Statut du Noyau</h2> <!-- text-sky-400 -->
+                                <h2 class="font-orbitron text-md mb-2 text-[color:var(--accent-blue)]">Statut du Noyau</h2> 
                                 <div id="base-status-section">
                                     <h3 class="font-orbitron text-sm text-[color:var(--accent-yellow)]">Intégrité Structurelle</h3>
                                     <div class="flex justify-between items-center text-xs mb-1">
@@ -621,7 +694,7 @@
                             <button class="sub-nav-button" data-subtab="quests-subtab" data-parentsection="world-section">Quêtes</button>
                         </div>
                         <div id="exploration-subtab" class="sub-content active">
-                            <div id="world-section-content"> <!-- Conteneur pour le flou -->
+                            <div id="world-section-content"> 
                                 <div id="exploration-layout" class="h-full">
                                     <div id="exploration-map-container">
                                         <div id="exploration-actions-bar">
@@ -668,12 +741,12 @@
                     </div>
                 </div>
 
-                 <div class="panel mt-2"> <!-- Reste en dehors des sections principales pour être toujours visible -->
+                 <div class="panel mt-2"> 
                     <h3 class="font-orbitron text-sm text-gray-400">Journal Principal</h3>
                     <div id="event-log" class="h-16 overflow-y-auto text-xs"><p class="text-xs text-gray-400 italic">En attente...</p></div>
                 </div>
             </main>
-        </div> <!-- Fin #main-layout-container -->
+        </div> 
 
         <!-- UI D'EXPLORATION ACTIVE DE TUILE -->
         <div id="active-tile-exploration-ui" class="hidden">
@@ -682,11 +755,17 @@
                 <button id="exit-active-exploration-btn" class="btn btn-danger btn-sm"><i class="ti ti-arrow-back-up mr-1"></i> Carte</button>
             </header>
             <div id="active-exploration-content-wrapper">
-                 <!-- Grille de prévisualisation -->
                 <div id="active-exploration-main-grid-view">
                     <!-- Les 9 cellules de la grille seront générées par JS ici -->
                 </div>
-                 <!-- Panneau de détails pour la case actuelle (celle du Nanobot) -->
+                <!-- MINI-CARTE -->
+                <div id="active-exploration-minimap-container" class="mt-2 md:mt-0 md:ml-2">
+                    <h4 class="font-orbitron text-xs text-gray-400 mb-1 text-center">Mini-Carte</h4>
+                    <div id="active-exploration-minimap-grid">
+                        <!-- Les 9 cellules de la mini-carte seront générées par JS ici -->
+                    </div>
+                </div>
+                <!-- FIN MINI-CARTE -->
                 <div id="active-exploration-detail-panel">
                     <div id="current-tile-view-details">
                         <div id="current-tile-image"></div>
@@ -703,7 +782,7 @@
                 <div id="active-exploration-nanobot-status"></div>
             </footer>
         </div>
-    </div> <!-- Fin #game-container -->
+    </div> 
 
     <div id="modal" class="modal hidden"><div class="modal-content"><h3 id="modal-title" class="font-orbitron text-lg mb-2">Titre</h3><p id="modal-message" class="mb-3 text-sm">Message.</p><div class="flex justify-end space-x-2"><button id="modal-cancel" class="btn btn-secondary btn-sm">Annuler</button><button id="modal-confirm" class="btn btn-primary btn-sm">OK</button></div></div></div>
     <div id="combat-modal" class="modal hidden">
@@ -738,26 +817,23 @@
     </div>
     <div id="combat-end-modal" class="modal hidden"><div class="modal-content text-center"><h3 id="combat-end-title" class="font-orbitron text-md mb-1">Victoire!</h3><p id="combat-end-rewards" class="mb-1 text-xs"></p><h4 class="text-blue-300 mt-1 mb-0.5 font-orbitron text-xs">XP & Niveau</h4><p id="xp-gain" class="text-xs mb-0.5"></p><div class="w-full bg-gray-700 rounded-full h-1.5 mb-1"><div id="xp-bar" class="bg-blue-500 h-1.5 rounded-full" style="width: 0%"></div></div><h4 class="text-yellow-300 mt-1 mb-0.5 font-orbitron text-xs">Butin</h4><ul id="loot-list" class="text-xs text-gray-300 list-disc list-inside mb-1"></ul><button id="close-end-modal" class="btn btn-primary btn-xs mt-1">Fermer</button></div></div>
     <div id="night-assault-video-container" class="modal hidden"><div class="relative"><video id="night-assault-video" preload="auto" playsinline><source src="videos/night_assault_alert.mp4" type="video/mp4"></video><button id="close-night-assault-video-btn" class="btn btn-danger btn-xs">X</button></div></div>
-    <div id="tutorial-modal" class="modal hidden"></div> <!-- Contenu injecté par JS -->
+    <div id="tutorial-modal" class="modal hidden"></div> 
     <div id="tooltip" class="hidden absolute z-[1100] p-2 bg-gray-800 border border-gray-600 rounded-md shadow-lg text-xs text-gray-200 max-w-xs"></div>
 
-    <!-- Scripts: Ordre de chargement important -->
-    <!-- 1. Configurations -->
+    <!-- Scripts -->
     <script src="js/config_enums.js"></script>
     <script src="js/config_general.js"></script>
     <script src="js/config_lore.js"></script>
     <script src="js/config_tile_exploration.js"></script>
-    <script src="js/config_player.js"></script> <!-- Contient NANOBOT_INITIAL_STATS -->
-    <script src="js/config_world.js"></script>   <!-- Contient WORLD_ZONES, enemyData, etc. -->
+    <script src="js/config_player.js"></script> 
+    <script src="js/config_world.js"></script>   
     <script src="js/config_events.js"></script>
-    <script src="js/config_gameplay.js"></script> <!-- Contient itemsData, buildingsData, researchData, nanobotModulesData, questData -->
-    <script src="js/config.js"></script>         <!-- Fichier d'ancrage principal pour les configs -->
+    <script src="js/config_gameplay.js"></script> 
+    <script src="js/config.js"></script>         
 
-    <!-- 2. État du jeu et Utilitaires -->
     <script src="js/gameState.js"></script>
     <script src="js/utils.js"></script>
 
-    <!-- 3. Gestionnaires et Contrôleurs principaux -->
     <script src="js/mapManager.js"></script>
     <script src="js/explorationController.js"></script>
     <script src="js/questController.js"></script>
@@ -765,7 +841,6 @@
     <script src="js/inventoryShop.js"></script> 
     <script src="js/craftingLogic.js"></script> 
     
-    <!-- 4. UI et Logique de Jeu -->
     <script src="js/uiNavigation.js"></script>
     <script src="js/explorationUI.js"></script>
     <script src="js/questUI.js"></script>
@@ -777,8 +852,7 @@
     <script src="js/gameplayLogic_resources_time.js"></script>
     <script src="js/gameplayLogic_night_assault.js"></script>
 
-    <!-- 5. Point d'entrée principal -->
-    <script src="js/main.js" defer></script> <!-- defer pour s'assurer que le DOM est prêt -->
+    <script src="js/main.js" defer></script> 
 
    </body>
 </html>

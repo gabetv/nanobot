@@ -20,6 +20,8 @@ var explorationUI = {
         activeTileLog: null,
 
         nanobotStatusContainer: null,
+        minimapContainer: null,
+        minimapGrid: null,
     },
     isInitializedActiveUI: false,
 
@@ -42,6 +44,9 @@ var explorationUI = {
 
         this.activeTileUiElements.nanobotStatusContainer = window.activeExplorationNanobotStatusEl;
 
+        this.activeTileUiElements.minimapContainer = document.getElementById('active-exploration-minimap-container');
+        this.activeTileUiElements.minimapGrid = document.getElementById('active-exploration-minimap-grid');
+
         if (this.activeTileUiElements.exitActiveExplorationBtn && typeof this.exitActiveTileExplorationMode === 'function') {
             if (!this.activeTileUiElements.exitActiveExplorationBtn.dataset.listenerAttached) {
                 this.activeTileUiElements.exitActiveExplorationBtn.addEventListener('click', () => this.exitActiveTileExplorationMode());
@@ -50,7 +55,7 @@ var explorationUI = {
         }
         
         this.isInitializedActiveUI = true;
-        console.log("explorationUI: Éléments de l'UI d'exploration active (refonte grille) initialisés.");
+        console.log("explorationUI: Éléments de l'UI d'exploration active (grille, minimap, détails) initialisés.");
     },
 
     enterActiveTileExplorationMode: function(tileX, tileY) {
@@ -177,6 +182,7 @@ var explorationUI = {
             }
         }
 
+        this.updateActiveExplorationMinimap(centerX, centerY);
 
         if (this.activeTileUiElements.detailPanel) {
             if (this.activeTileUiElements.activeExplorationTitle) {
@@ -185,18 +191,29 @@ var explorationUI = {
 
             const tileViewConfigKey = currentTile.actualType || 'default';
             const tileViewConfig = (typeof window.activeTileViewData !== 'undefined' && window.activeTileViewData[tileViewConfigKey]) || 
-                                   (typeof window.activeTileViewData !== 'undefined' ? window.activeTileViewData.default : {image: "images/tile_view/default_detail.png"});
+                                   (typeof window.activeTileViewData !== 'undefined' ? window.activeTileViewData.default : {image: "images/tile_view/default_detail.png", descriptions: ["Description par défaut."]});
 
             if (this.activeTileUiElements.currentTileImage) {
                 this.activeTileUiElements.currentTileImage.style.backgroundImage = `url('${tileViewConfig.image || (typeof window.activeTileViewData !== 'undefined' ? window.activeTileViewData.default.image : "")}')`;
             }
+            
             if (this.activeTileUiElements.currentTileDescription) {
-                let desc = `<strong>${this.getTileContentName(currentTile.actualType, null)} (${centerX},${centerY})</strong><br>`;
-                desc += (typeof window.MAP_FEATURE_DATA !== 'undefined' && window.MAP_FEATURE_DATA[currentTile.actualType]?.description) || "Une zone d'apparence ordinaire.";
+                let baseDesc = "Description non disponible.";
+                if (tileViewConfig.descriptions && Array.isArray(tileViewConfig.descriptions) && tileViewConfig.descriptions.length > 0) {
+                    baseDesc = getRandomElement(tileViewConfig.descriptions); 
+                } else if (typeof tileViewConfig.descriptions === 'string') { 
+                    baseDesc = tileViewConfig.descriptions;
+                }
+                
+                let desc = `<strong>${this.getTileContentName(currentTile.actualType, null)} (${centerX},${centerY})</strong><br>${baseDesc}`;
                 if (currentTile.content) { desc += `<br>Présence détectée: ${this.getTileContentName(currentTile.actualType, currentTile.content)}.`; }
                 if (currentTile.isFullyExplored) { desc += "<br><em class='text-green-400'>Cette zone a été entièrement explorée.</em>";
                 } else if (currentTile.usedActions && currentTile.usedActions['scan_local_active'] && (!currentTile.hiddenFeatures || currentTile.hiddenFeatures.length === 0) && (!currentTile.revealedFeatures || currentTile.revealedFeatures.length === 0)) {
                      desc += "<br><em class='text-gray-400'>Le scan local n'a rien révélé de plus.</em>";
+                }
+                if (currentTile.content?.poiType === (window.TILE_TYPES?.POI_ANCIENT_STRUCTURE || "poi_ancient_structure") && currentTile.content?.interactionStep) {
+                    if (currentTile.content.interactionStep === 1) desc += "<br><em class='text-sky-300'>La structure attend une analyse énergétique.</em>";
+                    if (currentTile.content.interactionStep === 2) desc += "<br><em class='text-yellow-300'>La structure semble prête à recevoir un catalyseur cristallin.</em>";
                 }
                 if (currentTile.hasActiveTrap) { desc += "<br><strong class='text-red-500 animate-pulse'>DANGER: Piège actif détecté !</strong>"; }
                 this.activeTileUiElements.currentTileDescription.innerHTML = desc;
@@ -204,7 +221,7 @@ var explorationUI = {
 
             if (this.activeTileUiElements.currentTileActionsGrid) {
                 this.activeTileUiElements.currentTileActionsGrid.innerHTML = ''; 
-                if (currentTile.isFullyExplored) {
+                if (currentTile.isFullyExplored && !(currentTile.content?.poiType === window.TILE_TYPES.POI_ANCIENT_STRUCTURE && !currentTile.content.isFullyExploited) ) { // Condition pour POI non fini
                      this.activeTileUiElements.currentTileActionsGrid.innerHTML = `<p class="text-sm text-green-400 italic p-2 text-center">Rien de plus à faire ici.</p>`;
                 } else {
                     let availableActions = [];
@@ -217,8 +234,16 @@ var explorationUI = {
                             if (actionDef) {
                                 const isRepeatable = actionDef.canRepeat;
                                 const isMaxedOut = isRepeatable && actionId === 'search_area_active' && (currentTile.searchAttempts || 0) >= (actionDef.maxRepeats || 3);
-                                const isUsed = !isRepeatable && currentTile.usedActions && currentTile.usedActions[actionId];
-    
+                                let isUsed = !isRepeatable && currentTile.usedActions && currentTile.usedActions[actionId];
+                                // Pour les actions dynamiques qui peuvent être utilisées plusieurs fois sur différentes features
+                                if (actionDef.isDynamic && currentTile.usedActions && currentTile.usedActions[actionId] && typeof currentTile.usedActions[actionId] === 'object') {
+                                    // Si c'est un objet, cela signifie qu'il est utilisé pour des features spécifiques.
+                                    // On doit vérifier si *toutes* les instances possibles de cette action ont été utilisées.
+                                    // Pour simplifier ici, on suppose qu'elle reste affichable tant que des features correspondantes existent.
+                                    // La logique de "isUsed" pour les features dynamiques est plus complexe.
+                                    // On pourrait laisser le bouton et la logique handleActionOnActiveTile gérera si une feature spécifique a déjà été actionnée.
+                                    isUsed = false; // Permettre de ré-afficher si des features dynamiques correspondantes sont présentes
+                                }
                                 if (!isMaxedOut && !isUsed) {
                                     availableActions.push({ ...actionDef, id: actionId, originalActionId: actionId });
                                 }
@@ -232,7 +257,20 @@ var explorationUI = {
                         } else if (currentTile.content.type === 'enemy_patrol') {
                             const actionDef = window.tileActiveExplorationOptions['engage_visible_enemy_active'];
                             if(actionDef && currentTile.content.details) availableActions.push({ ...actionDef, name: actionDef.name.replace('{enemyName}', currentTile.content.details.name), originalActionId: 'engage_visible_enemy_active' });
-                        } else if (currentTile.content.type === 'poi' && !currentTile.content.isInteracted) {
+                        } else if (currentTile.content.type === 'poi' && currentTile.content.poiType === (window.TILE_TYPES?.POI_ANCIENT_STRUCTURE || "poi_ancient_structure") && !currentTile.content.isFullyExploited) {
+                            if (!currentTile.content.interactionStep || currentTile.content.interactionStep < 1) {
+                                const actionDef = window.tileActiveExplorationOptions['interact_poi_active'];
+                                if(actionDef) availableActions.push({ ...actionDef, name: actionDef.name.replace('{poiName}', window.MAP_FEATURE_DATA[currentTile.content.poiType]?.name || "Structure"), originalActionId: 'interact_poi_active'});
+                            }
+                            const analyzeAction = window.tileActiveExplorationOptions['ancient_structure_analyze_energy'];
+                            if (analyzeAction && analyzeAction.condition(gameState, currentTile)) { // Passer tile à condition
+                                availableActions.push({ ...analyzeAction, originalActionId: 'ancient_structure_analyze_energy' });
+                            }
+                            const insertCrystalAction = window.tileActiveExplorationOptions['ancient_structure_insert_crystal'];
+                            if (insertCrystalAction && insertCrystalAction.condition(gameState, currentTile)) { // Passer tile à condition
+                                availableActions.push({ ...insertCrystalAction, originalActionId: 'ancient_structure_insert_crystal' });
+                            }
+                        } else if (currentTile.content.type === 'poi' && !currentTile.content.isInteracted) { // POI génériques non encore "isFullyExploited" implicitement
                             const actionDef = window.tileActiveExplorationOptions['interact_poi_active'];
                             if(actionDef && currentTile.content.poiType) availableActions.push({ ...actionDef, name: actionDef.name.replace('{poiName}', window.MAP_FEATURE_DATA[currentTile.content.poiType]?.name || "POI"), originalActionId: 'interact_poi_active'});
                         } else if (currentTile.content.type === 'enemy_base' && currentTile.content.currentHealth > 0) {
@@ -243,6 +281,9 @@ var explorationUI = {
                     if(currentTile.revealedFeatures && typeof window.tileActiveExplorationOptions !== 'undefined'){
                         currentTile.revealedFeatures.forEach((feature, index) => {
                             let actionDef, actionName, actionIdToUse, originalActionId;
+                            let featureAlreadyUsed = false;
+                            const featureIdentifier = `${feature.type}_${feature.name || index}_${centerX}_${centerY}`; // Identifiant unique pour cette feature sur cette tuile
+
                             if (feature.type === 'small_resource_cache') {
                                 actionDef = window.tileActiveExplorationOptions['collect_revealed_resource'];
                                 if(actionDef) { actionName = actionDef.name.replace('{resourceName}', feature.resourceType || 'Cache'); originalActionId = 'collect_revealed_resource'; actionIdToUse = `${originalActionId}_feat_${index}`; }
@@ -253,8 +294,14 @@ var explorationUI = {
                                 actionDef = window.tileActiveExplorationOptions['disarm_trap_active'];
                                 if(actionDef) { actionName = actionDef.name; originalActionId = 'disarm_trap_active'; actionIdToUse = `${originalActionId}_feat_${index}`; }
                             }
-                            if (actionDef) {
-                                 availableActions.push({ ...actionDef, name: actionName, id: actionIdToUse, originalActionId: originalActionId, dynamicData: feature });
+                            
+                            // Vérifier si CETTE feature spécifique a déjà été actionnée
+                            if (currentTile.usedActions && currentTile.usedActions[originalActionId] && currentTile.usedActions[originalActionId][featureIdentifier]) {
+                                featureAlreadyUsed = true;
+                            }
+
+                            if (actionDef && !featureAlreadyUsed) { // N'ajouter l'action que si la feature n'a pas été utilisée
+                                 availableActions.push({ ...actionDef, name: actionName, id: actionIdToUse, originalActionId: originalActionId, dynamicData: { ...feature, _featureIdentifier: featureIdentifier } }); // Passer un identifiant unique
                             }
                         });
                     }
@@ -265,17 +312,42 @@ var explorationUI = {
                             actionButton.className = 'btn btn-secondary btn-sm w-full text-left p-2 flex items-center gap-x-2 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-accent-blue';
                             let costString = ""; let canAfford = true; let meetsCondition = true;
     
-                            if(action.cost && typeof getCostString === 'function'){
-                                costString = ` (Coût: ${getCostString(action.cost, false, true)})`;
-                                for(const res in action.cost){ if((gameState.resources[res] || 0) < action.cost[res]) canAfford = false; }
+                            if(action.cost){
+                                let costPartsDisplay = [];
+                                if (action.cost.energy) {
+                                    costPartsDisplay.push(`${action.cost.energy} Énergie`);
+                                    if((gameState.resources.energy || 0) < action.cost.energy) canAfford = false;
+                                }
+                                if (action.cost.mobility) {
+                                    costPartsDisplay.push(`${action.cost.mobility} Mobilité`);
+                                    if((gameState.resources.mobility || 0) < action.cost.mobility) canAfford = false;
+                                }
+                                if (action.cost.items && typeof window.itemsData !== 'undefined') {
+                                    for (const itemId_cost in action.cost.items) { // Correction: itemId_cost au lieu de itemId
+                                        const required = action.cost.items[itemId_cost];
+                                        costPartsDisplay.push(`${required} ${window.itemsData[itemId_cost]?.name || itemId_cost}`);
+                                        const current = (gameState.inventory || []).filter(invItem => invItem === itemId_cost).length;
+                                        if(current < required) canAfford = false;
+                                    }
+                                }
+                                 for (const resKey in action.cost) {
+                                    if (resKey !== 'energy' && resKey !== 'mobility' && resKey !== 'items') {
+                                        costPartsDisplay.push(`${action.cost[resKey]} ${resKey}`);
+                                        if((gameState.resources[resKey] || 0) < action.cost[resKey]) canAfford = false;
+                                    }
+                                }
+                                if (costPartsDisplay.length > 0) {
+                                    costString = ` (Coût: ${costPartsDisplay.join(', ')})`;
+                                }
                             }
+
                             if(action.condition && typeof action.condition === 'function'){
-                                if(!action.condition(gameState)) meetsCondition = false;
+                                if(!action.condition(gameState, currentTile)) meetsCondition = false; 
                             }
                             actionButton.innerHTML = `<i class="${action.icon || 'ti-question-mark'} text-lg text-blue-300 flex-shrink-0"></i><div class="flex-grow"><strong class="text-sm text-gray-100">${action.name}</strong><p class="text-xs text-gray-400">${action.description}${costString}</p></div>`;
                             if(!canAfford || !meetsCondition) {
                                 actionButton.classList.add('btn-disabled', 'opacity-50'); actionButton.disabled = true;
-                                if(!canAfford && action.cost) actionButton.title = `Manque: ${Object.entries(action.cost).filter(([r,v]) => (gameState.resources[r]||0) < v).map(([r,v]) => `${v - (gameState.resources[r]||0)} ${r}`).join(', ')}`;
+                                if(!canAfford && action.cost) actionButton.title = `Ressources/Items manquants.`; 
                                 else if(!meetsCondition) actionButton.title = "Conditions non remplies.";
                             }
                             actionButton.onclick = () => {
@@ -297,6 +369,74 @@ var explorationUI = {
                 `PV: <span class="font-semibold">${Math.floor(gameState.nanobotStats.currentHealth)}/${gameState.nanobotStats.health}</span> | ` +
                 `Énergie: <span class="font-semibold">${Math.floor(gameState.resources.energy)}</span> | ` +
                 `Mobilité: <span class="font-semibold">${Math.floor(gameState.resources.mobility)}/${window.MAX_MOBILITY_POINTS}</span>`;
+        }
+    },
+
+    updateActiveExplorationMinimap: function(centerX, centerY) {
+        if (!this.activeTileUiElements.minimapGrid || !window.mapManager || !gameState || typeof window.TILE_TYPES === 'undefined') {
+            return;
+        }
+        this.activeTileUiElements.minimapGrid.innerHTML = ''; 
+
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                const adjX = centerX + dx;
+                const adjY = centerY + dy;
+                
+                const cellDiv = document.createElement('div');
+                cellDiv.className = 'minimap-cell';
+                
+                const adjTile = window.mapManager.getTile(adjX, adjY);
+                const currentZoneData = typeof window.WORLD_ZONES !== 'undefined' ? window.WORLD_ZONES[gameState.currentZoneId] : null;
+
+                if (currentZoneData && adjX >= 0 && adjX < currentZoneData.mapSize.width && adjY >= 0 && adjY < currentZoneData.mapSize.height && adjTile) {
+                    const isExploredOrScanned = adjTile.isExplored || (adjTile.isScannedFromMap && gameState.gameTime <= adjTile.scannedFromMapRevealTime);
+                    
+                    if (dx === 0 && dy === 0) { 
+                        cellDiv.classList.add('nanobot-pos-minimap');
+                        cellDiv.innerHTML = `<i class="ti ti-robot"></i>`;
+                    } else if (isExploredOrScanned) {
+                        const typeToDisplay = (adjTile.isScannedFromMap && gameState.gameTime <= adjTile.scannedFromMapRevealTime) ? adjTile.scannedFromMapActualType : adjTile.actualType;
+                        
+                        if (adjTile.content) {
+                            if (adjTile.content.type === 'enemy_patrol' || adjTile.content.type === 'enemy_base') {
+                                cellDiv.classList.add('enemy-minimap');
+                                cellDiv.innerHTML = `<i class="ti ti-skull"></i>`;
+                            } else if (adjTile.content.type === 'resource') {
+                                cellDiv.classList.add('resource-minimap');
+                                cellDiv.innerHTML = `<i class="ti ti-package"></i>`;
+                            } else if (adjTile.content.type === 'poi') {
+                                cellDiv.classList.add('poi-minimap');
+                                cellDiv.innerHTML = `<i class="ti ti-flag-question"></i>`;
+                            }
+                        } else { 
+                            switch (typeToDisplay) {
+                                case window.TILE_TYPES.EMPTY_GRASSLAND: cellDiv.classList.add('grassland-minimap'); break;
+                                case window.TILE_TYPES.EMPTY_DESERT: cellDiv.classList.add('desert-minimap'); break;
+                                case window.TILE_TYPES.EMPTY_WATER: cellDiv.classList.add('water-minimap'); break;
+                                case window.TILE_TYPES.FOREST: case window.TILE_TYPES.FOREST_LIGHT: case window.TILE_TYPES.FOREST_DENSE: cellDiv.classList.add('forest-minimap'); break;
+                                case window.TILE_TYPES.MOUNTAIN: case window.TILE_TYPES.MOUNTAINS_LOW: cellDiv.classList.add('mountain-minimap'); break;
+                                case window.TILE_TYPES.RUINS: case window.TILE_TYPES.RUINS_ANCIENT: cellDiv.classList.add('ruins-minimap'); break;
+                                case window.TILE_TYPES.DEBRIS_FIELD: cellDiv.classList.add('debris-minimap'); break;
+                                case window.TILE_TYPES.THICK_VINES: cellDiv.classList.add('vines-minimap'); break;
+                                case window.TILE_TYPES.PLAYER_BASE: cellDiv.classList.add('base-minimap'); cellDiv.innerHTML = `<i class="ti ti-home"></i>`; break;
+                                case window.TILE_TYPES.IMPASSABLE_DEEP_WATER: case window.TILE_TYPES.IMPASSABLE_HIGH_PEAK:
+                                    cellDiv.classList.add('impassable-minimap');
+                                    cellDiv.innerHTML = `<i class="ti ti-ban"></i>`;
+                                    break;
+                                default: cellDiv.classList.add('grassland-minimap'); 
+                            }
+                        }
+                    } else { 
+                        cellDiv.classList.add('unexplored-minimap');
+                        cellDiv.innerHTML = `<i class="ti ti-help-circle opacity-50"></i>`;
+                    }
+                } else { 
+                    cellDiv.classList.add('impassable-minimap'); 
+                    cellDiv.innerHTML = ``; 
+                }
+                this.activeTileUiElements.minimapGrid.appendChild(cellDiv);
+            }
         }
     },
 
@@ -629,7 +769,17 @@ var explorationUI = {
             };
             window.tileInteractionActionsEl.appendChild(attackBaseBtn);
         } else {
-             window.tileInteractionActionsEl.innerHTML = '<p class="text-xs text-gray-500 italic text-center">Placez Nexus-7 ici pour plus d\'options.</p>';
+             // Si la case n'est pas la position actuelle et n'est pas une base ennemie attaquable,
+             // on peut proposer un bouton "Se déplacer ici"
+             const moveToTileBtn = document.createElement('button');
+             moveToTileBtn.className = 'btn btn-secondary btn-xs w-full';
+             moveToTileBtn.innerHTML = `<i class="ti ti-arrow-move-right mr-1"></i>Se déplacer ici`;
+             moveToTileBtn.onclick = () => {
+                 if (typeof window.explorationController !== 'undefined' && typeof window.explorationController.moveToTile === 'function') {
+                     window.explorationController.moveToTile(x, y);
+                 }
+             };
+             window.tileInteractionActionsEl.appendChild(moveToTileBtn);
         }
     },
 
@@ -657,12 +807,12 @@ var explorationUI = {
     getBaseTerrainClass: function(actualType) {
         if (typeof window.TILE_TYPES === 'undefined') return 'grassland';
         switch (actualType) {
-            case window.TILE_TYPES.EMPTY_GRASSLAND: case window.TILE_TYPES.FOREST: case window.TILE_TYPES.RESOURCE_BIOMASS_PATCH: return 'grassland';
+            case window.TILE_TYPES.EMPTY_GRASSLAND: case window.TILE_TYPES.FOREST: case window.TILE_TYPES.FOREST_LIGHT: case window.TILE_TYPES.FOREST_DENSE: case window.TILE_TYPES.RESOURCE_BIOMASS_PATCH: return 'grassland';
             case window.TILE_TYPES.EMPTY_DESERT: return 'desert';
             case window.TILE_TYPES.EMPTY_WATER: return 'water';
-            case window.TILE_TYPES.MOUNTAIN: case window.TILE_TYPES.RESOURCE_CRYSTAL_VEIN: return 'mountain';
-            case window.TILE_TYPES.RUINS: case window.TILE_TYPES.POI_ANCIENT_STRUCTURE: return 'ruins';
-            case window.TILE_TYPES.DEBRIS_FIELD: return 'debris-field';
+            case window.TILE_TYPES.MOUNTAIN: case window.TILE_TYPES.MOUNTAINS_LOW: case window.TILE_TYPES.RESOURCE_CRYSTAL_VEIN: return 'mountain';
+            case window.TILE_TYPES.RUINS: case window.TILE_TYPES.RUINS_ANCIENT: case window.TILE_TYPES.POI_ANCIENT_STRUCTURE: return 'ruins';
+            case window.TILE_TYPES.DEBRIS_FIELD: case window.TILE_TYPES.DEBRIS_FIELD_LIGHT: case window.TILE_TYPES.DEBRIS_FIELD_DENSE: return 'debris-field';
             case window.TILE_TYPES.THICK_VINES: return 'thick-vines';
             default: return 'grassland';
         }
