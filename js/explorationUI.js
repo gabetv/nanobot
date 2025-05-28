@@ -2,335 +2,822 @@
 console.log("explorationUI.js - Fichier chargé et en cours d'analyse...");
 
 var explorationUI = {
-    isFirstExplorationViewUpdate: true, 
-    centerRetryTimeoutId: null, 
+    isFirstExplorationViewUpdate: true,
+    centerRetryTimeoutId: null,
 
-    updateFullExplorationView: function() {
+    activeTileUiElements: { 
+        container: null, 
+        activeExplorationTitle: null,
+        exitActiveExplorationBtn: null,
+        
+        mainGridView: null, 
+        
+        detailPanel: null, 
+        currentTileImage: null,
+        currentTileDescription: null,
+        currentTileActionsGrid: null,
+        activeTileLogContainer: null, 
+        activeTileLog: null,
+
+        nanobotStatusContainer: null,
+        minimapContainer: null,
+        minimapGrid: null,
+    },
+    isInitializedActiveUI: false,
+
+    initializeActiveTileUIElements: function() {
+        if (this.isInitializedActiveUI) return;
+
+        this.activeTileUiElements.container = window.activeTileExplorationUIEl;
+        this.activeTileUiElements.activeExplorationTitle = window.activeExplorationTitleEl;
+        this.activeTileUiElements.exitActiveExplorationBtn = window.exitActiveExplorationBtnEl;
+
+        this.activeTileUiElements.mainGridView = document.getElementById('active-exploration-main-grid-view');
+        
+        this.activeTileUiElements.detailPanel = document.getElementById('active-exploration-detail-panel');
+        this.activeTileUiElements.currentTileImage = window.currentTileImageEl; 
+        this.activeTileUiElements.currentTileDescription = window.currentTileDescriptionEl; 
+        this.activeTileUiElements.currentTileActionsGrid = window.currentTileActionsGridEl; 
+        
+        this.activeTileUiElements.activeTileLogContainer = window.activeTileLogContainerEl; 
+        this.activeTileUiElements.activeTileLog = window.activeTileLogEl; 
+
+        this.activeTileUiElements.nanobotStatusContainer = window.activeExplorationNanobotStatusEl;
+
+        this.activeTileUiElements.minimapContainer = document.getElementById('active-exploration-minimap-container');
+        this.activeTileUiElements.minimapGrid = document.getElementById('active-exploration-minimap-grid');
+
+        if (this.activeTileUiElements.exitActiveExplorationBtn && typeof this.exitActiveTileExplorationMode === 'function') {
+            if (!this.activeTileUiElements.exitActiveExplorationBtn.dataset.listenerAttached) {
+                this.activeTileUiElements.exitActiveExplorationBtn.addEventListener('click', () => this.exitActiveTileExplorationMode());
+                this.activeTileUiElements.exitActiveExplorationBtn.dataset.listenerAttached = 'true';
+            }
+        }
+        
+        this.isInitializedActiveUI = true;
+        console.log("explorationUI: Éléments de l'UI d'exploration active (grille, minimap, détails) initialisés.");
+    },
+
+    enterActiveTileExplorationMode: function(tileX, tileY) {
+        this.initializeActiveTileUIElements();
+        if (!this.activeTileUiElements.container) {
+            console.error("UI d'exploration active non trouvée dans le DOM !");
+            return;
+        }
         if (!gameState || !gameState.map) {
-            console.warn("explorationUI.updateFullExplorationView: gameState ou gameState.map non défini.");
+             console.error("enterActiveTileExplorationMode: gameState ou gameState.map non défini."); return;
+        }
+
+        gameState.map.activeExplorationTileCoords = { x: tileX, y: tileY };
+        this.activeTileUiElements.container.classList.remove('hidden');
+        if(window.worldSectionContentEl) window.worldSectionContentEl.classList.add('blurred-background');
+
+        if (this.activeTileUiElements.activeTileLog) this.activeTileUiElements.activeTileLog.innerHTML = ""; 
+        this.addLogToActiveTileView("Analyse de la zone en cours...", "system");
+
+        this.updateActiveTileExplorationView(tileX, tileY, true); 
+        console.log(`Entrée en mode exploration active pour (${tileX}, ${tileY})`);
+    },
+
+    exitActiveTileExplorationMode: function() {
+        if (!this.isInitializedActiveUI || !this.activeTileUiElements.container) return;
+         if (!gameState || !gameState.map) {
+             console.error("exitActiveTileExplorationMode: gameState ou gameState.map non défini."); return;
+        }
+
+        this.activeTileUiElements.container.classList.add('hidden');
+        gameState.map.activeExplorationTileCoords = null;
+        if(window.worldSectionContentEl) window.worldSectionContentEl.classList.remove('blurred-background');
+
+        this.updateExplorationMapDisplay();
+        this.centerMapOnPlayer(true); 
+        console.log("Sortie du mode exploration active.");
+    },
+
+    updateActiveTileExplorationView: function(centerX, centerY, forceActionRefresh = false) {
+        if (!this.isInitializedActiveUI) this.initializeActiveTileUIElements();
+        if (!gameState || !window.mapManager || !this.activeTileUiElements.container || this.activeTileUiElements.container.classList.contains('hidden')) {
+            return;
+        }
+        
+        const currentTile = window.mapManager.getTile(centerX, centerY);
+        if (!currentTile) {
+            console.error(`updateActiveTileExplorationView: Tuile centrale non trouvée en (${centerX}, ${centerY})`);
+            this.addLogToActiveTileView(`Erreur: Impossible de charger les données de la tuile (${centerX},${centerY}).`, "error");
             return;
         }
 
-        if (typeof this.updateExplorationMapDisplay !== 'function' ||
-            typeof this.updateExplorationLogDisplay !== 'function' ||
-            typeof this.updateTileInteractionPanel !== 'function' ||
-            typeof this.updateZoneSelectionUI !== 'function') {
-            console.error("explorationUI.updateFullExplorationView: Une ou plusieurs fonctions de mise à jour sont manquantes sur this.");
-            return;
-        }
-        this.updateExplorationMapDisplay();
-        this.updateExplorationLogDisplay();
-        if (gameState.map.selectedTile) {
-            this.updateTileInteractionPanel(gameState.map.selectedTile.x, gameState.map.selectedTile.y);
-        } else {
-            if (gameState.map.nanobotPos) {
-                this.updateTileInteractionPanel(gameState.map.nanobotPos.x, gameState.map.nanobotPos.y);
-            } else {
-                this.updateTileInteractionPanel();
+        if (this.activeTileUiElements.mainGridView) {
+            this.activeTileUiElements.mainGridView.innerHTML = ''; 
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    const adjX = centerX + dx;
+                    const adjY = centerY + dy;
+                    const isNanobotPos = (dx === 0 && dy === 0);
+                    
+                    const cellDiv = document.createElement('div');
+                    cellDiv.className = 'active-explore-grid-cell';
+                    if (isNanobotPos) {
+                        cellDiv.classList.add('current-nanobot-pos');
+                        const nanobotIcon = document.createElement('i');
+                        nanobotIcon.className = 'ti ti-robot nanobot-grid-icon';
+                        cellDiv.appendChild(nanobotIcon);
+                    }
+
+                    const adjTile = window.mapManager.getTile(adjX, adjY);
+                    const currentZoneData = typeof window.WORLD_ZONES !== 'undefined' ? window.WORLD_ZONES[gameState.currentZoneId] : null;
+
+                    if (currentZoneData && adjX >= 0 && adjX < currentZoneData.mapSize.width && adjY >= 0 && adjY < currentZoneData.mapSize.height && adjTile) {
+                        let terrainName, contentName = "", contentClass = "", terrainIcon = "ti-map-pin";
+                        const isExploredOrScanned = adjTile.isExplored || (adjTile.isScannedFromMap && gameState.gameTime <= adjTile.scannedFromMapRevealTime);
+                        
+                        if (isExploredOrScanned) {
+                            const typeToDisplay = (adjTile.isScannedFromMap && gameState.gameTime <= adjTile.scannedFromMapRevealTime) ? adjTile.scannedFromMapActualType : adjTile.actualType;
+                            terrainName = this.getTerrainTypeName(typeToDisplay);
+                            terrainIcon = this.getTileIcon(typeToDisplay, adjTile.content);
+                            if (adjTile.content) {
+                                contentName = this.getTileContentName(typeToDisplay, adjTile.content);
+                                if (contentName === terrainName && adjTile.content.type !== 'resource') contentName = ""; 
+                                if (adjTile.content.type === 'enemy_patrol' || adjTile.content.type === 'enemy_base') contentClass = 'enemy';
+                                else if (adjTile.content.type === 'resource') contentClass = 'resource';
+                            }
+                        } else {
+                            terrainName = `Inconnue`;
+                            terrainIcon = this.getTileIcon(adjTile.baseType, null, true); 
+                        }
+                        
+                        cellDiv.innerHTML += `<i class="${terrainIcon}"></i>
+                                             <span class="terrain-name-preview">${terrainName}</span>`;
+                        if (contentName) {
+                            cellDiv.innerHTML += `<span class="content-preview ${contentClass}">${contentName}</span>`;
+                        }
+
+                        let isTraversable = true; let traversalBlockReason = "";
+                        if (typeof window.TILE_TYPES !== 'undefined' && typeof window.explorationController !== 'undefined') {
+                            if (adjTile.actualType === window.TILE_TYPES.IMPASSABLE_DEEP_WATER || adjTile.actualType === window.TILE_TYPES.IMPASSABLE_HIGH_PEAK) {isTraversable = false;}
+                            else if (adjTile.actualType === window.TILE_TYPES.DEBRIS_FIELD && !window.explorationController.nanobotHasModuleAbility('canTraverse', window.TILE_TYPES.DEBRIS_FIELD)) {isTraversable = false; traversalBlockReason="Module Foreuse requis";}
+                            else if (adjTile.actualType === window.TILE_TYPES.THICK_VINES && !window.explorationController.nanobotHasModuleAbility('canTraverse', window.TILE_TYPES.THICK_VINES)) {isTraversable = false; traversalBlockReason="Module Découpeur requis";}
+                        } else { isTraversable = false; traversalBlockReason="Erreur config."; }
+
+                        if (!isNanobotPos && isTraversable) {
+                            cellDiv.classList.add('can-move');
+                            cellDiv.title = `Aller à (${adjX},${adjY})`;
+                            cellDiv.onclick = () => {
+                                if (typeof window.explorationController !== 'undefined' && typeof window.explorationController.attemptMoveInActiveExplorationByCoords === 'function') {
+                                    window.explorationController.attemptMoveInActiveExplorationByCoords(adjX, adjY);
+                                } else {
+                                    console.error("attemptMoveInActiveExplorationByCoords non définie!");
+                                }
+                            };
+                        } else if (!isNanobotPos && !isTraversable) {
+                            cellDiv.classList.add('blocked-preview');
+                            cellDiv.title = traversalBlockReason || "Infranchissable";
+                        }
+                    } else { 
+                        cellDiv.innerHTML = `<i class="ti ti-border-outer"></i><span class="terrain-name-preview">Hors Limites</span>`;
+                        cellDiv.classList.add('blocked-preview');
+                    }
+                    this.activeTileUiElements.mainGridView.appendChild(cellDiv);
+                }
             }
         }
 
-        if (this.isFirstExplorationViewUpdate) {
-            console.log("updateFullExplorationView: First update flag is true, attempting to center map.");
-            setTimeout(() => {
-                this.centerMapOnPlayer(true); 
-            }, 0); 
+        this.updateActiveExplorationMinimap(centerX, centerY);
+
+        if (this.activeTileUiElements.detailPanel) {
+            if (this.activeTileUiElements.activeExplorationTitle) {
+                this.activeTileUiElements.activeExplorationTitle.textContent = `Exploration: ${this.getTileContentName(currentTile.actualType, null)} (${centerX},${centerY})`;
+            }
+
+            const tileViewConfigKey = currentTile.actualType || 'default';
+            const tileViewConfig = (typeof window.activeTileViewData !== 'undefined' && window.activeTileViewData[tileViewConfigKey]) || 
+                                   (typeof window.activeTileViewData !== 'undefined' ? window.activeTileViewData.default : {image: "images/tile_view/default_detail.png", descriptions: ["Description par défaut."]});
+
+            if (this.activeTileUiElements.currentTileImage) {
+                this.activeTileUiElements.currentTileImage.style.backgroundImage = `url('${tileViewConfig.image || (typeof window.activeTileViewData !== 'undefined' ? window.activeTileViewData.default.image : "")}')`;
+            }
+            
+            if (this.activeTileUiElements.currentTileDescription) {
+                let baseDesc = "Description non disponible.";
+                if (tileViewConfig.descriptions && Array.isArray(tileViewConfig.descriptions) && tileViewConfig.descriptions.length > 0) {
+                    baseDesc = getRandomElement(tileViewConfig.descriptions); 
+                } else if (typeof tileViewConfig.descriptions === 'string') { 
+                    baseDesc = tileViewConfig.descriptions;
+                }
+                
+                let desc = `<strong>${this.getTileContentName(currentTile.actualType, null)} (${centerX},${centerY})</strong><br>${baseDesc}`;
+                if (currentTile.content) { desc += `<br>Présence détectée: ${this.getTileContentName(currentTile.actualType, currentTile.content)}.`; }
+                if (currentTile.isFullyExplored) { desc += "<br><em class='text-green-400'>Cette zone a été entièrement explorée.</em>";
+                } else if (currentTile.usedActions && currentTile.usedActions['scan_local_active'] && (!currentTile.hiddenFeatures || currentTile.hiddenFeatures.length === 0) && (!currentTile.revealedFeatures || currentTile.revealedFeatures.length === 0)) {
+                     desc += "<br><em class='text-gray-400'>Le scan local n'a rien révélé de plus.</em>";
+                }
+                if (currentTile.content?.poiType === (window.TILE_TYPES?.POI_ANCIENT_STRUCTURE || "poi_ancient_structure") && currentTile.content?.interactionStep) {
+                    if (currentTile.content.interactionStep === 1) desc += "<br><em class='text-sky-300'>La structure attend une analyse énergétique.</em>";
+                    if (currentTile.content.interactionStep === 2) desc += "<br><em class='text-yellow-300'>La structure semble prête à recevoir un catalyseur cristallin.</em>";
+                }
+                if (currentTile.hasActiveTrap) { desc += "<br><strong class='text-red-500 animate-pulse'>DANGER: Piège actif détecté !</strong>"; }
+                this.activeTileUiElements.currentTileDescription.innerHTML = desc;
+            }
+
+            if (this.activeTileUiElements.currentTileActionsGrid) {
+                this.activeTileUiElements.currentTileActionsGrid.innerHTML = ''; 
+                if (currentTile.isFullyExplored && !(currentTile.content?.poiType === window.TILE_TYPES.POI_ANCIENT_STRUCTURE && !currentTile.content.isFullyExploited) ) { // Condition pour POI non fini
+                     this.activeTileUiElements.currentTileActionsGrid.innerHTML = `<p class="text-sm text-green-400 italic p-2 text-center">Rien de plus à faire ici.</p>`;
+                } else {
+                    let availableActions = [];
+                    const tileViewDataForType = window.activeTileViewData[currentTile.actualType] || window.activeTileViewData.default;
+                    const baseActions = currentTile.baseActions || tileViewDataForType?.baseActions || [];
+    
+                    if (baseActions && typeof window.tileActiveExplorationOptions !== 'undefined') {
+                        baseActions.forEach(actionId => {
+                            const actionDef = window.tileActiveExplorationOptions[actionId];
+                            if (actionDef) {
+                                const isRepeatable = actionDef.canRepeat;
+                                const isMaxedOut = isRepeatable && actionId === 'search_area_active' && (currentTile.searchAttempts || 0) >= (actionDef.maxRepeats || 3);
+                                let isUsed = !isRepeatable && currentTile.usedActions && currentTile.usedActions[actionId];
+                                // Pour les actions dynamiques qui peuvent être utilisées plusieurs fois sur différentes features
+                                if (actionDef.isDynamic && currentTile.usedActions && currentTile.usedActions[actionId] && typeof currentTile.usedActions[actionId] === 'object') {
+                                    // Si c'est un objet, cela signifie qu'il est utilisé pour des features spécifiques.
+                                    // On doit vérifier si *toutes* les instances possibles de cette action ont été utilisées.
+                                    // Pour simplifier ici, on suppose qu'elle reste affichable tant que des features correspondantes existent.
+                                    // La logique de "isUsed" pour les features dynamiques est plus complexe.
+                                    // On pourrait laisser le bouton et la logique handleActionOnActiveTile gérera si une feature spécifique a déjà été actionnée.
+                                    isUsed = false; // Permettre de ré-afficher si des features dynamiques correspondantes sont présentes
+                                }
+                                if (!isMaxedOut && !isUsed) {
+                                    availableActions.push({ ...actionDef, id: actionId, originalActionId: actionId });
+                                }
+                            }
+                        });
+                    }
+                    if (currentTile.content && typeof window.tileActiveExplorationOptions !== 'undefined' && typeof window.TILE_TYPES_TO_RESOURCE_KEY !== 'undefined' && typeof window.MAP_FEATURE_DATA !== 'undefined') {
+                        if (currentTile.content.type === 'resource' && currentTile.content.amount > 0) {
+                            const actionDef = window.tileActiveExplorationOptions['collect_visible_resource_active'];
+                            if(actionDef) availableActions.push({ ...actionDef, name: actionDef.name.replace('{resourceName}', (window.TILE_TYPES_TO_RESOURCE_KEY[currentTile.content.resourceType] || "Ressource") ), originalActionId: 'collect_visible_resource_active' });
+                        } else if (currentTile.content.type === 'enemy_patrol') {
+                            const actionDef = window.tileActiveExplorationOptions['engage_visible_enemy_active'];
+                            if(actionDef && currentTile.content.details) availableActions.push({ ...actionDef, name: actionDef.name.replace('{enemyName}', currentTile.content.details.name), originalActionId: 'engage_visible_enemy_active' });
+                        } else if (currentTile.content.type === 'poi' && currentTile.content.poiType === (window.TILE_TYPES?.POI_ANCIENT_STRUCTURE || "poi_ancient_structure") && !currentTile.content.isFullyExploited) {
+                            if (!currentTile.content.interactionStep || currentTile.content.interactionStep < 1) {
+                                const actionDef = window.tileActiveExplorationOptions['interact_poi_active'];
+                                if(actionDef) availableActions.push({ ...actionDef, name: actionDef.name.replace('{poiName}', window.MAP_FEATURE_DATA[currentTile.content.poiType]?.name || "Structure"), originalActionId: 'interact_poi_active'});
+                            }
+                            const analyzeAction = window.tileActiveExplorationOptions['ancient_structure_analyze_energy'];
+                            if (analyzeAction && analyzeAction.condition(gameState, currentTile)) { // Passer tile à condition
+                                availableActions.push({ ...analyzeAction, originalActionId: 'ancient_structure_analyze_energy' });
+                            }
+                            const insertCrystalAction = window.tileActiveExplorationOptions['ancient_structure_insert_crystal'];
+                            if (insertCrystalAction && insertCrystalAction.condition(gameState, currentTile)) { // Passer tile à condition
+                                availableActions.push({ ...insertCrystalAction, originalActionId: 'ancient_structure_insert_crystal' });
+                            }
+                        } else if (currentTile.content.type === 'poi' && !currentTile.content.isInteracted) { // POI génériques non encore "isFullyExploited" implicitement
+                            const actionDef = window.tileActiveExplorationOptions['interact_poi_active'];
+                            if(actionDef && currentTile.content.poiType) availableActions.push({ ...actionDef, name: actionDef.name.replace('{poiName}', window.MAP_FEATURE_DATA[currentTile.content.poiType]?.name || "POI"), originalActionId: 'interact_poi_active'});
+                        } else if (currentTile.content.type === 'enemy_base' && currentTile.content.currentHealth > 0) {
+                             const actionDef = window.tileActiveExplorationOptions['attack_enemy_base_active'];
+                            if(actionDef && currentTile.content.details) availableActions.push({ ...actionDef, name: actionDef.name.replace('{baseName}', currentTile.content.details.name), originalActionId: 'attack_enemy_base_active' });
+                        }
+                    }
+                    if(currentTile.revealedFeatures && typeof window.tileActiveExplorationOptions !== 'undefined'){
+                        currentTile.revealedFeatures.forEach((feature, index) => {
+                            let actionDef, actionName, actionIdToUse, originalActionId;
+                            let featureAlreadyUsed = false;
+                            const featureIdentifier = `${feature.type}_${feature.name || index}_${centerX}_${centerY}`; // Identifiant unique pour cette feature sur cette tuile
+
+                            if (feature.type === 'small_resource_cache') {
+                                actionDef = window.tileActiveExplorationOptions['collect_revealed_resource'];
+                                if(actionDef) { actionName = actionDef.name.replace('{resourceName}', feature.resourceType || 'Cache'); originalActionId = 'collect_revealed_resource'; actionIdToUse = `${originalActionId}_feat_${index}`; }
+                            } else if (feature.type === 'ancient_data_fragment') {
+                                actionDef = window.tileActiveExplorationOptions['decipher_data_fragment'];
+                                if(actionDef) { actionName = actionDef.name; originalActionId = 'decipher_data_fragment'; actionIdToUse = `${originalActionId}_feat_${index}`; }
+                            } else if (feature.type === 'hidden_trap' && currentTile.hasActiveTrap) {
+                                actionDef = window.tileActiveExplorationOptions['disarm_trap_active'];
+                                if(actionDef) { actionName = actionDef.name; originalActionId = 'disarm_trap_active'; actionIdToUse = `${originalActionId}_feat_${index}`; }
+                            }
+                            
+                            // Vérifier si CETTE feature spécifique a déjà été actionnée
+                            if (currentTile.usedActions && currentTile.usedActions[originalActionId] && currentTile.usedActions[originalActionId][featureIdentifier]) {
+                                featureAlreadyUsed = true;
+                            }
+
+                            if (actionDef && !featureAlreadyUsed) { // N'ajouter l'action que si la feature n'a pas été utilisée
+                                 availableActions.push({ ...actionDef, name: actionName, id: actionIdToUse, originalActionId: originalActionId, dynamicData: { ...feature, _featureIdentifier: featureIdentifier } }); // Passer un identifiant unique
+                            }
+                        });
+                    }
+    
+                    if (availableActions.length > 0) {
+                        availableActions.forEach(action => {
+                            const actionButton = document.createElement('button');
+                            actionButton.className = 'btn btn-secondary btn-sm w-full text-left p-2 flex items-center gap-x-2 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-accent-blue';
+                            let costString = ""; let canAfford = true; let meetsCondition = true;
+    
+                            if(action.cost){
+                                let costPartsDisplay = [];
+                                if (action.cost.energy) {
+                                    costPartsDisplay.push(`${action.cost.energy} Énergie`);
+                                    if((gameState.resources.energy || 0) < action.cost.energy) canAfford = false;
+                                }
+                                if (action.cost.mobility) {
+                                    costPartsDisplay.push(`${action.cost.mobility} Mobilité`);
+                                    if((gameState.resources.mobility || 0) < action.cost.mobility) canAfford = false;
+                                }
+                                if (action.cost.items && typeof window.itemsData !== 'undefined') {
+                                    for (const itemId_cost in action.cost.items) { // Correction: itemId_cost au lieu de itemId
+                                        const required = action.cost.items[itemId_cost];
+                                        costPartsDisplay.push(`${required} ${window.itemsData[itemId_cost]?.name || itemId_cost}`);
+                                        const current = (gameState.inventory || []).filter(invItem => invItem === itemId_cost).length;
+                                        if(current < required) canAfford = false;
+                                    }
+                                }
+                                 for (const resKey in action.cost) {
+                                    if (resKey !== 'energy' && resKey !== 'mobility' && resKey !== 'items') {
+                                        costPartsDisplay.push(`${action.cost[resKey]} ${resKey}`);
+                                        if((gameState.resources[resKey] || 0) < action.cost[resKey]) canAfford = false;
+                                    }
+                                }
+                                if (costPartsDisplay.length > 0) {
+                                    costString = ` (Coût: ${costPartsDisplay.join(', ')})`;
+                                }
+                            }
+
+                            if(action.condition && typeof action.condition === 'function'){
+                                if(!action.condition(gameState, currentTile)) meetsCondition = false; 
+                            }
+                            actionButton.innerHTML = `<i class="${action.icon || 'ti-question-mark'} text-lg text-blue-300 flex-shrink-0"></i><div class="flex-grow"><strong class="text-sm text-gray-100">${action.name}</strong><p class="text-xs text-gray-400">${action.description}${costString}</p></div>`;
+                            if(!canAfford || !meetsCondition) {
+                                actionButton.classList.add('btn-disabled', 'opacity-50'); actionButton.disabled = true;
+                                if(!canAfford && action.cost) actionButton.title = `Ressources/Items manquants.`; 
+                                else if(!meetsCondition) actionButton.title = "Conditions non remplies.";
+                            }
+                            actionButton.onclick = () => {
+                                if (!actionButton.disabled && typeof window.explorationController !== 'undefined' && typeof window.explorationController.handleActionOnActiveTile === 'function') {
+                                    window.explorationController.handleActionOnActiveTile(action.originalActionId || action.id, centerX, centerY, action.dynamicData || null);
+                                }
+                            };
+                            this.activeTileUiElements.currentTileActionsGrid.appendChild(actionButton);
+                        });
+                    } else if (!currentTile.isFullyExplored) {
+                         this.activeTileUiElements.currentTileActionsGrid.innerHTML = `<p class="text-sm text-gray-400 italic p-2 text-center">Aucune action disponible pour le moment.</p>`;
+                    }
+                }
+            }
+        }
+
+        if (this.activeTileUiElements.nanobotStatusContainer && gameState.nanobotStats && typeof window.MAX_MOBILITY_POINTS !== 'undefined') {
+            this.activeTileUiElements.nanobotStatusContainer.innerHTML =
+                `PV: <span class="font-semibold">${Math.floor(gameState.nanobotStats.currentHealth)}/${gameState.nanobotStats.health}</span> | ` +
+                `Énergie: <span class="font-semibold">${Math.floor(gameState.resources.energy)}</span> | ` +
+                `Mobilité: <span class="font-semibold">${Math.floor(gameState.resources.mobility)}/${window.MAX_MOBILITY_POINTS}</span>`;
+        }
+    },
+
+    updateActiveExplorationMinimap: function(centerX, centerY) {
+        if (!this.activeTileUiElements.minimapGrid || !window.mapManager || !gameState || typeof window.TILE_TYPES === 'undefined') {
+            return;
+        }
+        this.activeTileUiElements.minimapGrid.innerHTML = ''; 
+
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                const adjX = centerX + dx;
+                const adjY = centerY + dy;
+                
+                const cellDiv = document.createElement('div');
+                cellDiv.className = 'minimap-cell';
+                
+                const adjTile = window.mapManager.getTile(adjX, adjY);
+                const currentZoneData = typeof window.WORLD_ZONES !== 'undefined' ? window.WORLD_ZONES[gameState.currentZoneId] : null;
+
+                if (currentZoneData && adjX >= 0 && adjX < currentZoneData.mapSize.width && adjY >= 0 && adjY < currentZoneData.mapSize.height && adjTile) {
+                    const isExploredOrScanned = adjTile.isExplored || (adjTile.isScannedFromMap && gameState.gameTime <= adjTile.scannedFromMapRevealTime);
+                    
+                    if (dx === 0 && dy === 0) { 
+                        cellDiv.classList.add('nanobot-pos-minimap');
+                        cellDiv.innerHTML = `<i class="ti ti-robot"></i>`;
+                    } else if (isExploredOrScanned) {
+                        const typeToDisplay = (adjTile.isScannedFromMap && gameState.gameTime <= adjTile.scannedFromMapRevealTime) ? adjTile.scannedFromMapActualType : adjTile.actualType;
+                        
+                        if (adjTile.content) {
+                            if (adjTile.content.type === 'enemy_patrol' || adjTile.content.type === 'enemy_base') {
+                                cellDiv.classList.add('enemy-minimap');
+                                cellDiv.innerHTML = `<i class="ti ti-skull"></i>`;
+                            } else if (adjTile.content.type === 'resource') {
+                                cellDiv.classList.add('resource-minimap');
+                                cellDiv.innerHTML = `<i class="ti ti-package"></i>`;
+                            } else if (adjTile.content.type === 'poi') {
+                                cellDiv.classList.add('poi-minimap');
+                                cellDiv.innerHTML = `<i class="ti ti-flag-question"></i>`;
+                            }
+                        } else { 
+                            switch (typeToDisplay) {
+                                case window.TILE_TYPES.EMPTY_GRASSLAND: cellDiv.classList.add('grassland-minimap'); break;
+                                case window.TILE_TYPES.EMPTY_DESERT: cellDiv.classList.add('desert-minimap'); break;
+                                case window.TILE_TYPES.EMPTY_WATER: cellDiv.classList.add('water-minimap'); break;
+                                case window.TILE_TYPES.FOREST: case window.TILE_TYPES.FOREST_LIGHT: case window.TILE_TYPES.FOREST_DENSE: cellDiv.classList.add('forest-minimap'); break;
+                                case window.TILE_TYPES.MOUNTAIN: case window.TILE_TYPES.MOUNTAINS_LOW: cellDiv.classList.add('mountain-minimap'); break;
+                                case window.TILE_TYPES.RUINS: case window.TILE_TYPES.RUINS_ANCIENT: cellDiv.classList.add('ruins-minimap'); break;
+                                case window.TILE_TYPES.DEBRIS_FIELD: cellDiv.classList.add('debris-minimap'); break;
+                                case window.TILE_TYPES.THICK_VINES: cellDiv.classList.add('vines-minimap'); break;
+                                case window.TILE_TYPES.PLAYER_BASE: cellDiv.classList.add('base-minimap'); cellDiv.innerHTML = `<i class="ti ti-home"></i>`; break;
+                                case window.TILE_TYPES.IMPASSABLE_DEEP_WATER: case window.TILE_TYPES.IMPASSABLE_HIGH_PEAK:
+                                    cellDiv.classList.add('impassable-minimap');
+                                    cellDiv.innerHTML = `<i class="ti ti-ban"></i>`;
+                                    break;
+                                default: cellDiv.classList.add('grassland-minimap'); 
+                            }
+                        }
+                    } else { 
+                        cellDiv.classList.add('unexplored-minimap');
+                        cellDiv.innerHTML = `<i class="ti ti-help-circle opacity-50"></i>`;
+                    }
+                } else { 
+                    cellDiv.classList.add('impassable-minimap'); 
+                    cellDiv.innerHTML = ``; 
+                }
+                this.activeTileUiElements.minimapGrid.appendChild(cellDiv);
+            }
+        }
+    },
+
+    addLogToActiveTileView: function(message, type = "info") {
+        if (!this.activeTileUiElements.activeTileLog) this.initializeActiveTileUIElements();
+        if (!this.activeTileUiElements.activeTileLog) { console.warn("addLogToActiveTileView: Élément activeTileLog non trouvé."); return;}
+
+        const entry = document.createElement('p');
+        entry.className = 'text-xs mb-1';
+        if (type === "error") entry.classList.add("text-red-400", "font-semibold");
+        else if (type === "success") entry.classList.add("text-green-400");
+        else if (type === "warning") entry.classList.add("text-yellow-400");
+        else if (type === "system") entry.classList.add("text-gray-500", "italic");
+        else entry.classList.add("text-gray-300");
+        entry.innerHTML = message;
+        this.activeTileUiElements.activeTileLog.appendChild(entry);
+        this.activeTileUiElements.activeTileLog.scrollTop = this.activeTileUiElements.activeTileLog.scrollHeight;
+    },
+
+    updateFullExplorationView: function() {
+        if (!gameState || !gameState.map) { console.warn("explorationUI.updateFullExplorationView: gameState ou gameState.map non défini."); return; }
+        if (this.activeTileUiElements.container && !this.activeTileUiElements.container.classList.contains('hidden')) { return; }
+
+        if (typeof this.updateExplorationMapDisplay !== 'function' || typeof this.updateExplorationLogDisplay !== 'function' || 
+            typeof this.updateTileInteractionPanel !== 'function' || typeof this.updateZoneSelectionUI !== 'function') {
+            console.error("explorationUI.updateFullExplorationView: Fonctions de mise à jour manquantes."); return;
+        }
+        this.updateExplorationMapDisplay();
+        this.updateExplorationLogDisplay();
+        if (gameState.map.selectedTile) { this.updateTileInteractionPanel(gameState.map.selectedTile.x, gameState.map.selectedTile.y);
+        } else if (gameState.map.nanobotPos) { this.updateTileInteractionPanel(gameState.map.nanobotPos.x, gameState.map.nanobotPos.y);
+        } else { this.updateTileInteractionPanel(); }
+        
+        const explorationSubTab = document.getElementById('exploration-subtab');
+        if (this.isFirstExplorationViewUpdate && explorationSubTab?.classList.contains('active')) {
+            setTimeout(() => { this.centerMapOnPlayer(true); }, 50);
             this.isFirstExplorationViewUpdate = false;
         }
     },
 
     updateExplorationMapDisplay: function() {
-        if(!mapGridEl || !nanobotMapPosEl || !tileInfoDisplayEl || !explorationTitleEl ) {
-            console.warn("explorationUI.updateExplorationMapDisplay: Un ou plusieurs éléments DOM de base sont manquants !");
-            return;
-        }
-        if (typeof ZONE_DATA === 'undefined' || !gameState || !gameState.map || !gameState.currentZoneId || !ZONE_DATA[gameState.currentZoneId]) {
-            console.warn("explorationUI.updateExplorationMapDisplay: ZONE_DATA ou gameState pour la carte non défini.");
-            if(mapGridEl) mapGridEl.innerHTML = "<p class='text-red-400 text-xs'>Erreur: Données de zone indisponibles.</p>";
-            return;
-        }
-
-        if(typeof this.updateZoneSelectionUI === 'function') this.updateZoneSelectionUI();
-        else console.warn("explorationUI: this.updateZoneSelectionUI non trouvée dans updateExplorationMapDisplay.");
-
-        const currentZone = ZONE_DATA[gameState.currentZoneId];
-        if(explorationTitleEl) explorationTitleEl.textContent = `Carte: ${currentZone.name}`;
+        const mapGrid = window.mapGridEl; const nanobotMapPos = window.nanobotMapPosEl;
+        const tileInfoDisp = window.tileInfoDisplayEl; const explorationTitle = window.explorationTitleEl;
+        if(!mapGrid || !nanobotMapPos || !tileInfoDisp || !explorationTitle ) { console.warn("explorationUI.updateExplorationMapDisplay: Eléments DOM carte manquants."); return; }
         
-        const mapScrollContainer = document.getElementById('map-scroll-container');
-
-        if(mapGridEl && mapScrollContainer) {
-            mapGridEl.innerHTML = '';
-            const fixedTileSize = 22; 
-            document.documentElement.style.setProperty('--map-tile-effective-size', `${fixedTileSize}px`);
-            mapGridEl.style.gridTemplateRows = `repeat(${currentZone.mapSize.height}, ${fixedTileSize}px)`;
-            mapGridEl.style.gridTemplateColumns = `repeat(${currentZone.mapSize.width}, ${fixedTileSize}px)`;
-            mapGridEl.style.width = `${currentZone.mapSize.width * (fixedTileSize + 1) -1}px`;
-            mapGridEl.style.height = `${currentZone.mapSize.height * (fixedTileSize + 1) -1}px`;
-        } else {
-            console.warn("explorationUI: mapGridEl ou mapScrollContainer non trouvé lors de la configuration de la grille.");
-            return;
+        if (typeof window.WORLD_ZONES === 'undefined' || !gameState || !gameState.map || !gameState.currentZoneId || !window.WORLD_ZONES[gameState.currentZoneId]) { 
+            mapGrid.innerHTML = "<p class='text-red-400 text-xs'>Erreur: Données de zone indisponibles.</p>"; return;
         }
+        if(typeof this.updateZoneSelectionUI === 'function') this.updateZoneSelectionUI();
 
-        let scanButton = document.getElementById('scan-map-button');
-        if (scanButton && typeof SCAN_ENERGY_COST !== 'undefined' && typeof SCAN_COOLDOWN_DURATION_SECONDS !== 'undefined' && typeof TICK_SPEED !== 'undefined' && gameState && gameState.nanobotStats) {
-            const stats = gameState.nanobotStats;
-            const scanCost = SCAN_ENERGY_COST;
-            const scanCooldownTimeInTicks = SCAN_COOLDOWN_DURATION_SECONDS * (1000 / TICK_SPEED);
-            const onCooldown = gameState.gameTime < (stats.lastScanTime || 0) + scanCooldownTimeInTicks;
-            const canAffordScan = gameState.resources.energy >= scanCost;
+        const currentZone = window.WORLD_ZONES[gameState.currentZoneId]; 
+        explorationTitle.textContent = `Carte: ${currentZone.name}`;
+        
+        const mapScrollContainer = window.mapScrollContainerEl;
+        if(mapGrid && mapScrollContainer) {
+            mapGrid.innerHTML = ''; const fixedTileSize = 22;
+            document.documentElement.style.setProperty('--map-tile-effective-size', `${fixedTileSize}px`);
+            mapGrid.style.gridTemplateRows = `repeat(${currentZone.mapSize.height}, ${fixedTileSize}px)`;
+            mapGrid.style.gridTemplateColumns = `repeat(${currentZone.mapSize.width}, ${fixedTileSize}px)`;
+            mapGrid.style.width = `${currentZone.mapSize.width * (fixedTileSize + 1) -1}px`;
+            mapGrid.style.height = `${currentZone.mapSize.height * (fixedTileSize + 1) -1}px`;
+        } else { return; }
+
+        let scanButton = window.scanMapButtonEl;
+        if (scanButton && typeof window.SCAN_MOBILITY_COST !== 'undefined' && typeof window.SCAN_COOLDOWN_DURATION_SECONDS !== 'undefined' && typeof window.TICK_SPEED !== 'undefined' && gameState && gameState.nanobotStats) {
+            const stats = gameState.nanobotStats; 
+            const scanCost = window.SCAN_MOBILITY_COST; 
+            const scanCooldownTimeInSeconds = window.SCAN_COOLDOWN_DURATION_SECONDS; 
+            const onCooldown = gameState.gameTime < (stats.lastMapScanTime || 0) + scanCooldownTimeInSeconds;
+            const canAffordScan = gameState.resources.mobility >= scanCost; 
             scanButton.disabled = onCooldown || !canAffordScan;
             scanButton.classList.toggle('btn-disabled', onCooldown || !canAffordScan);
-            scanButton.classList.toggle('btn-info', !onCooldown && canAffordScan); 
-
-            if (onCooldown) scanButton.textContent = `Scan (CD: ${formatTime(Math.ceil(((stats.lastScanTime || 0) + scanCooldownTimeInTicks - gameState.gameTime) * (TICK_SPEED/1000))) })`;
-            else if (!canAffordScan) scanButton.textContent = `Scan (${scanCost} NRG) - Insuff.`;
-            else scanButton.textContent = `Scanner (${scanCost} NRG)`;
-
-            if (!scanButton.dataset.listenerAttached) { 
-                scanButton.addEventListener('click', () => {
-                    if (typeof explorationController !== 'undefined' && typeof explorationController.performScan === 'function') {
-                        explorationController.performScan();
-                    } else {
-                        console.error("La fonction explorationController.performScan n'est pas définie.");
+            scanButton.classList.toggle('btn-info', !onCooldown && canAffordScan);
+            
+            if (onCooldown) {
+                 scanButton.textContent = `Scan Carte (CD: ${formatTime(Math.ceil(((stats.lastMapScanTime || 0) + scanCooldownTimeInSeconds - gameState.gameTime))) })`;
+            } else if (!canAffordScan) {
+                 scanButton.textContent = `Scan Carte (${scanCost} MOB) - Insuff.`; 
+                 scanButton.title = `Nécessite ${scanCost} Mobilité. Vous avez ${Math.floor(gameState.resources.mobility)}.`;
+            } else {
+                 scanButton.textContent = `Scanner Carte (${scanCost} MOB)`; 
+                 scanButton.title = `Scanner la zone autour du Nanobot. Coût: ${scanCost} Mobilité.`;
+            }
+            
+            if (!scanButton.dataset.listenerAttached) {
+                scanButton.addEventListener('click', () => { 
+                    if (!scanButton.disabled && typeof window.explorationController !== 'undefined' && typeof window.explorationController.performScanOnWorldMap === 'function') {
+                        window.explorationController.performScanOnWorldMap(); 
                     }
                 });
                 scanButton.dataset.listenerAttached = 'true';
             }
         }
-
-        if (!Array.isArray(gameState.map.tiles) || gameState.map.tiles.length !== currentZone.mapSize.height) {
-            mapGridEl.innerHTML = "<p class='text-yellow-400 italic text-xs'>Initialisation de la carte...</p>";
+        if (!gameState.map.tiles[gameState.currentZoneId] || !Array.isArray(gameState.map.tiles[gameState.currentZoneId]) || gameState.map.tiles[gameState.currentZoneId].length === 0 ) {
+            mapGrid.innerHTML = "<p class='text-yellow-400 italic text-xs'>Initialisation de la carte pour cette zone...</p>";
+             if(typeof window.mapManager !== 'undefined' && typeof window.mapManager.generateMap === 'function') {
+                 console.warn("Appel de generateMap depuis updateExplorationMapDisplay car la carte de zone n'existe pas.");
+                 window.mapManager.generateMap(gameState.currentZoneId);
+             }
             return;
         }
-
+        const zoneTiles = gameState.map.tiles[gameState.currentZoneId];
         for (let y = 0; y < currentZone.mapSize.height; y++) {
-            if (!Array.isArray(gameState.map.tiles[y]) || gameState.map.tiles[y].length !== currentZone.mapSize.width) continue;
+            if (!Array.isArray(zoneTiles[y]) || zoneTiles[y].length !== currentZone.mapSize.width) continue;
             for (let x = 0; x < currentZone.mapSize.width; x++) {
                 const tileDiv = document.createElement('div');
-                const tileData = this.getTile(x,y);
-                const tileClassesString = tileData ? this.getTileDisplayClass(x, y) : 'unexplored unexplored-flat';
+                const tileDataFromManager = this.getTile(x,y);
+                const tileClassesString = tileDataFromManager ? this.getTileDisplayClassOnWorldMap(x, y) : 'unexplored unexplored-flat';
                 tileDiv.className = `map-tile ${tileClassesString}`;
                 tileDiv.dataset.x = x; tileDiv.dataset.y = y;
-                tileDiv.addEventListener('click', () => {
-                    if(typeof explorationController !== 'undefined' && typeof explorationController.handleTileClick === 'function') {
-                        explorationController.handleTileClick(x, y);
-                    } else { console.error("explorationController.handleTileClick non défini.");}
-                });
-                tileDiv.addEventListener('mouseover', () => {
-                    if(tileInfoDisplayEl) tileInfoDisplayEl.textContent = `(${x},${y}) ${this.getTileInfo(x,y)}`;
-                });
-                tileDiv.addEventListener('mouseout', () => {
-                    if(tileInfoDisplayEl) tileInfoDisplayEl.textContent = "Survolez une case.";
-                });
-                mapGridEl.appendChild(tileDiv);
+                tileDiv.addEventListener('click', () => { if(typeof window.explorationController !== 'undefined' && typeof window.explorationController.handleTileClickOnWorldMap === 'function') window.explorationController.handleTileClickOnWorldMap(x, y);});
+                tileDiv.addEventListener('mouseover', () => { if(tileInfoDisp) tileInfoDisp.textContent = `(${x},${y}) ${this.getTileInfoForWorldMap(x,y)}`; });
+                tileDiv.addEventListener('mouseout', () => { if(tileInfoDisp) tileInfoDisp.textContent = "Survolez une case."; });
+                mapGrid.appendChild(tileDiv);
             }
         }
-
-        if (nanobotMapPosEl && gameState && gameState.map && gameState.map.nanobotPos) {
-            nanobotMapPosEl.textContent = `(${gameState.map.nanobotPos.x}, ${gameState.map.nanobotPos.y}) / ${currentZone.name}`;
-        }
+        if (nanobotMapPos && gameState && gameState.map && gameState.map.nanobotPos) nanobotMapPos.textContent = `(${gameState.map.nanobotPos.x}, ${gameState.map.nanobotPos.y}) / ${currentZone.name}`;
         
-        if (!this.isFirstExplorationViewUpdate) {
-             setTimeout(() => { 
-                this.centerMapOnPlayer(true);
-            }, 0);
-        }
-
-        const centerBtn = document.getElementById('center-map-btn');
+        const centerBtn = window.centerMapBtnEl;
         if (centerBtn && !centerBtn.dataset.listenerAttached) {
             centerBtn.addEventListener('click', () => this.centerMapOnPlayer(false));
             centerBtn.dataset.listenerAttached = 'true';
         }
     },
 
-    centerMapOnPlayer: function(instant = false) {
-        const mapScrollContainer = document.getElementById('map-scroll-container');
-        const mapGrid = document.getElementById('map-grid');
-        if (!mapScrollContainer || !mapGrid || !gameState || !gameState.map.nanobotPos) { return; }
-
-        requestAnimationFrame(() => {
-            if (!mapScrollContainer.clientWidth || !mapScrollContainer.clientHeight) {
-                if (instant && !this.centerRetryTimeoutId) { 
-                    this.centerRetryTimeoutId = setTimeout(() => {
-                        this.centerRetryTimeoutId = null; 
-                        this.centerMapOnPlayer(instant); 
-                    }, 100);
-                }
-                return;
-            }
-            if (this.centerRetryTimeoutId) {
-                clearTimeout(this.centerRetryTimeoutId);
-                this.centerRetryTimeoutId = null;
-            }
-
-            const tileSizeString = getComputedStyle(document.documentElement).getPropertyValue('--map-tile-effective-size');
-            const tileSize = parseFloat(tileSizeString) || 22;
-            const gap = 1; 
-            const playerTileX = gameState.map.nanobotPos.x;
-            const playerTileY = gameState.map.nanobotPos.y;
-            const playerPixelX = playerTileX * (tileSize + gap);
-            const playerPixelY = playerTileY * (tileSize + gap);
-            const playerCenterX = playerPixelX + tileSize / 2;
-            const playerCenterY = playerPixelY + tileSize / 2;
-            const targetScrollLeft = playerCenterX - mapScrollContainer.clientWidth / 2;
-            const targetScrollTop = playerCenterY - mapScrollContainer.clientHeight / 2;
-            
-            mapScrollContainer.scrollTo({
-                top: targetScrollTop,
-                left: targetScrollLeft,
-                behavior: instant ? 'auto' : 'smooth'
-            });
-        });
-    },
-
-    getTileDisplayClass: function(x, y) {
-        if (!gameState || !gameState.map || !this.getTile(x,y) || typeof TILE_TYPES === 'undefined') {
-            return 'unexplored unexplored-flat';
+    getTile: function(x, y) {
+        if (typeof window.mapManager !== 'undefined' && typeof window.mapManager.getTile === 'function') {
+            return window.mapManager.getTile(x, y);
         }
-        const tile = this.getTile(x,y);
-        let classes = [];
-        const isNanobotCurrentPos = gameState.map.nanobotPos.x === x && gameState.map.nanobotPos.y === y;
+        console.warn("explorationUI.getTile: mapManager ou mapManager.getTile non défini.");
+        return null;
+    },
+    
+    getTileDisplayClassOnWorldMap: function(x,y) {
+        if (!gameState || !gameState.map || !this.getTile(x,y) || typeof window.TILE_TYPES === 'undefined') return 'unexplored unexplored-flat';
+        const tile = this.getTile(x,y); let classes = [];
+        const isNanobotCurrentPos = gameState.map.nanobotPos && gameState.map.nanobotPos.x === x && gameState.map.nanobotPos.y === y;
+        if (isNanobotCurrentPos) classes.push('nanobot');
 
-        if (isNanobotCurrentPos) {
-            classes.push('nanobot');
-        } else if (tile.isExplored) {
-            classes.push('explored');
-            const actualType = tile.actualType;
+        if (tile.isExplored) {
+            classes.push('explored'); const actualType = tile.actualType;
             switch (actualType) {
-                case TILE_TYPES.EMPTY_GRASSLAND: classes.push('grassland'); break;
-                case TILE_TYPES.EMPTY_DESERT: classes.push('desert'); break;
-                case TILE_TYPES.EMPTY_WATER: classes.push('water'); break;
-                case TILE_TYPES.FOREST: classes.push('forest'); break;
-                case TILE_TYPES.MOUNTAIN: classes.push('mountain'); break;
-                case TILE_TYPES.RUINS: classes.push('ruins'); break;
-                case TILE_TYPES.PLAYER_BASE: classes.push('base'); break;
-                case TILE_TYPES.RESOURCE_BIOMASS_PATCH: classes.push('resource-biomass'); break;
-                case TILE_TYPES.RESOURCE_NANITE_DEPOSIT: classes.push('resource-nanites'); break;
-                case TILE_TYPES.RESOURCE_CRYSTAL_VEIN: classes.push('resource-crystal'); break;
-                case TILE_TYPES.UPGRADE_CACHE: classes.push(tile.content && tile.content.isOpened ? 'ruins' : 'upgrade'); break;
-                case TILE_TYPES.POI_ANCIENT_STRUCTURE: classes.push('poi-structure'); break;
-                case TILE_TYPES.ENEMY_OUTPOST_TILE: classes.push(tile.content && tile.content.currentHealth > 0 ? 'enemy-base' : 'ruins'); break;
-                case TILE_TYPES.MERCHANT_WRECKAGE: classes.push('poi-wreckage'); break;
-                case TILE_TYPES.ENEMY_PATROL_WEAK: case TILE_TYPES.ENEMY_PATROL_MEDIUM: classes.push('enemy'); break;
-                case TILE_TYPES.IMPASSABLE_DEEP_WATER: classes.push('impassable-water explored-impassable'); break;
-                case TILE_TYPES.IMPASSABLE_HIGH_PEAK: classes.push('impassable-mountain explored-impassable'); break;
-                default: classes.push('grassland'); break; 
+                case window.TILE_TYPES.EMPTY_GRASSLAND: classes.push('grassland'); break;
+                case window.TILE_TYPES.EMPTY_DESERT: classes.push('desert'); break;
+                case window.TILE_TYPES.EMPTY_WATER: classes.push('water'); break;
+                case window.TILE_TYPES.FOREST: classes.push('forest'); break;
+                case window.TILE_TYPES.MOUNTAIN: classes.push('mountain'); break;
+                case window.TILE_TYPES.RUINS: classes.push('ruins'); break;
+                case window.TILE_TYPES.DEBRIS_FIELD: classes.push('debris-field'); break;
+                case window.TILE_TYPES.THICK_VINES: classes.push('thick-vines'); break;
+                case window.TILE_TYPES.IMPASSABLE_DEEP_WATER: classes.push('impassable-water', 'explored-impassable'); break;
+                case window.TILE_TYPES.IMPASSABLE_HIGH_PEAK: classes.push('impassable-mountain', 'explored-impassable'); break;
+                case window.TILE_TYPES.PLAYER_BASE: classes.push('player-base-tile'); break; 
+                default: classes.push(this.getBaseTerrainClass(actualType) || 'grassland'); break;
             }
-            if (tile.content && tile.content.type === 'resource' && tile.content.amount > 0) {
-                classes.push('has-active-resource');
-            }
-        } else { 
+            if (tile.isFullyExplored && !isNanobotCurrentPos) classes.push('fully-explored-overlay');
+        } else {
             classes.push('unexplored');
             switch (tile.baseType) {
-                case TILE_TYPES.PRE_EMPTY: classes.push('unexplored-flat'); break;
-                case TILE_TYPES.PRE_WATER: classes.push('unexplored-water'); break;
-                case TILE_TYPES.PRE_ROUGH_TERRAIN: classes.push('unexplored-rough'); break;
-                case TILE_TYPES.PRE_HIGH_MOUNTAIN: classes.push('unexplored-impassable'); break;
-                case TILE_TYPES.PLAYER_BASE: classes.push('base'); break; 
+                case window.TILE_TYPES.PRE_EMPTY: classes.push('unexplored-flat'); break;
+                case window.TILE_TYPES.PRE_WATER: classes.push('unexplored-water'); break;
+                case window.TILE_TYPES.PRE_ROUGH_TERRAIN: classes.push('unexplored-rough'); break;
+                case window.TILE_TYPES.PRE_HIGH_MOUNTAIN: classes.push('unexplored-impassable'); break;
+                case window.TILE_TYPES.PRE_DEBRIS_FIELD: classes.push('unexplored-debris'); break;
+                case window.TILE_TYPES.PRE_THICK_VINES: classes.push('unexplored-vines'); break;
+                case window.TILE_TYPES.PRE_RUIN_SILHOUETTE: classes.push('unexplored-ruin-outline'); break;
+                case window.TILE_TYPES.PRE_HOSTILE_STRUCTURE: classes.push('unexplored-enemy-base-outline'); break;
                 default: classes.push('unexplored-flat'); break;
             }
-            if (tile.structureType) {
-                switch (tile.structureType) {
-                    case TILE_TYPES.PRE_RUIN_SILHOUETTE: classes.push('unexplored-ruin-outline'); break;
-                    case TILE_TYPES.PRE_LARGE_CRYSTAL_CLUSTER: classes.push('unexplored-large-crystal'); break;
-                    case TILE_TYPES.PRE_HOSTILE_STRUCTURE: classes.push('unexplored-enemy-base-outline'); break;
-                    case TILE_TYPES.PRE_DISTRESS_SIGNAL: classes.push('unexplored-distress-signal'); break;
-                }
-            }
-            if (tile.isScanned && tile.scannedActualType !== null && gameState.gameTime <= tile.scannedRevealTime) {
-                classes.push('scanned');
-                switch(tile.scannedActualType) {
-                    case TILE_TYPES.RESOURCE_BIOMASS_PATCH: classes.push('scanned-actual-biomass'); break;
-                    case TILE_TYPES.RESOURCE_NANITE_DEPOSIT: classes.push('scanned-actual-nanites'); break;
-                    case TILE_TYPES.RESOURCE_CRYSTAL_VEIN: classes.push('scanned-actual-crystal'); break;
-                    case TILE_TYPES.ENEMY_PATROL_WEAK: case TILE_TYPES.ENEMY_PATROL_MEDIUM: classes.push('scanned-actual-enemy'); break;
-                    case TILE_TYPES.UPGRADE_CACHE: classes.push('scanned-actual-upgrade'); break;
-                    case TILE_TYPES.ENEMY_OUTPOST_TILE: classes.push('scanned-actual-enemy-base'); break;
-                    case TILE_TYPES.IMPASSABLE_DEEP_WATER: classes.push('scanned-actual-impassable-water'); break;
-                    case TILE_TYPES.IMPASSABLE_HIGH_PEAK: classes.push('scanned-actual-impassable-mountain'); break;
-                    default: classes.push('scanned-actual-empty'); break; 
-                }
+            if (tile.isScannedFromMap && tile.scannedFromMapActualType !== null && gameState.gameTime <= tile.scannedFromMapRevealTime) {
+                classes.push('scanned-on-map');
+                 switch(tile.scannedFromMapActualType) {
+                    case window.TILE_TYPES.RESOURCE_BIOMASS_PATCH: classes.push('scanned-map-actual-biomass'); break;
+                    case window.TILE_TYPES.RESOURCE_NANITE_DEPOSIT: classes.push('scanned-map-actual-nanites'); break;
+                    case window.TILE_TYPES.RESOURCE_CRYSTAL_VEIN: classes.push('scanned-map-actual-crystal'); break;
+                    case window.TILE_TYPES.ENEMY_PATROL_WEAK: case window.TILE_TYPES.ENEMY_PATROL_MEDIUM: classes.push('scanned-map-actual-enemy'); break;
+                    case window.TILE_TYPES.UPGRADE_CACHE: classes.push('scanned-map-actual-upgrade'); break;
+                    case window.TILE_TYPES.ENEMY_OUTPOST_TILE: classes.push('scanned-map-actual-enemy-base'); break;
+                    case window.TILE_TYPES.IMPASSABLE_DEEP_WATER: classes.push('scanned-map-actual-impassable-water'); break;
+                    case window.TILE_TYPES.IMPASSABLE_HIGH_PEAK: classes.push('scanned-map-actual-impassable-mountain'); break;
+                    default: classes.push('scanned-map-actual-empty'); break;
+                 }
             }
         }
+        if (tile.content?.type === 'resource') classes.push('has-active-resource', `resource-${(window.TILE_TYPES_TO_RESOURCE_KEY && window.TILE_TYPES_TO_RESOURCE_KEY[tile.actualType]) || 'unknown'}`);
+        if (tile.content?.type === 'enemy_base') classes.push('enemy-base');
+        if (tile.content?.type === 'poi' && window.MAP_FEATURE_DATA && window.MAP_FEATURE_DATA[tile.content.poiType]) classes.push(`poi-${tile.content.poiType.toLowerCase().replace(/[^a-z0-9]/gi, '-')}`);
+
+
         return classes.join(' ');
     },
 
-    getTileInfo: function(x,y) {
-        if (!gameState || !gameState.map || !this.getTile(x,y) || typeof TILE_TYPES === 'undefined' || typeof MAP_FEATURE_DATA === 'undefined') {
-            return "Données indisponibles.";
+    getTileInfoForWorldMap: function(x,y) {
+        if (!gameState || !gameState.map || !this.getTile(x,y) || typeof window.TILE_TYPES === 'undefined' || typeof window.MAP_FEATURE_DATA === 'undefined') return "Données indisponibles.";
+        const tile = this.getTile(x,y); let info = "";
+        if (tile.isExplored) {
+            info = this.getTileContentName(tile.actualType, tile.content);
+            if (tile.isFullyExplored) info += " (Explorée)"; else info += " (Visitée)";
+            if (tile.content) {
+                if (tile.content.type === 'resource' && tile.content.amount > 0) info += ` - ${tile.content.amount} u.`;
+                else if (tile.content.type === 'enemy_patrol' && tile.content.details) info += ` - ${tile.content.details.name}`;
+                else if (tile.content.type === 'enemy_base' && tile.content.details) info += ` - PV: ${tile.content.currentHealth}/${tile.content.details.health}`;
+            }
+        } else {
+            info = "Zone Inconnue";
+            if (tile.baseType) info += ` (${this.getTerrainTypeName(tile.baseType)})`;
+            if (tile.structureType && typeof window.MAP_FEATURE_DATA !== 'undefined' && window.MAP_FEATURE_DATA[tile.structureType]?.name) info += ` | Struct: ${window.MAP_FEATURE_DATA[tile.structureType].name}`;
+            if (tile.isScannedFromMap && tile.scannedFromMapActualType !== null && gameState.gameTime <= tile.scannedFromMapRevealTime) {
+                info += ` | Scan: ${this.getTileContentName(tile.scannedFromMapActualType, null) || "Signal?"}`;
+            }
         }
-        const tile = this.getTile(x,y);
-        if (tile.isExplored) { const actualType = tile.actualType; const content = tile.content; let tileName = this.getTileContentName(actualType, content); if (content) { if (content.type === 'resource' && content.amount > 0) return `${tileName} (${content.amount} u).`; else if (content.type === 'resource' && content.amount <= 0) return `${tileName} (Épuisé).`; if (content.type === 'enemy_patrol') return `Danger! ${content.details?.name || "Patrouille"}.`; if (content.type === 'cache') return content.isOpened ? `${tileName} (Vide).` : tileName; if (content.type === 'poi') return `${tileName}. ${content.isInteracted ? "(Examiné)" : ""}`; if (content.type === 'enemy_base') return `${tileName} (PV: ${content.currentHealth}/${content.details?.health}).`;} return tileName;
-        } else {  let info = "NE. "; info += `Terr: ${this.getTerrainTypeName(tile.baseType)}. `; if (tile.structureType) info += `Struct: ${this.getStructureTypeName(tile.structureType)}. `; if (tile.isScanned && tile.scannedActualType !== null && gameState.gameTime <= tile.scannedRevealTime) info += `Scan: ${this.getTileContentName(tile.scannedActualType, null) || "Signal?"}.`; return info.trim(); }
+        return info.trim();
+    },
+
+    getTerrainTypeName: function(baseOrActualType) {
+        if (typeof window.tileData === 'undefined' || !window.tileData[baseOrActualType]) return "Terrain Inconnu";
+        return window.tileData[baseOrActualType].name || "Terrain Inconnu";
+    },
+
+    getStructureTypeName: function(structureType) { 
+        return (typeof window.MAP_FEATURE_DATA !== 'undefined' && window.MAP_FEATURE_DATA[structureType]) ? window.MAP_FEATURE_DATA[structureType].name || "Struct. Non Ident." : "Struct. Inconnue";
+    },
+
+    getTileContentName: function(actualType, content) {
+        if (content?.details?.name) return content.details.name;
+        if (content?.type === 'resource' && content.resourceType && typeof window.TILE_TYPES_TO_RESOURCE_KEY !== 'undefined' && window.TILE_TYPES_TO_RESOURCE_KEY[content.resourceType]) {
+            const rn = window.TILE_TYPES_TO_RESOURCE_KEY[content.resourceType];
+            return rn ? rn.charAt(0).toUpperCase() + rn.slice(1) : "Ressource Inconnue";
+        }
+        if (content?.type === 'poi' && content.poiType && typeof window.MAP_FEATURE_DATA !== 'undefined' && window.MAP_FEATURE_DATA[content.poiType]?.name) return window.MAP_FEATURE_DATA[content.poiType].name;
+        
+        return this.getTerrainTypeName(actualType);
+    },
+
+    getTileIcon: function(type, content, isUnexploredBase = false) {
+        if (isUnexploredBase) {
+            if (typeof window.tileData !== 'undefined' && window.tileData[type]?.icon) return window.tileData[type].icon; 
+            return "ti ti-help-circle";
+        }
+        if (content) {
+            if (content.type === 'resource') return "ti ti-package";
+            if (content.type === 'enemy_patrol') return "ti ti-skull";
+            if (content.type === 'enemy_base') return "ti ti-castle";
+            if (content.type === 'poi') {
+                if(typeof window.MAP_FEATURE_DATA !== 'undefined' && window.MAP_FEATURE_DATA[content.poiType]?.icon) return window.MAP_FEATURE_DATA[content.poiType].icon;
+                return "ti ti-flag-question";
+            }
+        }
+        if (typeof window.tileData !== 'undefined' && window.tileData[type]?.icon) return window.tileData[type].icon;
+        return "ti ti-map-pin";
+    },
+
+    centerMapOnPlayer: function(instant = false) {
+        if (!window.mapScrollContainerEl || !gameState || !gameState.map || !gameState.map.nanobotPos) return;
+        const mapGrid = window.mapGridEl;
+        if(!mapGrid) return;
+
+        const nanobotX = gameState.map.nanobotPos.x;
+        const nanobotY = gameState.map.nanobotPos.y;
+        const tileEffectiveSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--map-tile-effective-size')) || 22;
+        const gap = 1;
+
+        const targetScrollX = nanobotX * (tileEffectiveSize + gap) + (tileEffectiveSize / 2) - (window.mapScrollContainerEl.offsetWidth / 2);
+        const targetScrollY = nanobotY * (tileEffectiveSize + gap) + (tileEffectiveSize / 2) - (window.mapScrollContainerEl.offsetHeight / 2);
+
+        window.mapScrollContainerEl.scrollTo({
+            left: Math.max(0, targetScrollX),
+            top: Math.max(0, targetScrollY),
+            behavior: instant ? 'auto' : 'smooth'
+        });
     },
 
     updateExplorationLogDisplay: function() {
-        if (!explorationLogEl || !gameState || !gameState.explorationLog) { console.warn("explorationUI.updateExplorationLogDisplay: Elément de log ou gameState.explorationLog manquant."); return; }
-        explorationLogEl.innerHTML = ''; 
-        if (gameState.explorationLog.length === 0 || (gameState.explorationLog.length === 1 && gameState.explorationLog[0].includes("initialisé"))) { if (!explorationLogEl.querySelector('p.text-gray-500.italic')) { const placeholderP = document.createElement('p'); placeholderP.className = 'text-gray-500 italic text-xs'; placeholderP.textContent = 'Aucun événement récent...'; explorationLogEl.appendChild(placeholderP);}}
-        else { const logToDisplay = gameState.explorationLog.slice(-20); logToDisplay.forEach(msg => { const entry = document.createElement('p'); entry.className = 'text-xs'; if (typeof msg === 'string') { if (msg.toLowerCase().includes("collecté") || msg.toLowerCase().includes("trouvé") || msg.toLowerCase().includes("réussi") || msg.toLowerCase().includes("terminée") || msg.toLowerCase().includes("victoire")) entry.classList.add("text-green-400"); else if (msg.toLowerCase().includes("danger") || msg.toLowerCase().includes("hostile") || msg.toLowerCase().includes("erreur") || msg.toLowerCase().includes("impossible") || msg.toLowerCase().includes("vaincu")) entry.classList.add("text-red-400"); else if (msg.toLowerCase().includes("déplacement") || msg.toLowerCase().includes("zone") || msg.toLowerCase().includes("découverte") || msg.toLowerCase().includes("scan") || msg.toLowerCase().includes("arriv")) entry.classList.add("text-blue-300"); else if (msg.toLowerCase().includes("indécis") || msg.toLowerCase().includes("retraite") || msg.toLowerCase().includes("attention")) entry.classList.add("text-yellow-400"); else entry.classList.add("text-gray-300"); entry.innerHTML = msg; } else { entry.textContent = "Entrée log invalide."; entry.classList.add("text-red-500");} explorationLogEl.appendChild(entry); });}
-        if (explorationLogEl) explorationLogEl.scrollTop = explorationLogEl.scrollHeight;
+        if (!window.explorationLogEl || !gameState || !Array.isArray(gameState.explorationLog)) return;
+        window.explorationLogEl.innerHTML = '';
+        const logToDisplay = gameState.explorationLog.slice(-50);
+        logToDisplay.forEach(entryText => {
+            const p = document.createElement('p');
+            p.innerHTML = entryText; 
+            window.explorationLogEl.appendChild(p);
+        });
+        window.explorationLogEl.scrollTop = window.explorationLogEl.scrollHeight;
     },
 
     updateTileInteractionPanel: function(x, y) {
-        const panel = tileInteractionPanelEl; const detailsDiv = tileInteractionDetailsEl; const actionsDiv = tileInteractionActionsEl;
-        if (!panel || !detailsDiv || !actionsDiv) { console.warn("explorationUI.updateTileInteractionPanel: Eléments panneau manquants."); return; }
-        if (x === undefined || y === undefined || !gameState || !gameState.map || !this.getTile(x,y) ) { detailsDiv.innerHTML = `<h4 class="font-orbitron text-sm text-blue-300 mb-1">Interaction</h4><p class="text-gray-500 italic text-xs">Cliquez une case.</p>`; actionsDiv.innerHTML = ''; return; }
-        const tile = this.getTile(x,y); const nanobotIsOnThisTile = gameState.map.nanobotPos.x === x && gameState.map.nanobotPos.y === y;
-        let detailsHtml = `<h4 class="font-orbitron text-sm text-blue-300 mb-1">Détails (${x}, ${y})</h4>`; detailsHtml += `<p class="text-xs"><b>Statut:</b> ${tile.isExplored ? 'Explorée' : 'Non explorée'}</p>`; detailsHtml += `<p class="text-xs"><b>Terrain:</b> ${this.getTerrainTypeName(tile.baseType)}</p>`;
-        if (!tile.isExplored && tile.structureType) detailsHtml += `<p class="text-xs"><b>Structure:</b> ${this.getStructureTypeName(tile.structureType)}</p>`;
-        actionsDiv.innerHTML = ''; 
-        if (tile.isExplored) {
-            detailsHtml += `<p class="text-xs"><b>Contenu:</b> ${this.getTileContentName(tile.actualType, tile.content)}</p>`;
-            if (tile.content) { const content = tile.content; 
-                if (content.type === 'resource' && content.amount > 0) { detailsHtml += `<p class="text-xs">Quantité: ${content.amount}</p>`;}
-                else if (content.type === 'resource' && content.amount <= 0) { detailsHtml += `<p class="text-xs text-gray-500">Épuisé.</p>`;}
-                else if (content.type === 'enemy_patrol') { detailsHtml += `<p class="text-xs text-red-400">Ennemi: ${content.details.name}</p>`;}
-                else if (content.type === 'cache' ) { detailsHtml += `<p class="text-xs text-yellow-400">Cache ${content.isOpened ? "(Vide)" : "non ouverte"}.</p>`;}
-                else if (content.type === 'poi') { detailsHtml += `<p class="text-xs text-blue-300">${(typeof MAP_FEATURE_DATA !== 'undefined' && MAP_FEATURE_DATA[content.poiType]?.description) || "Point d'intérêt."} ${content.isInteracted ? "(Déjà examiné)" : "(À examiner)"}</p>`; if (nanobotIsOnThisTile && !content.isInteracted) { const interactButton = document.createElement('button'); interactButton.className = 'btn btn-info btn-xs w-full mt-1'; interactButton.textContent = `Examiner ${this.getTileContentName(tile.actualType, content)}`; interactButton.onclick = () => { if (typeof explorationController !== 'undefined' && typeof explorationController.processTileContentOnArrival === 'function') explorationController.processTileContentOnArrival(x, y); }; actionsDiv.appendChild(interactButton);}}
-                else if (content.type === 'enemy_base') { detailsHtml += `<p class="text-xs font-semibold">${content.details.name}</p>`; detailsHtml += `<p class="text-xs">Intégrité: <span class="${content.currentHealth > 0 ? 'text-red-400' : 'text-green-400'}">${content.currentHealth}/${content.details.health}</span></p>`; if (content.currentHealth > 0) { const dxPosBase = Math.abs(x - gameState.map.nanobotPos.x); const dyPosBase = Math.abs(y - gameState.map.nanobotPos.y); const isAdjacentOrOnTileForBase = (dxPosBase <= 1 && dyPosBase <= 1); if (isAdjacentOrOnTileForBase) { const attackButton = document.createElement('button'); attackButton.className = 'btn btn-danger btn-xs w-full mt-1'; attackButton.textContent = `Attaquer ${content.details.name}`; attackButton.onclick = () => { if(typeof explorationController !== 'undefined' && typeof explorationController.attemptAttackEnemyBase === 'function') explorationController.attemptAttackEnemyBase(x,y); }; actionsDiv.appendChild(attackButton);} else { actionsDiv.innerHTML = `<p class="text-xs text-yellow-500 italic">Rapprochez-vous.</p>`;}} else { detailsHtml += `<p class="text-xs text-green-400">Détruite.</p>`;}}
-            }
-        } else if (tile.isScanned && tile.scannedActualType !== null && gameState.gameTime <= tile.scannedRevealTime) { detailsHtml += `<p class="text-xs text-yellow-300"><b>Scan:</b> ${this.getTileContentName(tile.scannedActualType, null) || "Signal?"}</p>`;}
-        
-        const dxPosMove = Math.abs(x - gameState.map.nanobotPos.x); const dyPosMove = Math.abs(y - gameState.map.nanobotPos.y); const isAdjacentMove = dxPosMove <= 1 && dyPosMove <= 1 && !(dxPosMove === 0 && dyPosMove === 0);
-        
-        if (!nanobotIsOnThisTile && isAdjacentMove && tile.actualType !== TILE_TYPES.IMPASSABLE_DEEP_WATER && tile.actualType !== TILE_TYPES.IMPASSABLE_HIGH_PEAK) {
-            const moveButton = document.createElement('button');
-            moveButton.className = 'btn btn-primary btn-xs mt-1 w-full';
-            moveButton.textContent = `Déplacer (${EXPLORATION_COST_MOBILITY} Mobilité)`; // Affiche coût mobilité
-            if (gameState.resources.mobility < EXPLORATION_COST_MOBILITY) { // Vérifie mobilité
-                moveButton.disabled = true;
-                moveButton.classList.add('btn-disabled');
-            }
-            moveButton.onclick = () => { if (typeof explorationController !== 'undefined' && typeof explorationController.handleTileClick === 'function') explorationController.handleTileClick(x, y); };
-            actionsDiv.appendChild(moveButton);
-        }
+        if (!window.tileInteractionDetailsEl || !window.tileInteractionActionsEl) return;
+        window.tileInteractionDetailsEl.innerHTML = ''; window.tileInteractionActionsEl.innerHTML = '';
 
-        if (actionsDiv.innerHTML === '') actionsDiv.innerHTML = `<p class="text-xs text-gray-500 italic">Aucune action ici.</p>`;
-        detailsDiv.innerHTML = detailsHtml;
+        if (x === undefined || y === undefined || !gameState || !gameState.map) {
+            window.tileInteractionDetailsEl.innerHTML = '<p class="text-gray-500 italic">Sélectionnez une case sur la carte.</p>';
+            return;
+        }
+        const tile = this.getTile(x,y);
+        if (!tile) {
+            window.tileInteractionDetailsEl.innerHTML = '<p class="text-red-500">Erreur: Données de case invalides.</p>';
+            return;
+        }
+        let detailsHtml = `<h4 class="text-sm font-semibold mb-1">${this.getTileContentName(tile.actualType, tile.content)} (${x},${y})</h4>`;
+        detailsHtml += `<p class="text-xs text-gray-400 mb-1">Type: ${this.getTerrainTypeName(tile.actualType)}</p>`;
+        if(tile.isExplored) detailsHtml += `<p class="text-xs text-green-400">Statut: Visitée ${tile.isFullyExplored ? '(Complètement explorée)' : ''}</p>`;
+        else detailsHtml += `<p class="text-xs text-yellow-400">Statut: Non visitée ${tile.isScannedFromMap ? '(Scannée)' : ''}</p>`;
+        if (tile.content) {
+            detailsHtml += `<p class="text-xs">Contenu: ${this.getTileContentName(tile.actualType, tile.content)}`;
+            if (tile.content.type === 'resource') detailsHtml += ` (${tile.content.amount} unités)`;
+            if (tile.content.type === 'enemy_base' && tile.content.details) detailsHtml += ` (PV: ${tile.content.currentHealth}/${tile.content.details.health})`;
+            detailsHtml += `</p>`;
+        }
+        if (tile.revealedFeatures && tile.revealedFeatures.length > 0) {
+            detailsHtml += `<p class="text-xs mt-1">Découvertes (<i class="ti ti-radar-2"></i>):</p><ul class="list-disc list-inside text-xs pl-2">`;
+            tile.revealedFeatures.forEach(feat => { detailsHtml += `<li>${feat.name || feat.type}</li>`;});
+            detailsHtml += `</ul>`;
+        }
+        window.tileInteractionDetailsEl.innerHTML = detailsHtml;
+
+        const isNanobotCurrentPos = gameState.map.nanobotPos && x === gameState.map.nanobotPos.x && y === gameState.map.nanobotPos.y;
+        if (isNanobotCurrentPos) {
+            const enterExplorationBtn = document.createElement('button');
+            enterExplorationBtn.className = 'btn btn-primary btn-xs w-full';
+            enterExplorationBtn.innerHTML = `<i class="ti ti-target mr-1"></i> Explorer Activement`;
+            enterExplorationBtn.onclick = () => this.enterActiveTileExplorationMode(x,y);
+            window.tileInteractionActionsEl.appendChild(enterExplorationBtn);
+        } else if (tile.isExplored && tile.content && tile.content.type === 'enemy_base' && tile.content.currentHealth > 0) {
+            const attackBaseBtn = document.createElement('button');
+            attackBaseBtn.className = 'btn btn-danger btn-xs w-full';
+            attackBaseBtn.innerHTML = `<i class="ti ti-sword mr-1"></i> Attaquer Base`;
+            attackBaseBtn.onclick = () => {
+                if (typeof window.explorationController !== 'undefined' && typeof window.explorationController.attemptAttackEnemyBase === 'function') {
+                    window.explorationController.attemptAttackEnemyBase(x, y);
+                }
+            };
+            window.tileInteractionActionsEl.appendChild(attackBaseBtn);
+        } else {
+             // Si la case n'est pas la position actuelle et n'est pas une base ennemie attaquable,
+             // on peut proposer un bouton "Se déplacer ici"
+             const moveToTileBtn = document.createElement('button');
+             moveToTileBtn.className = 'btn btn-secondary btn-xs w-full';
+             moveToTileBtn.innerHTML = `<i class="ti ti-arrow-move-right mr-1"></i>Se déplacer ici`;
+             moveToTileBtn.onclick = () => {
+                 if (typeof window.explorationController !== 'undefined' && typeof window.explorationController.moveToTile === 'function') {
+                     window.explorationController.moveToTile(x, y);
+                 }
+             };
+             window.tileInteractionActionsEl.appendChild(moveToTileBtn);
+        }
     },
 
     updateZoneSelectionUI: function() {
-        const zoneListContainer = zoneListContainerEl; if (!zoneListContainer) return;
-        if (typeof ZONE_DATA === 'undefined' || !gameState || !gameState.unlockedZones || typeof researchData === 'undefined' || typeof QUEST_DATA === 'undefined') { zoneListContainer.innerHTML = "<p class='text-red-400 italic text-xs'>Erreur zones.</p>"; return;}
-        zoneListContainer.innerHTML = ''; 
-        for (const zoneId in ZONE_DATA) { const zone = ZONE_DATA[zoneId]; let isUnlocked = gameState.unlockedZones.includes(zoneId); if (!isUnlocked && zone.unlockCondition?.research && gameState.research[zone.unlockCondition.research]) { isUnlocked = true; if (!gameState.unlockedZones.includes(zoneId)) gameState.unlockedZones.push(zoneId); }
-            const zoneDiv = document.createElement('div'); zoneDiv.className = 'p-1 rounded text-xs '; 
-            if (isUnlocked) { zoneDiv.classList.add('hover:bg-gray-600', 'cursor-pointer'); if (gameState.currentZoneId === zoneId) { zoneDiv.classList.add('bg-blue-700', 'font-semibold'); zoneDiv.innerHTML = `<h5 class="text-xs text-white">${zone.name}</h5>`; zoneDiv.title = "Zone actuelle";} else { zoneDiv.classList.add('bg-gray-800'); zoneDiv.innerHTML = `<h5 class="text-xs text-blue-300">${zone.name}</h5>`; zoneDiv.title = `Voyager vers ${zone.name}`; if (zone.travelCost) { let costStr = Object.entries(zone.travelCost).map(([res,val]) => `${val} ${res.charAt(0).toUpperCase() + res.slice(1)}`).join(', '); zoneDiv.title += ` (Coût: ${costStr})`;} zoneDiv.onclick = () => { if(typeof explorationController !== 'undefined' && typeof explorationController.attemptTravelToZone === 'function') explorationController.attemptTravelToZone(zoneId); };}}
-            else { zoneDiv.classList.add('bg-gray-900', 'opacity-60'); let unlockText = "Condition déblocage inconnue."; if (zone.unlockCondition?.research && researchData[zone.unlockCondition.research]) unlockText = `Recherche: ${researchData[zone.unlockCondition.research].name}`; else if (zone.unlockCondition?.quest && QUEST_DATA[zone.unlockCondition.quest]) unlockText = `Quête: ${QUEST_DATA[zone.unlockCondition.quest].title}`; zoneDiv.innerHTML = `<h5 class="text-xs text-gray-600">${zone.name} (Verrouillé)</h5><p class="text-xs text-gray-500">${unlockText}</p>`;}
-            zoneListContainer.appendChild(zoneDiv);
+        if (!window.zoneListEl || typeof window.WORLD_ZONES === 'undefined' || !gameState) return; 
+        window.zoneListEl.innerHTML = '';
+        for (const zoneId in window.WORLD_ZONES) { 
+            const zone = window.WORLD_ZONES[zoneId]; 
+            const button = document.createElement('button');
+            button.className = `btn btn-xs mr-1 mb-1 ${gameState.currentZoneId === zoneId ? 'btn-primary' : (gameState.unlockedZones.includes(zoneId) ? 'btn-secondary' : 'btn-disabled')}`;
+            if (!gameState.unlockedZones.includes(zoneId)) button.disabled = true;
+            button.textContent = zone.name;
+            button.title = zone.description || zone.name;
+            if (gameState.unlockedZones.includes(zoneId) && gameState.currentZoneId !== zoneId) {
+                button.onclick = () => {
+                    if (typeof window.explorationController !== 'undefined' && typeof window.explorationController.attemptTravelToZone === 'function') {
+                        window.explorationController.attemptTravelToZone(zoneId);
+                    }
+                };
+            }
+            window.zoneListEl.appendChild(button);
         }
     },
 
-    getTerrainTypeName: function(baseType) { return TILE_TYPES ? ({[TILE_TYPES.PRE_EMPTY]:"Plaines", [TILE_TYPES.PRE_WATER]:"Eau", [TILE_TYPES.PRE_ROUGH_TERRAIN]:"Accidenté", [TILE_TYPES.PRE_HIGH_MOUNTAIN]:"Sommets", [TILE_TYPES.PLAYER_BASE]:"Votre Base",})[baseType] || "Terr. Inconnu" : "Terr. Inconnu";},
-    getStructureTypeName: function(structureType) { return (TILE_TYPES && MAP_FEATURE_DATA) ? MAP_FEATURE_DATA[structureType]?.name || "Struct. Non Ident." : "Struct. Inconnue";},
-    getTileContentName: function(actualType, content) { if(TILE_TYPES && MAP_FEATURE_DATA){ if (content?.details?.name) return content.details.name; if (content?.type === 'resource' && content.resourceType) { for(const key in TILE_TYPES) if (TILE_TYPES[key] === content.resourceType) return key.replace('RESOURCE_', '').replace('_PATCH', '').replace('_DEPOSIT', '').replace('_VEIN', '').split('_').map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()).join(' ');} return ({[TILE_TYPES.EMPTY_GRASSLAND]:"Prairie", [TILE_TYPES.EMPTY_DESERT]:"Désert", [TILE_TYPES.EMPTY_WATER]:"Eau peu prof.", [TILE_TYPES.FOREST]:"Forêt", [TILE_TYPES.MOUNTAIN]:"Montagne", [TILE_TYPES.RUINS]:MAP_FEATURE_DATA[TILE_TYPES.RUINS]?.name||"Ruines", [TILE_TYPES.PLAYER_BASE]:"Noyau Nexus-7", [TILE_TYPES.RESOURCE_BIOMASS_PATCH]:"Biomasse", [TILE_TYPES.RESOURCE_NANITE_DEPOSIT]:"Nanites", [TILE_TYPES.RESOURCE_CRYSTAL_VEIN]:"Cristaux", [TILE_TYPES.UPGRADE_CACHE]:"Cache", [TILE_TYPES.POI_ANCIENT_STRUCTURE]:MAP_FEATURE_DATA[TILE_TYPES.POI_ANCIENT_STRUCTURE]?.name||"Struct. Antique", [TILE_TYPES.ENEMY_OUTPOST_TILE]:MAP_FEATURE_DATA[TILE_TYPES.ENEMY_OUTPOST_TILE]?.name||"Avant-poste En.", [TILE_TYPES.MERCHANT_WRECKAGE]:MAP_FEATURE_DATA[TILE_TYPES.MERCHANT_WRECKAGE]?.name||"Épave March.", [TILE_TYPES.ENEMY_PATROL_WEAK]:"Patrouille faible", [TILE_TYPES.ENEMY_PATROL_MEDIUM]:"Patrouille moy.", [TILE_TYPES.IMPASSABLE_DEEP_WATER]:"Eau Profonde (X)", [TILE_TYPES.IMPASSABLE_HIGH_PEAK]:"Pic Infranch.(X)"})[actualType] || "Vide";} return "Contenu Inconnu"; },
-    getTile: function(x, y) {
-        if (gameState && gameState.map && gameState.map.tiles && gameState.map.tiles[y] && gameState.map.tiles[y][x]) {
-            return gameState.map.tiles[y][x];
+    getBaseTerrainClass: function(actualType) {
+        if (typeof window.TILE_TYPES === 'undefined') return 'grassland';
+        switch (actualType) {
+            case window.TILE_TYPES.EMPTY_GRASSLAND: case window.TILE_TYPES.FOREST: case window.TILE_TYPES.FOREST_LIGHT: case window.TILE_TYPES.FOREST_DENSE: case window.TILE_TYPES.RESOURCE_BIOMASS_PATCH: return 'grassland';
+            case window.TILE_TYPES.EMPTY_DESERT: return 'desert';
+            case window.TILE_TYPES.EMPTY_WATER: return 'water';
+            case window.TILE_TYPES.MOUNTAIN: case window.TILE_TYPES.MOUNTAINS_LOW: case window.TILE_TYPES.RESOURCE_CRYSTAL_VEIN: return 'mountain';
+            case window.TILE_TYPES.RUINS: case window.TILE_TYPES.RUINS_ANCIENT: case window.TILE_TYPES.POI_ANCIENT_STRUCTURE: return 'ruins';
+            case window.TILE_TYPES.DEBRIS_FIELD: case window.TILE_TYPES.DEBRIS_FIELD_LIGHT: case window.TILE_TYPES.DEBRIS_FIELD_DENSE: return 'debris-field';
+            case window.TILE_TYPES.THICK_VINES: return 'thick-vines';
+            default: return 'grassland';
         }
-        return null;
     }
 };
+window.explorationUI = explorationUI;
 
 console.log("explorationUI.js - Objet explorationUI défini.");

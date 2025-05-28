@@ -4,94 +4,112 @@ console.log("mapManager.js - Fichier chargé et en cours d'analyse...");
 var mapManager = {
     generateMap: function(zoneId) {
         console.log(`mapManager: generateMap pour la zone ${zoneId}`);
-        if (typeof ZONE_DATA === 'undefined' || typeof TILE_TYPES === 'undefined' || typeof explorationEnemyData === 'undefined' || typeof enemyBaseDefinitions === 'undefined' || typeof BASE_COORDINATES === 'undefined' || typeof DEFAULT_MAP_SIZE === 'undefined' || typeof gameState === 'undefined' || typeof TILE_TYPES_TO_RESOURCE_KEY === 'undefined') {
-            console.error("mapManager.generateMap: Dépendances de configuration critiques (ZONE_DATA, TILE_TYPES, gameState, TILE_TYPES_TO_RESOURCE_KEY, etc.) non définies.");
-            if (typeof addLogEntry === 'function') addLogEntry("Erreur critique de configuration de la carte.", "error", eventLogEl, gameState?.eventLog);
-            // Create a fallback empty map if critical data is missing
-             gameState.map.tiles = Array(DEFAULT_MAP_SIZE.height).fill(null).map(() => Array(DEFAULT_MAP_SIZE.width).fill({
-                baseType: TILE_TYPES.PRE_EMPTY, structureType: null, actualType: TILE_TYPES.EMPTY_GRASSLAND,
-                content: null, isExplored: false, isScanned: false, scannedActualType: null, scannedRevealTime: 0
-            }));
-            gameState.map.zoneId = zoneId;
-            gameState.currentZoneId = zoneId; // Ensure currentZoneId is also set
-            gameState.map.nanobotPos = { x: Math.floor(DEFAULT_MAP_SIZE.width / 2), y: Math.floor(DEFAULT_MAP_SIZE.height / 2) };
-             if (gameState.map.tiles[gameState.map.nanobotPos.y]?.[gameState.map.nanobotPos.x]) {
-                 gameState.map.tiles[gameState.map.nanobotPos.y][gameState.map.nanobotPos.x].isExplored = true;
+        // LOGS DE DÉBOGAGE (peuvent être gardés ou enlevés si le problème est résolu)
+        console.log("DEBUG mapManager - window.WORLD_ZONES:", typeof window.WORLD_ZONES, window.WORLD_ZONES ? Object.keys(window.WORLD_ZONES).length : 'N/A', window.WORLD_ZONES);
+        console.log("DEBUG mapManager - window.TILE_TYPES:", typeof window.TILE_TYPES, window.TILE_TYPES ? Object.keys(window.TILE_TYPES).length : 'N/A');
+        console.log("DEBUG mapManager - window.explorationEnemyData:", typeof window.explorationEnemyData, window.explorationEnemyData ? Object.keys(window.explorationEnemyData).length : 'N/A');
+        console.log("DEBUG mapManager - window.enemyBaseDefinitions:", typeof window.enemyBaseDefinitions, window.enemyBaseDefinitions ? Object.keys(window.enemyBaseDefinitions).length : 'N/A');
+        console.log("DEBUG mapManager - window.BASE_COORDINATES:", typeof window.BASE_COORDINATES, window.BASE_COORDINATES);
+        console.log("DEBUG mapManager - window.DEFAULT_MAP_SIZE:", typeof window.DEFAULT_MAP_SIZE, window.DEFAULT_MAP_SIZE);
+        console.log("DEBUG mapManager - window.gameState:", typeof window.gameState);
+        console.log("DEBUG mapManager - window.TILE_TYPES_TO_RESOURCE_KEY:", typeof window.TILE_TYPES_TO_RESOURCE_KEY, window.TILE_TYPES_TO_RESOURCE_KEY ? Object.keys(window.TILE_TYPES_TO_RESOURCE_KEY).length : 'N/A');
+        console.log("DEBUG mapManager - window.activeTileViewData:", typeof window.activeTileViewData, window.activeTileViewData ? Object.keys(window.activeTileViewData).length : 'N/A');
+        console.log("DEBUG mapManager - window.MAP_FEATURE_DATA:", typeof window.MAP_FEATURE_DATA, window.MAP_FEATURE_DATA ? Object.keys(window.MAP_FEATURE_DATA).length : 'N/A');
+
+
+        if (typeof window.WORLD_ZONES === 'undefined' || typeof window.TILE_TYPES === 'undefined' ||
+            typeof window.explorationEnemyData === 'undefined' || typeof window.enemyBaseDefinitions === 'undefined' ||
+            typeof window.BASE_COORDINATES === 'undefined' || typeof window.DEFAULT_MAP_SIZE === 'undefined' ||
+            typeof window.gameState === 'undefined' || typeof window.TILE_TYPES_TO_RESOURCE_KEY === 'undefined' ||
+            typeof window.activeTileViewData === 'undefined' || typeof window.MAP_FEATURE_DATA === 'undefined'
+           ) {
+            console.error("mapManager.generateMap: Dépendances de configuration critiques non définies (vérification WORLD_ZONES).");
+            if (window.gameState && window.gameState.map) {
+                const fallbackWidth = (window.DEFAULT_MAP_SIZE?.width || 30);
+                const fallbackHeight = (window.DEFAULT_MAP_SIZE?.height || 30);
+                window.gameState.map.tiles = window.gameState.map.tiles || {};
+                window.gameState.map.tiles[zoneId] = Array(fallbackHeight).fill(null).map((_, y_idx) =>
+                    Array(fallbackWidth).fill(null).map((_, x_idx) => ({
+                        x:x_idx, y:y_idx,
+                        baseType: window.TILE_TYPES?.PRE_EMPTY || "pre_empty", structureType: null, actualType: window.TILE_TYPES?.EMPTY_GRASSLAND || "empty_grassland",
+                        content: null, isExplored: false, isFullyExplored: false,
+                        baseActions: (window.activeTileViewData?.default?.baseActions) || ['scan_local_active', 'search_area_active'],
+                        hiddenFeatures: [], revealedFeatures: [], searchAttempts: 0, usedActions: {},
+                        isScannedFromMap: false, scannedFromMapRevealTime: 0, scannedFromMapActualType: null,
+                        triggeredEvents: [], hasActiveTrap: false
+                    }))
+                );
+                window.gameState.map.zoneId = zoneId;
+                window.gameState.currentZoneId = zoneId;
+                window.gameState.map.nanobotPos = { x: Math.floor(fallbackWidth / 2), y: Math.floor(fallbackHeight / 2) };
+                const startTileFallback = this.getTile(window.gameState.map.nanobotPos.x, window.gameState.map.nanobotPos.y);
+                if (startTileFallback) startTileFallback.isExplored = true;
             }
             return;
         }
-        const zone = ZONE_DATA[zoneId];
+
+        const zone = window.WORLD_ZONES[zoneId]; // UTILISER WORLD_ZONES
         if (!zone) {
-            console.error(`mapManager.generateMap: Données de zone introuvables pour l'ID: ${zoneId}`);
-            if (typeof addLogEntry === 'function') addLogEntry(`Erreur critique: Impossible de générer la carte pour la zone ${zoneId}.`, "error", eventLogEl, gameState.eventLog);
-            // Fallback map generation (similar to above)
-            gameState.map.tiles = Array(DEFAULT_MAP_SIZE.height).fill(null).map(() => Array(DEFAULT_MAP_SIZE.width).fill({
-                baseType: TILE_TYPES.PRE_EMPTY, structureType: null, actualType: TILE_TYPES.EMPTY_GRASSLAND,
-                content: null, isExplored: false, isScanned: false, scannedActualType: null, scannedRevealTime: 0
-            }));
-            gameState.map.zoneId = zoneId;
-            gameState.currentZoneId = zoneId;
-            gameState.map.nanobotPos = { x: Math.floor(DEFAULT_MAP_SIZE.width / 2), y: Math.floor(DEFAULT_MAP_SIZE.height / 2) };
-            if (gameState.map.tiles[gameState.map.nanobotPos.y]?.[gameState.map.nanobotPos.x]) {
-                gameState.map.tiles[gameState.map.nanobotPos.y][gameState.map.nanobotPos.x].isExplored = true;
-           }
+            console.error(`mapManager.generateMap: Données de zone introuvables pour l'ID: ${zoneId} dans WORLD_ZONES.`);
             return;
         }
 
-        gameState.map.tiles = [];
-        gameState.map.zoneId = zoneId;
-        gameState.currentZoneId = zoneId;
-        gameState.map.nanobotPos = { ...(zone.entryPoint || {x:Math.floor(zone.mapSize.width / 2), y:Math.floor(zone.mapSize.height / 2)}) };
-        gameState.map.selectedTile = null; // Reset selected tile when changing/generating map
-        console.log(`mapManager.generateMap - NanobotPos initialisé à: (${gameState.map.nanobotPos.x}, ${gameState.map.nanobotPos.y}) pour la zone ${zoneId}`);
+        window.gameState.map.tiles = window.gameState.map.tiles || {};
+        window.gameState.map.tiles[zoneId] = [];
+        
+        window.gameState.map.zoneId = zoneId;
+        window.gameState.currentZoneId = zoneId;
+        window.gameState.map.nanobotPos = { ...(zone.entryPoint || {x:Math.floor(zone.mapSize.width / 2), y:Math.floor(zone.mapSize.height / 2)}) };
+        window.gameState.map.selectedTile = null;
+        
+        console.log(`mapManager.generateMap - NanobotPos initialisé à: (${window.gameState.map.nanobotPos.x}, ${window.gameState.map.nanobotPos.y}) pour la zone ${zoneId}`);
 
-        const playerBaseCoords = zone.basePlayerCoordinates || BASE_COORDINATES;
+        const playerBaseCoords = zone.basePlayerCoordinates || (window.BASE_COORDINATES || {x:15,y:15}); // Fallback pour BASE_COORDINATES aussi
 
         for (let y = 0; y < zone.mapSize.height; y++) {
-            gameState.map.tiles[y] = [];
+            window.gameState.map.tiles[zoneId][y] = [];
             for (let x = 0; x < zone.mapSize.width; x++) {
-                let baseTileType = TILE_TYPES.PRE_EMPTY;
+                let baseTileType = window.TILE_TYPES.PRE_EMPTY;
                 let structureOnTile = null;
-                let actualTileType = TILE_TYPES.EMPTY_GRASSLAND; // Default actual type
+                let actualTileType = window.TILE_TYPES.EMPTY_GRASSLAND;
                 let tileContent = null;
 
-                // 1. Base terrain and visible structures from layout or procedural
-                if (zone.baseTerrainLayout && zone.baseTerrainLayout[y] && zone.baseTerrainLayout[y][x] !== undefined) {
+                let baseActionsForTile = (window.activeTileViewData?.default?.baseActions) || ['scan_local_active', 'search_area_active'];
+                let possibleHiddenFeaturesForTile = (window.activeTileViewData?.default?.possibleHiddenFeatures) || [];
+                let hiddenFeaturesOnThisTile = [];
+
+                if (zone.baseTerrainLayout && zone.baseTerrainLayout[y] && typeof zone.baseTerrainLayout[y][x] !== 'undefined') {
                     baseTileType = zone.baseTerrainLayout[y][x];
-                } else { /* ... (your procedural base terrain logic) ... */
+                } else {
                     if (y === 0 || y === zone.mapSize.height - 1 || x === 0 || x === zone.mapSize.width - 1) {
-                        baseTileType = TILE_TYPES.PRE_HIGH_MOUNTAIN; // Use a more specific impassable pre-type
-                    } else if (Math.random() < 0.1) baseTileType = TILE_TYPES.PRE_ROUGH_TERRAIN;
-                    else if (Math.random() < 0.05) baseTileType = TILE_TYPES.PRE_HIGH_MOUNTAIN;
-                    else if (Math.random() < 0.08) baseTileType = TILE_TYPES.PRE_WATER;
-                    else baseTileType = TILE_TYPES.PRE_EMPTY;
+                        baseTileType = window.TILE_TYPES.PRE_HIGH_MOUNTAIN;
+                    } else if (Math.random() < 0.1) baseTileType = window.TILE_TYPES.PRE_ROUGH_TERRAIN;
+                    else if (Math.random() < 0.05) baseTileType = window.TILE_TYPES.PRE_HIGH_MOUNTAIN;
+                    else if (Math.random() < 0.08) baseTileType = window.TILE_TYPES.PRE_WATER;
+                    else baseTileType = window.TILE_TYPES.PRE_EMPTY;
                 }
 
-                if (zone.visibleStructureLayout && zone.visibleStructureLayout[y] && zone.visibleStructureLayout[y][x] !== undefined) {
+                if (zone.visibleStructureLayout && zone.visibleStructureLayout[y] && typeof zone.visibleStructureLayout[y][x] !== 'undefined') {
                     structureOnTile = zone.visibleStructureLayout[y][x];
                 }
-
-                // 2. Determine actualType and tileContent
-                // Player base overrides everything
-                let isPlayerBaseTile = (x === playerBaseCoords.x && y === playerBaseCoords.y);
-                // Ensure currentZoneId matches the zone being generated for base placement
-                if (zoneId !== gameState.currentZoneId && gameState.currentZoneId === 'verdant_archipelago' && zoneId === 'verdant_archipelago') {
-                    // This condition is a bit complex, usually base is only in one zone.
-                    // Simpler: base is only in the zone defined by its basePlayerCoordinates
-                    isPlayerBaseTile = (x === playerBaseCoords.x && y === playerBaseCoords.y && zone.id === 'verdant_archipelago'); // Assuming base is always in verdant_archipelago
-                }
-
+                
+                const playerBaseZoneId = gameState.playerBaseZoneId || (window.EXPLORATION_SETTINGS?.initialZoneId || 'verdant_archipelago');
+                let isPlayerBaseTile = (x === playerBaseCoords.x && y === playerBaseCoords.y && zoneId === playerBaseZoneId);
 
                 if (isPlayerBaseTile) {
-                     actualTileType = TILE_TYPES.PLAYER_BASE;
-                     baseTileType = TILE_TYPES.PLAYER_BASE; // Make base visible immediately
-                     structureOnTile = null; // No other structure on base tile
-                     tileContent = null;     // No resource/enemy content on base tile
-                } else if (baseTileType === TILE_TYPES.PRE_HIGH_MOUNTAIN) {
-                    actualTileType = TILE_TYPES.IMPASSABLE_HIGH_PEAK;
-                } else if (baseTileType === TILE_TYPES.PRE_WATER) {
-                    actualTileType = Math.random() < 0.3 ? TILE_TYPES.IMPASSABLE_DEEP_WATER : TILE_TYPES.EMPTY_WATER;
-                } else { // Potentially explorable tile, try to place content
+                    actualTileType = window.TILE_TYPES.PLAYER_BASE;
+                    baseTileType = window.TILE_TYPES.PLAYER_BASE;
+                    structureOnTile = null;
+                    tileContent = null;
+                } else if (baseTileType === window.TILE_TYPES.PRE_HIGH_MOUNTAIN) {
+                    actualTileType = window.TILE_TYPES.IMPASSABLE_HIGH_PEAK;
+                } else if (baseTileType === window.TILE_TYPES.PRE_WATER) {
+                    actualTileType = Math.random() < 0.3 ? window.TILE_TYPES.IMPASSABLE_DEEP_WATER : window.TILE_TYPES.EMPTY_WATER;
+                } else if (baseTileType === window.TILE_TYPES.PRE_DEBRIS_FIELD) {
+                    actualTileType = window.TILE_TYPES.DEBRIS_FIELD;
+                } else if (baseTileType === window.TILE_TYPES.PRE_THICK_VINES) {
+                    actualTileType = window.TILE_TYPES.THICK_VINES;
+                } else {
                     let random = Math.random();
                     let cumulativeProbability = 0;
                     let foundContent = false;
@@ -101,105 +119,97 @@ var mapManager = {
                             cumulativeProbability += zone.tileContentDistribution[keyInDistroString];
                             if (random < cumulativeProbability) {
                                 foundContent = true;
-                                const numericKey = parseInt(keyInDistroString); // Try to parse key as number for TILE_TYPES
+                                const contentId = keyInDistroString;
 
-                                if (explorationEnemyData[keyInDistroString]) { // Key is a string ID for an enemy
-                                    actualTileType = explorationEnemyData[keyInDistroString].actualTileType;
-                                    tileContent = { type: 'enemy_patrol', details: { ...explorationEnemyData[keyInDistroString] }, id: keyInDistroString };
-                                } else if (enemyBaseDefinitions[keyInDistroString]) { // Key is a string ID for a base
-                                    actualTileType = enemyBaseDefinitions[keyInDistroString].actualTileType;
-                                    tileContent = { type: 'enemy_base', details: { ...enemyBaseDefinitions[keyInDistroString] }, id: keyInDistroString, currentHealth: enemyBaseDefinitions[keyInDistroString].health };
-                                    structureOnTile = structureOnTile || enemyBaseDefinitions[keyInDistroString].visibleStructureType || TILE_TYPES.PRE_HOSTILE_STRUCTURE;
-                                } else if (!isNaN(numericKey) && Object.values(TILE_TYPES).includes(numericKey)) { // Key is a string that parses to a valid TILE_TYPE number
-                                    actualTileType = numericKey; // Use the parsed numeric TILE_TYPE
-                                    if (TILE_TYPES_TO_RESOURCE_KEY[actualTileType]) { // Check if this TILE_TYPE is a resource
-                                        tileContent = { type: 'resource', resourceType: actualTileType, amount: Math.floor(Math.random() * 60) + 40 };
-                                    } else if (actualTileType === TILE_TYPES.UPGRADE_CACHE) {
-                                        tileContent = { type: 'cache', lootTable: ['comp_av', 'mod_proto', 'item_repair_kit_s'], isOpened: false };
-                                    } else if (actualTileType === TILE_TYPES.POI_ANCIENT_STRUCTURE || actualTileType === TILE_TYPES.MERCHANT_WRECKAGE) {
-                                        tileContent = { type: 'poi', poiType: actualTileType, isInteracted: false };
-                                        if (actualTileType === TILE_TYPES.POI_ANCIENT_STRUCTURE) structureOnTile = structureOnTile || TILE_TYPES.PRE_RUIN_SILHOUETTE;
-                                    } else if (actualTileType === TILE_TYPES.FOREST) { // If FOREST is in distribution
-                                         if (Math.random() < 0.6) tileContent = { type: 'resource', resourceType: TILE_TYPES.RESOURCE_BIOMASS_PATCH, amount: Math.floor(Math.random() * 30) + 20 };
-                                         // else actualTileType remains TILE_TYPES.FOREST
-                                    } else if (actualTileType === TILE_TYPES.RUINS) { // If RUINS is in distribution
-                                        if (Math.random() < 0.4) tileContent = {type: 'cache', lootTable:['frag_alien', (itemsData['nanites_medium_cache'] ? 'nanites_medium_cache' : 'comp_av')], isOpened:false};
-                                         // else actualTileType remains TILE_TYPES.RUINS
-                                    } else if (actualTileType === TILE_TYPES.MOUNTAIN) { // If MOUNTAIN is in distribution
-                                        if (Math.random() < 0.2) tileContent = { type: 'resource', resourceType: TILE_TYPES.RESOURCE_CRYSTAL_VEIN, amount: Math.floor(Math.random()*10)+5};
-                                         // else actualTileType remains TILE_TYPES.MOUNTAIN
-                                    }
-                                    // Note: If actualTileType is set here but no specific content (like for plain FOREST/RUINS/MOUNTAIN from distribution)
-                                    // tileContent will remain null unless set in one of the conditions above.
+                                if (window.explorationEnemyData[contentId]) {
+                                    actualTileType = window.explorationEnemyData[contentId].actualTileType || window.TILE_TYPES.EMPTY_GRASSLAND;
+                                    tileContent = { type: 'enemy_patrol', details: { ...window.explorationEnemyData[contentId] }, id: contentId, x:x, y:y };
+                                } else if (window.enemyBaseDefinitions[contentId]) {
+                                    actualTileType = window.enemyBaseDefinitions[contentId].actualTileType || window.TILE_TYPES.ENEMY_OUTPOST_TILE;
+                                    tileContent = { type: 'enemy_base', details: { ...window.enemyBaseDefinitions[contentId] }, id: contentId, currentHealth: window.enemyBaseDefinitions[contentId].health, x:x, y:y };
+                                    structureOnTile = structureOnTile || window.enemyBaseDefinitions[contentId].visibleStructureType || window.TILE_TYPES.PRE_HOSTILE_STRUCTURE;
                                 } else {
-                                    // Key was not an enemy, base, or recognized numeric TILE_TYPE. Could be a plain terrain type string like "FOREST".
-                                    // This path is less likely if distribution uses TILE_TYPE numbers for terrain.
-                                    // For safety, try to map string key to TILE_TYPE if it exists.
-                                    const tileTypeFromName = TILE_TYPES[keyInDistroString.toUpperCase()]; // e.g. keyInDistroString = "FOREST"
-                                    if(tileTypeFromName !== undefined) {
-                                        actualTileType = tileTypeFromName;
-                                        // Add specific content for these if needed, e.g. a forest might have biomass
-                                        if (actualTileType === TILE_TYPES.FOREST && Math.random() < 0.6) {
-                                            tileContent = { type: 'resource', resourceType: TILE_TYPES.RESOURCE_BIOMASS_PATCH, amount: Math.floor(Math.random() * 30) + 20 };
+                                    let potentialTileTypeKey = String(contentId);
+                                    
+                                    if (Object.values(window.TILE_TYPES).includes(potentialTileTypeKey)) {
+                                        actualTileType = potentialTileTypeKey;
+                                        if (window.TILE_TYPES_TO_RESOURCE_KEY && window.TILE_TYPES_TO_RESOURCE_KEY[actualTileType]) {
+                                            tileContent = { type: 'resource', resourceType: actualTileType, amount: Math.floor(Math.random() * 60) + 40, x:x, y:y };
+                                        } else if (actualTileType === window.TILE_TYPES.UPGRADE_CACHE) {
+                                            tileContent = { type: 'poi', poiType: actualTileType, lootTable: ['repair_kit_basic', 'crystal_shard_raw'], isOpened: false, isInteracted: false, x:x, y:y };
+                                        } else if ( [window.TILE_TYPES.POI_ANCIENT_STRUCTURE, window.TILE_TYPES.MERCHANT_WRECKAGE, window.TILE_TYPES.CAVE_ENTRANCE, window.TILE_TYPES.POI_CRASHED_SHIP, window.TILE_TYPES.POI_DISTRESS_SIGNAL].includes(actualTileType) ) {
+                                            tileContent = { type: 'poi', poiType: actualTileType, isInteracted: false, x:x, y:y };
+                                            if ((actualTileType === window.TILE_TYPES.POI_ANCIENT_STRUCTURE || actualTileType === window.TILE_TYPES.RUINS_ANCIENT) && !structureOnTile) structureOnTile = window.TILE_TYPES.PRE_RUIN_SILHOUETTE;
                                         }
                                     } else {
-                                        console.warn(`MapGen: Unhandled key in tileContentDistribution: ${keyInDistroString}`);
-                                        actualTileType = TILE_TYPES.EMPTY_GRASSLAND; // Fallback if key is truly unknown
+                                        console.warn(`Contenu de tuile non reconnu '${contentId}' (après conversion en string: '${potentialTileTypeKey}') dans tileContentDistribution pour la zone ${zoneId}. Utilisation du terrain de base.`);
+                                        actualTileType = (baseTileType === window.TILE_TYPES.PRE_ROUGH_TERRAIN) ? window.TILE_TYPES.MOUNTAIN : window.TILE_TYPES.EMPTY_GRASSLAND;
                                     }
                                 }
-                                break; // Content found from distribution, exit loop for this tile
+                                break;
                             }
                         }
                     }
-
-                    if (!foundContent) { // If no content placed by distribution, determine actualType from baseType
-                        if (baseTileType === TILE_TYPES.PRE_ROUGH_TERRAIN) actualTileType = TILE_TYPES.EMPTY_GRASSLAND; // Or TILE_TYPES.MOUNTAIN based on further randomness
-                        else if (baseTileType === TILE_TYPES.PRE_EMPTY) actualTileType = TILE_TYPES.EMPTY_GRASSLAND;
-                        else actualTileType = TILE_TYPES.EMPTY_GRASSLAND; // Default fallback
+                    if (!foundContent) {
+                        if (baseTileType === window.TILE_TYPES.PRE_ROUGH_TERRAIN) actualTileType = window.TILE_TYPES.MOUNTAIN;
+                        else if (baseTileType === window.TILE_TYPES.PRE_EMPTY) actualTileType = window.TILE_TYPES.EMPTY_GRASSLAND;
+                        else if (baseTileType === window.TILE_TYPES.PRE_DEBRIS_FIELD) actualTileType = window.TILE_TYPES.DEBRIS_FIELD;
+                        else if (baseTileType === window.TILE_TYPES.PRE_THICK_VINES) actualTileType = window.TILE_TYPES.THICK_VINES;
+                        else actualTileType = window.TILE_TYPES.EMPTY_GRASSLAND;
                     }
                 }
 
-                gameState.map.tiles[y][x] = {
+                const tileViewConfig = (window.activeTileViewData && window.activeTileViewData[actualTileType]) || (window.activeTileViewData && window.activeTileViewData.default);
+                if (tileViewConfig) {
+                    baseActionsForTile = tileViewConfig.baseActions ? [...tileViewConfig.baseActions] : ['scan_local_active', 'search_area_active'];
+                    possibleHiddenFeaturesForTile = tileViewConfig.possibleHiddenFeatures || [];
+                }
+
+                possibleHiddenFeaturesForTile.forEach(featureDef => {
+                    if (Math.random() < (featureDef.chance || 0)) {
+                        hiddenFeaturesOnThisTile.push({ ...featureDef });
+                    }
+                });
+
+                window.gameState.map.tiles[zoneId][y][x] = {
+                    x: x, y: y,
                     baseType: baseTileType,
                     structureType: structureOnTile,
                     actualType: actualTileType,
                     content: tileContent,
-                    isExplored: false,
-                    isScanned: false,
-                    scannedActualType: null,
-                    scannedRevealTime: 0
+                    isExplored: false, isFullyExplored: false,
+                    isScannedFromMap: false, scannedFromMapRevealTime: 0, scannedFromMapActualType: null,
+                    baseActions: baseActionsForTile, hiddenFeatures: hiddenFeaturesOnThisTile,
+                    revealedFeatures: [], searchAttempts: 0, usedActions: {},
+                    triggeredEvents: [], hasActiveTrap: false,
                 };
             }
         }
 
-        // Reveal starting area
-        const { x: startX, y: startY } = gameState.map.nanobotPos;
-        for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-                const nx = startX + dx;
-                const ny = startY + dy;
-                if (nx >= 0 && nx < zone.mapSize.width && ny >= 0 && ny < zone.mapSize.height) {
-                    const tileToExplore = this.getTile(nx, ny);
-                    if(tileToExplore){
-                         tileToExplore.isExplored = true;
-                    }
-                }
+        const startTile = this.getTile(window.gameState.map.nanobotPos.x, window.gameState.map.nanobotPos.y);
+        if (startTile) {
+            startTile.isExplored = true;
+            if (typeof questController !== 'undefined' && typeof questController.checkQuestProgress === 'function') {
+                 questController.checkQuestProgress({ type: "explore_tile_type", tileType: startTile.actualType, zoneId: zoneId, x: startTile.x, y: startTile.y });
             }
         }
 
-        if (typeof addLogEntry === 'function' && typeof explorationLogEl !== 'undefined' && gameState && gameState.explorationLog) {
-             addLogEntry(`Arrivée en zone: ${zone.name}. Position (${gameState.map.nanobotPos.x}, ${gameState.map.nanobotPos.y}).`, "map-event", explorationLogEl, gameState.explorationLog);
+        if (typeof addLogEntry === 'function' && window.explorationLogEl && window.gameState?.explorationLog) {
+             addLogEntry(`Arrivée en zone: ${zone.name}. Position (${window.gameState.map.nanobotPos.x}, ${window.gameState.map.nanobotPos.y}).`, "map-event", window.explorationLogEl, window.gameState.explorationLog);
         }
-        console.log(`mapManager.generateMap - Carte pour ${zoneId} générée. Taille: ${gameState.map.tiles.length}x${gameState.map.tiles[0]?.length}. Première tuile [0][0]:`, gameState.map.tiles[0] ? JSON.parse(JSON.stringify(gameState.map.tiles[0][0])) : "Ligne 0 vide/non générée");
+        console.log(`mapManager.generateMap - Carte pour ${zoneId} générée. Taille: ${window.gameState.map.tiles[zoneId].length}x${window.gameState.map.tiles[zoneId][0]?.length}.`);
     },
 
     getTile: function(x, y) {
-        if (gameState && gameState.map && gameState.map.tiles && gameState.map.tiles[y] && gameState.map.tiles[y][x]) {
-            return gameState.map.tiles[y][x];
+        if (window.gameState && window.gameState.map && window.gameState.map.tiles && window.gameState.currentZoneId &&
+            window.gameState.map.tiles[window.gameState.currentZoneId] &&
+            y >= 0 && y < window.gameState.map.tiles[window.gameState.currentZoneId].length &&
+            x >= 0 && x < window.gameState.map.tiles[window.gameState.currentZoneId][y]?.length) {
+            return window.gameState.map.tiles[window.gameState.currentZoneId][y][x];
         }
-        // console.warn(`mapManager.getTile: Tuile non trouvée pour (${x},${y}) dans la zone ${gameState?.map?.zoneId}`);
         return null;
     }
 };
+window.mapManager = mapManager;
 
 console.log("mapManager.js - Objet mapManager défini.");

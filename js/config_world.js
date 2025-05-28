@@ -1,103 +1,183 @@
 // js/config_world.js
 console.log("config_world.js - Fichier chargé et en cours d'analyse...");
 
-// Assurez-vous que TILE_TYPES, DAMAGE_TYPES, itemsData (si utilisé pour loot) sont définis avant ce fichier.
-// Ces variables sont déclarées avec 'var' dans leurs fichiers respectifs pour être globales.
-
-var TILE_TYPES_TO_RESOURCE_KEY = {
-    [TILE_TYPES.RESOURCE_BIOMASS_PATCH]: 'biomass',
-    [TILE_TYPES.RESOURCE_NANITE_DEPOSIT]: 'nanites',
-    [TILE_TYPES.RESOURCE_CRYSTAL_VEIN]: 'crystal_shards'
-    // Add other direct TILE_TYPE to resource string key mappings here if needed
-};
-
-var explorationEnemyData = {
-    'drone_scout': { name: "Drone Éclaireur", health: 20, maxHealth:20, attack: 5, defense: 0, reward: {biomass:5, nanites:3, xp:10}, actualTileType: TILE_TYPES.ENEMY_PATROL_WEAK, spritePath: 'https://placehold.co/80x100/718096/e2e8f0?text=ScoutD' },
-    'raider_grunt': { name: "Pilleur novice", health: 35, maxHealth:35, attack: 8, defense: 2, reward: {biomass:12, nanites:8, xp:20}, actualTileType: TILE_TYPES.ENEMY_PATROL_WEAK, spritePath: 'https://placehold.co/80x100/e53e3e/e2e8f0?text=Raider' },
-    'mutated_creature': { name: "Créature Mutante", health: 50, maxHealth:50, attack: 10, defense: 3, reward: {biomass:20, xp:25}, actualTileType: TILE_TYPES.ENEMY_PATROL_MEDIUM, spritePath: 'https://placehold.co/80x100/48bb78/1a202c?text=Mutant' },
-    'heavy_security_bot': { name: "Bot de Sécurité Lourd", health: 70, maxHealth:70, attack: 12, defense: 5, reward: {nanites:25, xp:40, loot:['comp_av']}, actualTileType: TILE_TYPES.ENEMY_PATROL_MEDIUM, spritePath: 'https://placehold.co/80x100/a0aec0/1a202c?text=SecBot' },
-    'enemy_crystal_golem': { name: "Golem de Cristal", health: 70, maxHealth:70, attack: 12, defense: 6, damageType: DAMAGE_TYPES.KINETIC, resistances: { kinetic: 0.3, energy: -0.2 }, spritePath: 'https://placehold.co/80x100/67e8f9/1a202c?text=GolemC', reward: { biomass: 20, nanites: 15, xp: 50, loot: ['crist_stock'] }, actualTileType: TILE_TYPES.ENEMY_PATROL_MEDIUM },
-    'enemy_spark_wisp': { name: "Feu Follet Étincelant", health: 30, maxHealth:30, attack: 10, defense: 0, damageType: DAMAGE_TYPES.ENERGY, resistances: { energy: 0.4, kinetic: -0.25 }, spritePath: 'https://placehold.co/80x100/facc15/1a202c?text=WispS', reward: { nanites: 20, xp: 35 }, actualTileType: TILE_TYPES.ENEMY_PATROL_MEDIUM },
-    'enemy_crystal_golem_weak': { name: "Petit Golem de Cristal", health: 50, maxHealth:50, attack: 10, defense: 5, reward: {xp:30, loot:['crist_stock']}, actualTileType: TILE_TYPES.ENEMY_PATROL_MEDIUM, spritePath: 'https://placehold.co/80x100/9f7aea/e2e8f0?text=SmGolem' },
-    'enemy_spark_wisp_scout': { name: "Éclaireur Feu Follet", health: 25, maxHealth:25, attack: 8, defense: 0, reward: {nanites:15, xp:20}, actualTileType: TILE_TYPES.ENEMY_PATROL_WEAK, spritePath: 'https://placehold.co/80x100/faf089/1a202c?text=ScWisp' }
-};
-
-var enemyBaseDefinitions = {
-    'outpost_alpha': {
-        id: 'outpost_alpha', name: "Avant-poste Alpha",
-        actualTileType: TILE_TYPES.ENEMY_OUTPOST_TILE, visibleStructureType: TILE_TYPES.PRE_HOSTILE_STRUCTURE,
-        health: 250,
-        defenders: [ { id: 'raider_grunt', count: 2 }, { id: 'drone_scout', count: 1 } ],
-        loot: ['comp_av', 'nanites_medium_cache', 'item_repair_kit_s'], // IDs d'itemsData
-        xpReward: 100,
-        onDiscoveryText: "Un avant-poste ennemi rudimentaire bloque le passage.",
-        onAttackText: "Vous engagez l'avant-poste Alpha !",
-        onDestroyedText: "L'avant-poste Alpha est neutralisé. La voie est libre et des ressources ont été récupérées."
+// --- ENEMY DATA ---
+const enemyData = {
+    "mutated_rat_weak": {
+        id: "mutated_rat_weak", name: "Rat Mutant Faible",
+        description: "Une petite créature agressive, affaiblie mais toujours dangereuse en groupe.",
+        health: 25, maxHealth: 25, attack: 8, defense: 2, speed: 12,
+        damageType: window.DAMAGE_TYPES?.KINETIC || 'kinetic',
+        resistances: { [window.DAMAGE_TYPES?.CORROSIVE || 'corrosive']: -0.25 },
+        tags: [window.ENEMY_TAGS?.ORGANIC, window.ENEMY_TAGS?.SWARM].filter(t => t),
+        xpValue: 5, lootTable: window.LOOT_TABLE_TIERS?.TIER1_COMMON || "tier1_common",
+        spritePath: "images/enemies/mutated_rat.png", combatSize: "small", skills: [], behavior: "aggressive",
+        actualTileType: window.TILE_TYPES?.ENEMY_PATROL_WEAK || "enemy_patrol_weak"
     },
-    'crystal_hive_node': {
-        id: 'crystal_hive_node', name: "Nœud de Ruche Cristalline",
-        actualTileType: TILE_TYPES.ENEMY_OUTPOST_TILE, visibleStructureType: TILE_TYPES.PRE_LARGE_CRYSTAL_CLUSTER,
-        health: 400,
-        defenders: [ { id: 'enemy_crystal_golem', count: 1 }, { id: 'enemy_spark_wisp', count: 4 } ],
-        loot: ['crist_stock_large', 'arte_rare', 'crystal_shards_large_cache'], // IDs d'itemsData
-        xpReward: 250,
-        onDiscoveryText: "Une imposante structure cristalline pulse d'énergie... un nœud de ruche.",
-        onAttackText: "Vous attaquez le nœud de la ruche cristalline. Les défenseurs émergent !",
-        onDestroyedText: "Le nœud de la ruche explose en une myriade d'éclats. D'importantes ressources cristallines sont exposées."
+    "scavenger_bot_rusted": {
+        id: "scavenger_bot_rusted", name: "Bot Pilleur Rouillé",
+        description: "Un ancien robot de récupération, maintenant erratique et hostile.",
+        health: 40, maxHealth: 40, attack: 10, defense: 6, speed: 8,
+        damageType: window.DAMAGE_TYPES?.KINETIC || 'kinetic',
+        resistances: { [window.DAMAGE_TYPES?.ENERGY || 'energy']: 0.25, [window.DAMAGE_TYPES?.EXPLOSIVE || 'explosive']: -0.5 },
+        tags: [window.ENEMY_TAGS?.MECHANICAL, window.ENEMY_TAGS?.GROUND].filter(t => t),
+        xpValue: 12, lootTable: window.LOOT_TABLE_TIERS?.TIER1_UNCOMMON || "tier1_uncommon",
+        spritePath: "images/enemies/scavenger_bot.png", combatSize: "medium", skills: [/* ... */], behavior: "defensive",
+        actualTileType: window.TILE_TYPES?.ENEMY_PATROL_MEDIUM || "enemy_patrol_medium"
+    },
+    "training_drone_01": { 
+        id: "training_drone_01",
+        name: "Drone d'Entraînement Mk.I",
+        description: "Un drone basique utilisé pour les simulations de combat et l'entraînement.",
+        health: 40, maxHealth: 40, attack: 10, defense: 3, speed: 5,
+        damageType: window.DAMAGE_TYPES?.KINETIC || 'kinetic',
+        resistances: { [window.DAMAGE_TYPES?.ENERGY || 'energy']: 0.1 },
+        tags: [window.ENEMY_TAGS?.MECHANICAL, window.ENEMY_TAGS?.RANGED].filter(t => t),
+        xpValue: 10,
+        lootTable: window.LOOT_TABLE_TIERS?.NONE || "none",
+        spritePath: "https://placehold.co/80x100/4299e1/e2e8f0?text=T-DRONE",
+        color: "#4299e1",
+        combatSize: "small",
+        skills: [],
+        behavior: "passive_scan",
+        actualTileType: null 
+    },
+    // ... autres ennemis ...
+};
+window.enemyData = enemyData;
+window.explorationEnemyData = enemyData;
+
+// --- ENEMY BASE DEFINITIONS ---
+const enemyBaseDefinitions = {
+    "outpost_alpha": {
+        id: "outpost_alpha", name: "Avant-poste Alpha",
+        description: "Un petit avant-poste ennemi légèrement défendu.",
+        health: 300, 
+        defenders: [ 
+            { id: "scavenger_bot_rusted", count: 2 },
+            { id: "mutated_rat_weak", count: 3 }
+        ],
+        loot: ["nanite_cluster_small", "biomass_sample", "crystal_shard_raw"], 
+        xpReward: 50,
+        actualTileType: window.TILE_TYPES?.ENEMY_OUTPOST_TILE || "enemy_outpost_tile", 
+        visibleStructureType: window.TILE_TYPES?.PRE_HOSTILE_STRUCTURE || "pre_hostile_structure", 
+        onAttackText: "Vous attaquez l'Avant-poste Alpha...",
+        onDestroyedText: "L'Avant-poste Alpha est en ruines!"
+    },
+    // ... autres définitions de bases ...
+};
+window.enemyBaseDefinitions = enemyBaseDefinitions;
+
+
+// --- TILE DATA ---
+const tileData = {
+    [window.TILE_TYPES?.UNKNOWN || "unknown"]: { name: "Inconnu", type: "system", traversable: false, description: "Zone non identifiée." },
+    [window.TILE_TYPES?.EMPTY_SPACE || "empty_space"]: { name: "Espace Vide", type: "terrain", traversable: true, description: "Une étendue vide.", icon: "·", baseMoveCost: 1 },
+    [window.TILE_TYPES?.EMPTY_GRASSLAND || "empty_grassland"]: { name: "Prairie", type: "terrain", traversable: true, description: "Vastes plaines.", icon: "🌾", baseMoveCost: 1 },
+    [window.TILE_TYPES?.FOREST || "forest"]: { name: "Forêt", type: "terrain", traversable: true, description: "Forêt dense.", icon: "🌲", baseMoveCost: 1.5 },
+    [window.TILE_TYPES?.IMPASSABLE_DEEP_WATER || "impassable_deep_water"]: { name: "Eau Profonde", type: "obstacle", traversable: false, description: "Infranchissable.", icon: "🌊" },
+    [window.TILE_TYPES?.IMPASSABLE_HIGH_PEAK || "impassable_high_peak"]: { name: "Haut Pic", type: "obstacle", traversable: false, description: "Infranchissable.", icon: "🏔️" },
+    [window.TILE_TYPES?.DEBRIS_FIELD || "debris_field"]: { name: "Champ de Débris", type: "terrain", traversable: true, description: "Débris métalliques.", icon: "🔩", baseMoveCost: 1.5, needsModule: window.TILE_TYPES?.DEBRIS_FIELD },
+    [window.TILE_TYPES?.THICK_VINES || "thick_vines"]: { name: "Vignes Épaisses", type: "terrain", traversable: true, description: "Végétation dense.", icon: "🌿", baseMoveCost: 1.8, needsModule: window.TILE_TYPES?.THICK_VINES },
+    [window.TILE_TYPES?.PLAYER_BASE || "player_base"]: { name: "Base Nexus-7", type: "system", traversable: false, description: "Votre base principale." },
+    [window.TILE_TYPES?.RESOURCE_BIOMASS_PATCH || "resource_biomass_patch"]: { name: "Patch de Biomasse", type: "resource_node", traversable: true, icon: "🌿" },
+    [window.TILE_TYPES?.UPGRADE_CACHE || "upgrade_cache"]: { name: "Cache d'amélioration", type: "poi", traversable: true, icon: "💡" },
+    [window.TILE_TYPES?.ENEMY_OUTPOST_TILE || "enemy_outpost_tile"]: { name: "Avant-Poste Ennemi", type: "poi_hostile", traversable: true, icon: "🏰" }
+};
+window.tileData = tileData;
+
+const MAP_FEATURE_DATA = {
+    [window.TILE_TYPES?.UPGRADE_CACHE || "upgrade_cache"]: { name: "Cache d'Amélioration", description: "Un conteneur scellé contenant potentiellement des technologies utiles." },
+    [window.TILE_TYPES?.POI_ANCIENT_STRUCTURE || "poi_ancient_structure"]: { name: "Structure Ancienne", description: "Les restes énigmatiques d'une construction d'origine inconnue." },
+    [window.TILE_TYPES?.MERCHANT_WRECKAGE || "merchant_wreckage"]: { name: "Épave de Marchand", description: "Les débris d'un vaisseau marchand, peut-être avec une cargaison récupérable." },
+    [window.TILE_TYPES?.RUINS || "ruins"]: { name: "Ruines", description: "Vestiges d'une civilisation passée." },
+};
+window.MAP_FEATURE_DATA = MAP_FEATURE_DATA;
+
+const TILE_TYPES_TO_RESOURCE_KEY = {
+    [window.TILE_TYPES?.RESOURCE_BIOMASS_PATCH || "resource_biomass_patch"]: "biomass",
+    [window.TILE_TYPES?.RESOURCE_NANITE_DEPOSIT || "resource_nanite_deposit"]: "nanites",
+    [window.TILE_TYPES?.RESOURCE_CRYSTAL_VEIN || "resource_crystal_vein"]: "crystal_shards",
+};
+window.TILE_TYPES_TO_RESOURCE_KEY = TILE_TYPES_TO_RESOURCE_KEY;
+
+
+// --- ZONE BIOMES DATA ---
+const zoneBiomesData = {
+    "temperate_forest": {
+        name: "Forêt Tempérée", description: "Une forêt luxuriante avec une faune et une flore variées.",
+        ambientSound: "sounds/forest_ambience.mp3",
+        possibleTiles: [window.TILE_TYPES?.EMPTY_GRASSLAND, window.TILE_TYPES?.FOREST_LIGHT, window.TILE_TYPES?.FOREST_DENSE, window.TILE_TYPES?.HILLS, window.TILE_TYPES?.EMPTY_WATER, window.TILE_TYPES?.RUINS_ANCIENT].filter(t=>t),
+        resourceBias: { [window.RESOURCE_TYPES?.BIOMASS || 'biomass']: 1.5, [window.RESOURCE_TYPES?.NANITES || 'nanites']: 0.8, [window.RESOURCE_TYPES?.CRYSTAL_SHARDS || 'crystal_shards']: 0.5 }
+    },
+    "arid_desert": { 
+        name: "Désert Aride", description: "Vastes étendues de sable et de roche, peu de vie visible.",
+        ambientSound: "sounds/desert_wind.mp3",
+        possibleTiles: [window.TILE_TYPES?.EMPTY_DESERT, window.TILE_TYPES?.HILLS, window.TILE_TYPES?.MOUNTAINS_LOW, window.TILE_TYPES?.RUINS].filter(t=>t),
+        resourceBias: { [window.RESOURCE_TYPES?.BIOMASS || 'biomass']: 0.2, [window.RESOURCE_TYPES?.NANITES || 'nanites']: 1.2, [window.RESOURCE_TYPES?.CRYSTAL_SHARDS || 'crystal_shards']: 1.5 }
     }
 };
+window.zoneBiomesData = zoneBiomesData;
 
-var ZONE_DATA = {
-    'verdant_archipelago': {
-        id: 'verdant_archipelago',
-        name: "Archipel Verdoyant",
+// --- BIOME COLOR MAPPING ---
+const biomeColorMapping = {
+    "temperate_forest": "#228B22", "arid_desert": "#F0E68C", 
+    [window.TILE_TYPES?.IMPASSABLE_DEEP_WATER || "impassable_deep_water"]: "#1E90FF", 
+    [window.TILE_TYPES?.IMPASSABLE_HIGH_PEAK || "impassable_high_peak"]: "#808080"
+};
+window.biomeColorMapping = biomeColorMapping;
+
+// --- WORLD ZONES ---
+const WORLD_ZONES = {
+    "verdant_archipelago": {
+        id: "verdant_archipelago", name: "Archipel Verdoyant",
+        description: "Une série d'îles luxuriantes et interconnectées.",
         mapSize: { width: 25, height: 20 },
         entryPoint: { x: 3, y: 3 },
-        basePlayerCoordinates: { x: 3, y: 3 },
-        baseTerrainLayout: [], // Sera rempli par mapManager.js ou défini statiquement ici
-        visibleStructureLayout: [], // Sera rempli par mapManager.js ou défini statiquement ici
-        tileContentDistribution: { // Chance de trouver ce contenu sur une tuile générique explorable
-            [TILE_TYPES.RESOURCE_BIOMASS_PATCH]: 0.12,
-            [TILE_TYPES.RESOURCE_NANITE_DEPOSIT]: 0.04,
-            [TILE_TYPES.FOREST]: 0.15,
-            [TILE_TYPES.RUINS]: 0.03,
-            [TILE_TYPES.UPGRADE_CACHE]: 0.02,
-            [TILE_TYPES.POI_ANCIENT_STRUCTURE]: 0.01,
-            'drone_scout': 0.04, // Clé de explorationEnemyData
-            'raider_grunt': 0.03, // Clé de explorationEnemyData
-            'outpost_alpha': 0.01, // Clé de enemyBaseDefinitions
-        },
-        patrolEnemyPool: ['drone_scout', 'raider_grunt']
-    },
-    'crystal_caves': {
-        id: 'crystal_caves',
-        name: "Grottes Cristallines",
-        mapSize: { width: 20, height: 20 },
-        entryPoint: { x: 1, y: 10 },
-        baseTerrainLayout: [],
-        visibleStructureLayout: [],
+        defaultBiome: "temperate_forest", difficultyLevel: 1,
+        basePlayerCoordinates: { x: 12, y: 10 },
         tileContentDistribution: {
-            [TILE_TYPES.RESOURCE_NANITE_DEPOSIT]: 0.10,
-            [TILE_TYPES.RESOURCE_CRYSTAL_VEIN]: 0.15,
-            [TILE_TYPES.MOUNTAIN]: 0.20,
-            'enemy_crystal_golem_weak': 0.08,
-            [TILE_TYPES.UPGRADE_CACHE]: 0.04,
-            'crystal_hive_node': 0.015,
+            "mutated_rat_weak": 0.05,
+            "scavenger_bot_rusted": 0.03,
+            [String(window.TILE_TYPES?.RESOURCE_BIOMASS_PATCH)]: 0.1, 
+            [String(window.TILE_TYPES?.UPGRADE_CACHE)]: 0.02,
+            [String(window.TILE_TYPES?.RUINS_ANCIENT)]: 0.04,
         },
-        patrolEnemyPool: ['enemy_crystal_golem_weak', 'enemy_spark_wisp_scout'],
-        unlockCondition: { research: 'advanced_geology' } // Exemple: ID d'une recherche de config_gameplay.js
-    }
-    // Add other zones here
+        unlockedZones: ["scorched_sands"],
+        travelCost: null
+    },
+    "scorched_sands": {
+        id: "scorched_sands", name: "Sables Brûlants",
+        description: "Un désert impitoyable sous un soleil de plomb.",
+        mapSize: { width: 30, height: 30 }, entryPoint: {x:1, y:15}, defaultBiome: "arid_desert", difficultyLevel: 3,
+        tileContentDistribution: {
+            "scavenger_bot_rusted": 0.06, 
+            [String(window.TILE_TYPES?.RESOURCE_CRYSTAL_VEIN)]: 0.08,
+            [String(window.TILE_TYPES?.RUINS)]: 0.05,
+        },
+        unlockedZones: [],
+        travelCost: { nanites: 100 }
+    },
 };
+window.WORLD_ZONES = WORLD_ZONES;
 
-// BASE_COORDINATES est crucial et doit être défini après ZONE_DATA.
-// Il pointe vers la base du joueur dans la zone de départ.
-var BASE_COORDINATES = (ZONE_DATA['verdant_archipelago'] && ZONE_DATA['verdant_archipelago'].basePlayerCoordinates)
-                       ? { ...ZONE_DATA['verdant_archipelago'].basePlayerCoordinates }
-                       : { x: Math.floor((typeof DEFAULT_MAP_SIZE !== 'undefined' ? DEFAULT_MAP_SIZE.width : 10) / 2), y: Math.floor((typeof DEFAULT_MAP_SIZE !== 'undefined' ? DEFAULT_MAP_SIZE.height : 10) / 2) };
+// --- GENERAL EXPLORATION CONSTANTS ---
+const EXPLORATION_COST_MOBILITY = 1;
+window.EXPLORATION_COST_MOBILITY = EXPLORATION_COST_MOBILITY;
+
+// const SCAN_ENERGY_COST = 20; // Ancienne constante
+const SCAN_MOBILITY_COST = 3;   // Nouvelle constante pour le coût en mobilité
+const SCAN_COOLDOWN_DURATION_SECONDS = 60;
+const SCAN_REVEAL_DURATION_SECONDS = 180;
+// window.SCAN_ENERGY_COST = SCAN_ENERGY_COST; // Ne plus exposer l'ancienne
+window.SCAN_MOBILITY_COST = SCAN_MOBILITY_COST; // Exposer la nouvelle
+window.SCAN_COOLDOWN_DURATION_SECONDS = SCAN_COOLDOWN_DURATION_SECONDS;
+window.SCAN_REVEAL_DURATION_SECONDS = SCAN_REVEAL_DURATION_SECONDS;
+
+const BASE_COORDINATES = { x: 15, y: 15 };
+window.BASE_COORDINATES = BASE_COORDINATES;
+const DEFAULT_MAP_SIZE = { width: 30, height: 30 };
+window.DEFAULT_MAP_SIZE = DEFAULT_MAP_SIZE;
 
 
 console.log("config_world.js - Données du monde (zones, ennemis d'exploration, bases) définies.");
-if (typeof ZONE_DATA === 'undefined' || typeof explorationEnemyData === 'undefined' || typeof enemyBaseDefinitions === 'undefined' || typeof TILE_TYPES_TO_RESOURCE_KEY === 'undefined') {
-    console.error("config_world.js - ERREUR: ZONE_DATA, explorationEnemyData, enemyBaseDefinitions ou TILE_TYPES_TO_RESOURCE_KEY n'est pas défini !");
-}
