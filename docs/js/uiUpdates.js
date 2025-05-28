@@ -37,6 +37,40 @@ var uiUpdates = {
         if(window.nanitesRateEl) window.nanitesRateEl.textContent = gameState.productionRates.nanites.toFixed(1);
     },
 
+    updateScanButtonCooldown: function() {
+        if (!gameState || !gameState.nanobotStats || typeof window.SCAN_MOBILITY_COST === 'undefined' || 
+            typeof window.SCAN_COOLDOWN_DURATION_SECONDS === 'undefined') {
+            return; 
+        }
+
+        let scanButton = window.scanMapButtonEl;
+        if (scanButton) {
+            const stats = gameState.nanobotStats; 
+            const scanCost = window.SCAN_MOBILITY_COST; 
+            const scanCooldownTimeInSeconds = window.SCAN_COOLDOWN_DURATION_SECONDS; 
+            const timeSinceLastScan = gameState.gameTime - (stats.lastMapScanTime || 0);
+            const cooldownRemaining = Math.max(0, scanCooldownTimeInSeconds - timeSinceLastScan);
+            
+            const onCooldown = cooldownRemaining > 0;
+            const canAffordScan = gameState.resources.mobility >= scanCost; 
+            
+            scanButton.disabled = onCooldown || !canAffordScan;
+            scanButton.classList.toggle('btn-disabled', onCooldown || !canAffordScan);
+            scanButton.classList.toggle('btn-info', !onCooldown && canAffordScan);
+            
+            if (onCooldown) {
+                 scanButton.textContent = `Scan Carte (CD: ${formatTime(Math.ceil(cooldownRemaining)) })`;
+                 scanButton.title = `Scanner en rechargement. Encore ${formatTime(Math.ceil(cooldownRemaining))}.`;
+            } else if (!canAffordScan) {
+                 scanButton.textContent = `Scan Carte (${scanCost} MOB) - Insuff.`; 
+                 scanButton.title = `Nécessite ${scanCost} Mobilité. Vous avez ${Math.floor(gameState.resources.mobility)}.`;
+            } else {
+                 scanButton.textContent = `Scanner Carte (${scanCost} MOB)`; 
+                 scanButton.title = `Scanner la zone autour du Nanobot. Coût: ${scanCost} Mobilité.`;
+            }
+        }
+    },
+
     updateBuildingDisplay: function() {
         const buildingsContainer = window.buildingsContainerEl; 
         if (!buildingsContainer) { console.warn("UI: updateBuildingDisplay - Conteneur #buildings-section non trouvé."); return; }
@@ -196,7 +230,6 @@ var uiUpdates = {
                  </div>
                  <p class="text-xs text-gray-300">Temps Restant: ${formatTime(timeRemainingSecondsDisplay)} (Facteur Labo: x${researchSpeedFactor.toFixed(1)})</p>`);
             
-            // Bouton pour accélérer la recherche
             if (typeof window.INSTANT_RESEARCH_CRYSTAL_COST_PER_10_SECONDS !== 'undefined' && timeRemainingSecondsDisplay > 0) {
                 const crystalCost = Math.ceil(timeRemainingSecondsDisplay / 10) * window.INSTANT_RESEARCH_CRYSTAL_COST_PER_10_SECONDS;
                 const canAffordInstant = (gameState.resources.crystal_shards || 0) >= crystalCost;
@@ -664,7 +697,7 @@ var uiUpdates = {
     },
 
     drawLaserShot: function(startX, startY, endX, endY, type = 'friendly', visualType = 'laser') {
-        if (typeof drawProjectileVisual === 'function') drawProjectileVisual(startX, startY, endX, endY, type, 'laser'); 
+        if (typeof drawProjectileVisual === 'function') drawProjectileVisual(startX, startY, endX, endY, type, visualType); // Modifié pour passer visualType
     },
     drawEnemyProjectile: function(startX, startY, endX, endY, damageType) {
         this.drawLaserShot(startX, startY, endX, endY, 'enemy'); 
@@ -766,8 +799,10 @@ var uiUpdates = {
                 const activeSubTabButton = document.querySelector('#world-section .sub-nav-button.active');
                 if (activeSubTabButton) {
                     const activeSubTabId = activeSubTabButton.dataset.subtab;
-                    if (activeSubTabId === 'exploration-subtab' && typeof window.explorationUI !== 'undefined' && typeof window.explorationUI.updateFullExplorationView === 'function') {
-                        window.explorationUI.updateFullExplorationView();
+                    if (activeSubTabId === 'exploration-subtab' && typeof window.explorationUI !== 'undefined') {
+                        if (typeof window.explorationUI.updateFullExplorationView === 'function') {
+                             window.explorationUI.updateFullExplorationView(); 
+                        }
                     } else if (activeSubTabId === 'quests-subtab' && typeof window.questUI !== 'undefined' && typeof window.questUI.updateQuestDisplay === 'function') {
                         window.questUI.updateQuestDisplay();
                     }
@@ -795,4 +830,4 @@ if (typeof window.handleDefenseAction === 'undefined') {
 }
 
 
-console.log("uiUpdates.js - Objet uiUpdates défini.")
+console.log("uiUpdates.js - Objet uiUpdates défini.");

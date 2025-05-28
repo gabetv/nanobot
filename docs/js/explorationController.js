@@ -11,7 +11,6 @@ var explorationController = {
             console.error("explorationController.handleTileClickOnWorldMap: Dépendances manquantes (gameState, WORLD_ZONES, TILE_TYPES, mapManager, explorationUI, etc.).");
             return;
         }
-        // Vérification plus robuste de la zone actuelle
         if (!gameState.currentZoneId || !window.WORLD_ZONES[gameState.currentZoneId]) {
             console.error("explorationController.handleTileClickOnWorldMap: currentZoneId invalide ou zone non trouvée dans WORLD_ZONES.");
             if(typeof addLogEntry === 'function' && window.explorationLogEl) addLogEntry("Erreur: Données de zone actuelle corrompues.", "error", window.explorationLogEl, gameState.explorationLog);
@@ -41,59 +40,44 @@ var explorationController = {
                 console.error("explorationController: explorationUI.enterActiveTileExplorationMode non défini.");
             }
         } else {
-            if (gameState.map.nanobotPos) {
-                const dxPos = Math.abs(x - gameState.map.nanobotPos.x);
-                const dyPos = Math.abs(y - gameState.map.nanobotPos.y);
-                if (dxPos > 1 || dyPos > 1 ) {
-                     if(typeof addLogEntry === 'function' && window.explorationLogEl) addLogEntry("Entrez en mode exploration (clic sur votre case) pour vous déplacer.", "info", window.explorationLogEl, gameState.explorationLog);
-                } else {
-                     if(typeof addLogEntry === 'function' && window.explorationLogEl) addLogEntry(`Case (${x},${y}) sélectionnée. Entrez en mode exploration pour interagir ou vous y déplacer.`, "info", window.explorationLogEl, gameState.explorationLog);
-                }
-            } else {
-                 if(typeof addLogEntry === 'function' && window.explorationLogEl) addLogEntry(`Case (${x},${y}) sélectionnée. Position du Nanobot inconnue.`, "info", window.explorationLogEl, gameState.explorationLog);
-            }
+            if(typeof addLogEntry === 'function' && window.explorationLogEl) addLogEntry(`Case (${x},${y}) sélectionnée. Entrez en mode exploration (clic sur votre case) pour interagir ou vous y déplacer.`, "info", window.explorationLogEl, gameState.explorationLog);
         }
 
         if (typeof window.explorationUI.updateTileInteractionPanel === 'function') {
             window.explorationUI.updateTileInteractionPanel(x, y);
         }
     },
-
-    attemptMoveInActiveExploration: function(direction) {
-        console.log(`explorationController: attemptMoveInActiveExploration vers ${direction}`);
+    
+    attemptMoveInActiveExplorationByCoords: function(targetX, targetY) {
+        console.log(`explorationController: attemptMoveInActiveExplorationByCoords vers (${targetX},${targetY})`);
         if (!gameState || !gameState.map || !gameState.map.nanobotPos ||
             typeof window.EXPLORATION_COST_MOBILITY === 'undefined' || typeof window.mapManager === 'undefined' ||
             typeof window.explorationUI === 'undefined' || typeof window.nanobotModulesData === 'undefined' ||
-            typeof window.WORLD_ZONES === 'undefined' || !window.WORLD_ZONES[gameState.currentZoneId] || // MODIFIÉ: Vérification plus robuste
+            typeof window.WORLD_ZONES === 'undefined' || !window.WORLD_ZONES[gameState.currentZoneId] ||
             typeof window.TILE_TYPES === 'undefined') { 
-            console.error("attemptMoveInActiveExploration: Dépendances cruciales manquantes ou zone actuelle invalide.");
+            console.error("attemptMoveInActiveExplorationByCoords: Dépendances cruciales manquantes ou zone actuelle invalide.");
             if (typeof window.explorationUI.addLogToActiveTileView === 'function') window.explorationUI.addLogToActiveTileView("Erreur système de déplacement.", "error");
             return;
         }
 
         const currentX = gameState.map.nanobotPos.x;
         const currentY = gameState.map.nanobotPos.y;
-        let newX = currentX;
-        let newY = currentY;
 
-        switch (direction) {
-            case 'north': newY--; break;
-            case 'south': newY++; break;
-            case 'west':  newX--; break;
-            case 'east':  newX++; break;
-            default:
-                if (typeof window.explorationUI.addLogToActiveTileView === 'function') window.explorationUI.addLogToActiveTileView("Direction de déplacement invalide.", "error");
-                return;
+        const dx = Math.abs(targetX - currentX);
+        const dy = Math.abs(targetY - currentY);
+        if (!((dx <= 1 && dy === 0) || (dx === 0 && dy <= 1)) || (dx === 0 && dy === 0)) {
+             if (typeof window.explorationUI.addLogToActiveTileView === 'function') window.explorationUI.addLogToActiveTileView("Déplacement invalide (non adjacent).", "warning");
+            return;
         }
 
+
         const currentZone = window.WORLD_ZONES[gameState.currentZoneId]; 
-        // currentZone est déjà vérifié dans la garde ci-dessus
-        if (newX < 0 || newX >= currentZone.mapSize.width || newY < 0 || newY >= currentZone.mapSize.height) {
+        if (targetX < 0 || targetX >= currentZone.mapSize.width || targetY < 0 || targetY >= currentZone.mapSize.height) {
             if (typeof window.explorationUI.addLogToActiveTileView === 'function') window.explorationUI.addLogToActiveTileView("Déplacement hors des limites de la zone.", "warning");
             return;
         }
 
-        const targetTile = window.mapManager.getTile(newX, newY);
+        const targetTile = window.mapManager.getTile(targetX, targetY);
         if (!targetTile) {
             if (typeof window.explorationUI.addLogToActiveTileView === 'function') window.explorationUI.addLogToActiveTileView("Case cible invalide.", "error");
             return;
@@ -109,12 +93,12 @@ var explorationController = {
         if (targetTile.actualType === window.TILE_TYPES.DEBRIS_FIELD) {
             if (!this.nanobotHasModuleAbility('canTraverse', window.TILE_TYPES.DEBRIS_FIELD)) {
                 canTraverseTile = false;
-                requiredModuleName = (typeof window.nanobotModulesData !== 'undefined' && window.nanobotModulesData["mining_drill_arm_mk1"]?.name) || "Module Foreuse"; // Utiliser l'ID exact du module
+                requiredModuleName = (typeof window.nanobotModulesData !== 'undefined' && window.nanobotModulesData["mining_drill_arm_mk1"]?.name) || "Module Foreuse"; 
             }
         } else if (targetTile.actualType === window.TILE_TYPES.THICK_VINES) {
             if (!this.nanobotHasModuleAbility('canTraverse', window.TILE_TYPES.THICK_VINES)) {
                 canTraverseTile = false;
-                requiredModuleName = (typeof window.nanobotModulesData !== 'undefined' && window.nanobotModulesData["plasma_cutter_arm_mk1"]?.name) || "Découpeur Plasma"; // Utiliser l'ID exact
+                requiredModuleName = (typeof window.nanobotModulesData !== 'undefined' && window.nanobotModulesData["plasma_cutter_arm_mk1"]?.name) || "Découpeur Plasma"; 
             }
         }
 
@@ -134,10 +118,10 @@ var explorationController = {
         if (typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateResourceDisplay === 'function') uiUpdates.updateResourceDisplay();
 
         const oldPos = { ...gameState.map.nanobotPos };
-        gameState.map.nanobotPos = { x: newX, y: newY };
-        gameState.map.activeExplorationTileCoords = { x: newX, y: newY };
+        gameState.map.nanobotPos = { x: targetX, y: targetY };
+        gameState.map.activeExplorationTileCoords = { x: targetX, y: targetY };
 
-        if(typeof addLogEntry === 'function' && typeof window.explorationLogEl !== 'undefined') addLogEntry(`Déplacement de (${oldPos.x},${oldPos.y}) vers (${newX},${newY}). Coût: ${window.EXPLORATION_COST_MOBILITY} mobilité.`, "map-event", window.explorationLogEl, gameState.explorationLog);
+        if(typeof addLogEntry === 'function' && typeof window.explorationLogEl !== 'undefined') addLogEntry(`Déplacement de (${oldPos.x},${oldPos.y}) vers (${targetX},${targetY}). Coût: ${window.EXPLORATION_COST_MOBILITY} mobilité.`, "map-event", window.explorationLogEl, gameState.explorationLog);
 
         let newTilesExploredCountForQuest = 0;
         if (!targetTile.isExplored) {
@@ -149,16 +133,14 @@ var explorationController = {
             questController.checkQuestProgress({ type: "explore_tiles", count: newTilesExploredCountForQuest });
         }
         if (typeof questController !== 'undefined' && typeof questController.checkQuestProgress === 'function') {
-            questController.checkQuestProgress({ type: "explore_tile_type", tileType: targetTile.actualType, zoneId: gameState.currentZoneId, x:newX, y:newY });
+            questController.checkQuestProgress({ type: "explore_tile_type", tileType: targetTile.actualType, zoneId: gameState.currentZoneId, x:targetX, y:targetY });
         }
 
         if (typeof window.explorationUI !== 'undefined' && typeof window.explorationUI.updateActiveTileExplorationView === 'function') {
-            window.explorationUI.updateActiveTileExplorationView(newX, newY, true);
-        }
-        if (typeof window.explorationUI !== 'undefined' && typeof window.explorationUI.updateExplorationMapDisplay === 'function') {
-            window.explorationUI.updateExplorationMapDisplay();
+            window.explorationUI.updateActiveTileExplorationView(targetX, targetY, true); 
         }
     },
+
 
     handleActionOnActiveTile: async function(actionId, tileX, tileY, dynamicData = null) {
         console.log(`explorationController: handleActionOnActiveTile: ${actionId} sur (${tileX},${tileY}), dynamicData:`, dynamicData);
@@ -243,7 +225,7 @@ var explorationController = {
     },
 
     checkIfTileIsFullyExplored: function(tile) {
-        if (!tile || typeof window.tileActiveExplorationOptions === 'undefined' || typeof window.activeTileViewData === 'undefined') return; // Ajout activeTileViewData
+        if (!tile || typeof window.tileActiveExplorationOptions === 'undefined' || typeof window.activeTileViewData === 'undefined') return; 
         let allDone = true;
         const tileViewDataForType = window.activeTileViewData[tile.actualType] || window.activeTileViewData.default;
 
@@ -293,58 +275,68 @@ var explorationController = {
             if (gameState.nanobotModuleLevels[moduleId] > 0) {
                 const moduleData = window.nanobotModulesData[moduleId];
                 if (moduleData && moduleData.abilities && moduleData.abilities[abilityKey] && Array.isArray(moduleData.abilities[abilityKey]) && moduleData.abilities[abilityKey].includes(requiredValue)) return true;
-                if (moduleData && abilityKey === 'canTraverse' && moduleData[abilityKey] && Array.isArray(moduleData[abilityKey]) && moduleData[abilityKey].includes(requiredValue)) return true;
-
+                // Correction pour la vérification directe de `canTraverse` sur l'objet moduleData
+                if (moduleData && abilityKey === 'canTraverse' && moduleData.abilities && moduleData.abilities[abilityKey] && Array.isArray(moduleData.abilities[abilityKey]) && moduleData.abilities[abilityKey].includes(requiredValue)) return true;
             }
         }
         return false;
     },
 
     performScanOnWorldMap: function() {
-        if (!gameState || !gameState.nanobotStats || typeof window.SCAN_ENERGY_COST === 'undefined' || 
+        if (!gameState || !gameState.nanobotStats || typeof window.SCAN_MOBILITY_COST === 'undefined' || 
             typeof window.SCAN_COOLDOWN_DURATION_SECONDS === 'undefined' || typeof window.SCAN_REVEAL_DURATION_SECONDS === 'undefined' || 
-            typeof window.WORLD_ZONES === 'undefined' || !window.WORLD_ZONES[gameState.currentZoneId] || // MODIFIÉ: Vérification plus robuste
+            typeof window.WORLD_ZONES === 'undefined' || !window.WORLD_ZONES[gameState.currentZoneId] || 
             typeof window.TICK_SPEED === 'undefined' || typeof window.mapManager === 'undefined') { 
             console.error("performScanOnWorldMap: Dépendances manquantes ou zone actuelle invalide."); return; 
         }
-        const scanCost = window.SCAN_ENERGY_COST;
+        const scanCost = window.SCAN_MOBILITY_COST; 
         const scanCooldownTimeInSeconds = window.SCAN_COOLDOWN_DURATION_SECONDS; 
         const scanRevealTimeInSeconds = window.SCAN_REVEAL_DURATION_SECONDS;
         
         if (gameState.gameTime < (gameState.nanobotStats.lastMapScanTime || 0) + scanCooldownTimeInSeconds) {
             if(typeof addLogEntry === 'function' && typeof window.explorationLogEl !== 'undefined') addLogEntry(`Scanner de carte en rechargement (${formatTime(Math.ceil(((gameState.nanobotStats.lastMapScanTime || 0) + scanCooldownTimeInSeconds - gameState.gameTime))) }).`, "warning", window.explorationLogEl, gameState.explorationLog); return;
         }
-        if (gameState.resources.energy < scanCost) {
-            if(typeof addLogEntry === 'function' && typeof window.eventLogEl !== 'undefined') addLogEntry(`Énergie insuffisante pour le scan de carte (Requis: ${scanCost}).`, "error", window.eventLogEl, gameState.eventLog); return;
+        if (gameState.resources.mobility < scanCost) {
+            if(typeof addLogEntry === 'function' && typeof window.eventLogEl !== 'undefined') addLogEntry(`Mobilité insuffisante pour le scan de carte (Requis: ${scanCost}).`, "error", window.eventLogEl, gameState.eventLog); return;
         }
-        gameState.resources.energy -= scanCost; gameState.nanobotStats.lastMapScanTime = gameState.gameTime;
+        gameState.resources.mobility -= scanCost; 
+        gameState.nanobotStats.lastMapScanTime = gameState.gameTime;
         if(typeof addLogEntry === 'function' && typeof window.explorationLogEl !== 'undefined') addLogEntry("Scan de la carte en cours...", "map-event", window.explorationLogEl, gameState.explorationLog);
         
-        if (!gameState.map.nanobotPos) {console.error("performScanOnWorldMap: nanobotPos non défini."); return;}
+        if (!gameState.map.nanobotPos) {
+            console.error("performScanOnWorldMap: nanobotPos non défini."); 
+            if(typeof addLogEntry === 'function' && typeof window.explorationLogEl !== 'undefined') addLogEntry("Scan échoué: Position du Nanobot inconnue.", "error", window.explorationLogEl, gameState.explorationLog);
+            return;
+        }
         const { x: botX, y: botY } = gameState.map.nanobotPos;
         const scanRevealUntilTime = gameState.gameTime + scanRevealTimeInSeconds; 
-        let scannedSomethingNew = false; const scanRadius = window.EXPLORATION_SETTINGS?.scanRadius || 3;
+        let scannedSomethingNew = false; 
+        const scanRadius = window.EXPLORATION_SETTINGS?.scanRadius || 3;
 
-        const currentZone = window.WORLD_ZONES[gameState.currentZoneId]; // currentZone est déjà vérifié dans la garde
+        const currentZone = window.WORLD_ZONES[gameState.currentZoneId]; 
 
         for (let dy = -scanRadius; dy <= scanRadius; dy++) {
             for (let dx = -scanRadius; dx <= scanRadius; dx++) {
                 if (dx === 0 && dy === 0) continue;
                 const cx = botX + dx; const cy = botY + dy;
-                // Utiliser currentZone ici
                 if (currentZone && cx >= 0 && cx < currentZone.mapSize.width && cy >= 0 && cy < currentZone.mapSize.height) {
                     const tile = window.mapManager.getTile(cx, cy);
-                    if (tile && !tile.isFullyExplored && !tile.isExplored) {
+                    // Ne scanne que les tuiles non explorées ET non déjà full (pour éviter de rescanner des POI déjà vidés par ex.)
+                    if (tile && !tile.isExplored && !tile.isFullyExplored) { 
                         tile.isScannedFromMap = true;
                         tile.scannedFromMapRevealTime = scanRevealUntilTime; 
-                        tile.scannedFromMapActualType = tile.actualType;
+                        tile.scannedFromMapActualType = tile.actualType; 
                         scannedSomethingNew = true;
                     }
                 }
             }
         }
         if (typeof uiUpdates !== 'undefined' && typeof uiUpdates.updateResourceDisplay === 'function') uiUpdates.updateResourceDisplay();
-        if (scannedSomethingNew && typeof window.explorationUI !== 'undefined' && typeof window.explorationUI.updateExplorationMapDisplay === 'function') window.explorationUI.updateExplorationMapDisplay();
+        if (scannedSomethingNew && typeof window.explorationUI !== 'undefined' && typeof window.explorationUI.updateExplorationMapDisplay === 'function') {
+            window.explorationUI.updateExplorationMapDisplay(); 
+        } else if (!scannedSomethingNew) {
+            if(typeof addLogEntry === 'function' && typeof window.explorationLogEl !== 'undefined') addLogEntry("Scan de carte terminé. Aucune nouvelle information notable dans la portée immédiate.", "info", window.explorationLogEl, gameState.explorationLog);
+        }
     },
 
     updateExpiredMapScans: function() {
@@ -360,7 +352,7 @@ var explorationController = {
                 const tile = zoneTiles[y][x];
                 if (tile && tile.isScannedFromMap && gameState.gameTime > tile.scannedFromMapRevealTime) {
                     tile.isScannedFromMap = false;
-                    tile.scannedFromMapActualType = null;
+                    tile.scannedFromMapActualType = null; 
                     tilesChanged = true;
                 }
             }
@@ -495,7 +487,6 @@ var explorationController = {
                     if (window.itemsData[itemId] && window.itemsData[itemId].effects_on_use && (window.itemsData[itemId].rarity === "consumable_reward" || window.itemsData[itemId].consumable)) {
                          if(typeof window.itemsData[itemId].effects_on_use === 'function') window.itemsData[itemId].effects_on_use(gameState);
                          else if (Array.isArray(window.itemsData[itemId].effects_on_use)) {
-                            // Cette partie nécessiterait une logique de traitement d'effets plus complexe si vous l'utilisez.
                          }
                     } else {
                         window.addToInventory(itemId);

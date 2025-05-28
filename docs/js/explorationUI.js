@@ -5,13 +5,21 @@ var explorationUI = {
     isFirstExplorationViewUpdate: true,
     centerRetryTimeoutId: null,
 
-    activeTileUiElements: {
-        container: null, currentTileView: null, currentTileImage: null,
-        currentTileDescription: null, currentTileActionsGrid: null, currentTileLog: null,
-        previewNorth: null, previewSouth: null, previewEast: null, previewWest: null,
-        navNorthBtn: null, navSouthBtn: null, navEastBtn: null, navWestBtn: null,
-        nanobotStatusContainer: null, exitActiveExplorationBtn: null,
+    activeTileUiElements: { 
+        container: null, 
         activeExplorationTitle: null,
+        exitActiveExplorationBtn: null,
+        
+        mainGridView: null, 
+        
+        detailPanel: null, 
+        currentTileImage: null,
+        currentTileDescription: null,
+        currentTileActionsGrid: null,
+        activeTileLogContainer: null, 
+        activeTileLog: null,
+
+        nanobotStatusContainer: null,
     },
     isInitializedActiveUI: false,
 
@@ -20,21 +28,19 @@ var explorationUI = {
 
         this.activeTileUiElements.container = window.activeTileExplorationUIEl;
         this.activeTileUiElements.activeExplorationTitle = window.activeExplorationTitleEl;
-        this.activeTileUiElements.currentTileView = window.currentTileViewEl;
-        this.activeTileUiElements.currentTileImage = window.currentTileImageEl;
-        this.activeTileUiElements.currentTileDescription = window.currentTileDescriptionEl;
-        this.activeTileUiElements.currentTileActionsGrid = window.currentTileActionsGridEl;
-        this.activeTileUiElements.currentTileLog = window.activeTileLogEl;
-        this.activeTileUiElements.previewNorth = window.previewNorthEl;
-        this.activeTileUiElements.previewSouth = window.previewSouthEl;
-        this.activeTileUiElements.previewEast = window.previewEastEl;
-        this.activeTileUiElements.previewWest = window.previewWestEl;
-        this.activeTileUiElements.navNorthBtn = window.activeExploreNavNorthBtn;
-        this.activeTileUiElements.navSouthBtn = window.activeExploreNavSouthBtn;
-        this.activeTileUiElements.navEastBtn = window.activeExploreNavEastBtn;
-        this.activeTileUiElements.navWestBtn = window.activeExploreNavWestBtn;
-        this.activeTileUiElements.nanobotStatusContainer = window.activeExplorationNanobotStatusEl;
         this.activeTileUiElements.exitActiveExplorationBtn = window.exitActiveExplorationBtnEl;
+
+        this.activeTileUiElements.mainGridView = document.getElementById('active-exploration-main-grid-view');
+        
+        this.activeTileUiElements.detailPanel = document.getElementById('active-exploration-detail-panel');
+        this.activeTileUiElements.currentTileImage = window.currentTileImageEl; 
+        this.activeTileUiElements.currentTileDescription = window.currentTileDescriptionEl; 
+        this.activeTileUiElements.currentTileActionsGrid = window.currentTileActionsGridEl; 
+        
+        this.activeTileUiElements.activeTileLogContainer = window.activeTileLogContainerEl; 
+        this.activeTileUiElements.activeTileLog = window.activeTileLogEl; 
+
+        this.activeTileUiElements.nanobotStatusContainer = window.activeExplorationNanobotStatusEl;
 
         if (this.activeTileUiElements.exitActiveExplorationBtn && typeof this.exitActiveTileExplorationMode === 'function') {
             if (!this.activeTileUiElements.exitActiveExplorationBtn.dataset.listenerAttached) {
@@ -42,23 +48,9 @@ var explorationUI = {
                 this.activeTileUiElements.exitActiveExplorationBtn.dataset.listenerAttached = 'true';
             }
         }
-        const navButtons = [
-            { btn: this.activeTileUiElements.navNorthBtn, dir: 'north' },
-            { btn: this.activeTileUiElements.navSouthBtn, dir: 'south' },
-            { btn: this.activeTileUiElements.navEastBtn, dir: 'east' },
-            { btn: this.activeTileUiElements.navWestBtn, dir: 'west' }
-        ];
-        navButtons.forEach(item => {
-            if (item.btn && typeof window.explorationController !== 'undefined' && typeof window.explorationController.attemptMoveInActiveExploration === 'function') {
-                if (!item.btn.dataset.listenerAttached) {
-                    item.btn.addEventListener('click', () => window.explorationController.attemptMoveInActiveExploration(item.dir));
-                    item.btn.dataset.listenerAttached = 'true';
-                }
-            }
-        });
-
+        
         this.isInitializedActiveUI = true;
-        console.log("explorationUI: Éléments de l'UI d'exploration active initialisés.");
+        console.log("explorationUI: Éléments de l'UI d'exploration active (refonte grille) initialisés.");
     },
 
     enterActiveTileExplorationMode: function(tileX, tileY) {
@@ -75,10 +67,10 @@ var explorationUI = {
         this.activeTileUiElements.container.classList.remove('hidden');
         if(window.worldSectionContentEl) window.worldSectionContentEl.classList.add('blurred-background');
 
-        if (this.activeTileUiElements.currentTileLog) this.activeTileUiElements.currentTileLog.innerHTML = "";
+        if (this.activeTileUiElements.activeTileLog) this.activeTileUiElements.activeTileLog.innerHTML = ""; 
         this.addLogToActiveTileView("Analyse de la zone en cours...", "system");
 
-        this.updateActiveTileExplorationView(tileX, tileY, true);
+        this.updateActiveTileExplorationView(tileX, tileY, true); 
         console.log(`Entrée en mode exploration active pour (${tileX}, ${tileY})`);
     },
 
@@ -93,7 +85,7 @@ var explorationUI = {
         if(window.worldSectionContentEl) window.worldSectionContentEl.classList.remove('blurred-background');
 
         this.updateExplorationMapDisplay();
-        this.centerMapOnPlayer(true);
+        this.centerMapOnPlayer(true); 
         console.log("Sortie du mode exploration active.");
     },
 
@@ -102,183 +94,203 @@ var explorationUI = {
         if (!gameState || !window.mapManager || !this.activeTileUiElements.container || this.activeTileUiElements.container.classList.contains('hidden')) {
             return;
         }
-        const tile = window.mapManager.getTile(centerX, centerY);
-        if (!tile) {
-            console.error(`updateActiveTileExplorationView: Tuile non trouvée en (${centerX}, ${centerY})`);
+        
+        const currentTile = window.mapManager.getTile(centerX, centerY);
+        if (!currentTile) {
+            console.error(`updateActiveTileExplorationView: Tuile centrale non trouvée en (${centerX}, ${centerY})`);
             this.addLogToActiveTileView(`Erreur: Impossible de charger les données de la tuile (${centerX},${centerY}).`, "error");
             return;
         }
 
-        if (this.activeTileUiElements.activeExplorationTitle) {
-            this.activeTileUiElements.activeExplorationTitle.textContent = `Exploration: ${this.getTileContentName(tile.actualType, null)} (${centerX},${centerY})`;
-        }
-
-        const tileViewConfigKey = tile.actualType || 'default';
-        const tileViewConfig = (typeof window.activeTileViewData !== 'undefined' && window.activeTileViewData[tileViewConfigKey]) || 
-                               (typeof window.activeTileViewData !== 'undefined' ? window.activeTileViewData.default : {image: "images/tile_view/default_detail.png"});
-
-        if (this.activeTileUiElements.currentTileImage) {
-            this.activeTileUiElements.currentTileImage.style.backgroundImage = `url('${tileViewConfig.image || (typeof window.activeTileViewData !== 'undefined' ? window.activeTileViewData.default.image : "")}')`;
-        }
-        if (this.activeTileUiElements.currentTileDescription) {
-            let desc = `<strong>${this.getTileContentName(tile.actualType, null)} (${centerX},${centerY})</strong><br>`;
-            desc += (typeof window.MAP_FEATURE_DATA !== 'undefined' && window.MAP_FEATURE_DATA[tile.actualType]?.description) || "Une zone d'apparence ordinaire.";
-            if (tile.content) { desc += `<br>Présence détectée: ${this.getTileContentName(tile.actualType, tile.content)}.`; }
-            if (tile.isFullyExplored) { desc += "<br><em class='text-green-400'>Cette zone a été entièrement explorée.</em>";
-            } else if (tile.usedActions && tile.usedActions['scan_local_active'] && (!tile.hiddenFeatures || tile.hiddenFeatures.length === 0) && (!tile.revealedFeatures || tile.revealedFeatures.length === 0)) {
-                 desc += "<br><em class='text-gray-400'>Le scan local n'a rien révélé de plus.</em>";
-            }
-            if (tile.hasActiveTrap) { desc += "<br><strong class='text-red-500 animate-pulse'>DANGER: Piège actif détecté !</strong>"; }
-            this.activeTileUiElements.currentTileDescription.innerHTML = desc;
-        }
-
-        if (this.activeTileUiElements.currentTileActionsGrid) {
-            this.activeTileUiElements.currentTileActionsGrid.innerHTML = '';
-            if (tile.isFullyExplored) {
-                 this.activeTileUiElements.currentTileActionsGrid.innerHTML = `<p class="text-sm text-green-400 italic p-2 text-center">Rien de plus à faire ici.</p>`;
-            } else {
-                let availableActions = [];
-                const tileViewDataForType = window.activeTileViewData[tile.actualType] || window.activeTileViewData.default;
-                const baseActions = tile.baseActions || tileViewDataForType?.baseActions || [];
-
-                if (baseActions && typeof window.tileActiveExplorationOptions !== 'undefined') {
-                    baseActions.forEach(actionId => {
-                        const actionDef = window.tileActiveExplorationOptions[actionId];
-                        if (actionDef) {
-                            const isRepeatable = actionDef.canRepeat;
-                            const isMaxedOut = isRepeatable && actionId === 'search_area_active' && (tile.searchAttempts || 0) >= (actionDef.maxRepeats || 3);
-                            const isUsed = !isRepeatable && tile.usedActions && tile.usedActions[actionId];
-
-                            if (!isMaxedOut && !isUsed) {
-                                availableActions.push({ ...actionDef, id: actionId, originalActionId: actionId });
-                            }
-                        }
-                    });
-                }
-                if (tile.content && typeof window.tileActiveExplorationOptions !== 'undefined' && typeof window.TILE_TYPES_TO_RESOURCE_KEY !== 'undefined' && typeof window.MAP_FEATURE_DATA !== 'undefined') {
-                    if (tile.content.type === 'resource' && tile.content.amount > 0) {
-                        const actionDef = window.tileActiveExplorationOptions['collect_visible_resource_active'];
-                        if(actionDef) availableActions.push({ ...actionDef, name: actionDef.name.replace('{resourceName}', (window.TILE_TYPES_TO_RESOURCE_KEY[tile.content.resourceType] || "Ressource Inconnue") ), originalActionId: 'collect_visible_resource_active' });
-                    } else if (tile.content.type === 'enemy_patrol') {
-                        const actionDef = window.tileActiveExplorationOptions['engage_visible_enemy_active'];
-                        if(actionDef && tile.content.details) availableActions.push({ ...actionDef, name: actionDef.name.replace('{enemyName}', tile.content.details.name), originalActionId: 'engage_visible_enemy_active' });
-                    } else if (tile.content.type === 'poi' && !tile.content.isInteracted) {
-                        const actionDef = window.tileActiveExplorationOptions['interact_poi_active'];
-                        if(actionDef && tile.content.poiType) availableActions.push({ ...actionDef, name: actionDef.name.replace('{poiName}', window.MAP_FEATURE_DATA[tile.content.poiType]?.name || "POI"), originalActionId: 'interact_poi_active'});
-                    } else if (tile.content.type === 'enemy_base' && tile.content.currentHealth > 0) {
-                         const actionDef = window.tileActiveExplorationOptions['attack_enemy_base_active'];
-                        if(actionDef && tile.content.details) availableActions.push({ ...actionDef, name: actionDef.name.replace('{baseName}', tile.content.details.name), originalActionId: 'attack_enemy_base_active' });
+        if (this.activeTileUiElements.mainGridView) {
+            this.activeTileUiElements.mainGridView.innerHTML = ''; 
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    const adjX = centerX + dx;
+                    const adjY = centerY + dy;
+                    const isNanobotPos = (dx === 0 && dy === 0);
+                    
+                    const cellDiv = document.createElement('div');
+                    cellDiv.className = 'active-explore-grid-cell';
+                    if (isNanobotPos) {
+                        cellDiv.classList.add('current-nanobot-pos');
+                        const nanobotIcon = document.createElement('i');
+                        nanobotIcon.className = 'ti ti-robot nanobot-grid-icon';
+                        cellDiv.appendChild(nanobotIcon);
                     }
-                }
-                if(tile.revealedFeatures && typeof window.tileActiveExplorationOptions !== 'undefined'){
-                    tile.revealedFeatures.forEach((feature, index) => {
-                        let actionDef, actionName, actionIdToUse, originalActionId;
-                        if (feature.type === 'small_resource_cache') {
-                            actionDef = window.tileActiveExplorationOptions['collect_revealed_resource'];
-                            if(actionDef) { actionName = actionDef.name.replace('{resourceName}', feature.resourceType || 'Cache'); originalActionId = 'collect_revealed_resource'; actionIdToUse = `${originalActionId}_feat_${index}`; }
-                        } else if (feature.type === 'ancient_data_fragment') {
-                            actionDef = window.tileActiveExplorationOptions['decipher_data_fragment'];
-                            if(actionDef) { actionName = actionDef.name; originalActionId = 'decipher_data_fragment'; actionIdToUse = `${originalActionId}_feat_${index}`; }
-                        } else if (feature.type === 'hidden_trap' && tile.hasActiveTrap) {
-                            actionDef = window.tileActiveExplorationOptions['disarm_trap_active'];
-                            if(actionDef) { actionName = actionDef.name; originalActionId = 'disarm_trap_active'; actionIdToUse = `${originalActionId}_feat_${index}`; }
-                        }
-                        if (actionDef) {
-                             availableActions.push({ ...actionDef, name: actionName, id: actionIdToUse, originalActionId: originalActionId, dynamicData: feature });
-                        }
-                    });
-                }
 
-                if (availableActions.length > 0) {
-                    availableActions.forEach(action => {
-                        const actionButton = document.createElement('button');
-                        actionButton.className = 'btn btn-secondary btn-sm w-full text-left p-2 flex items-center gap-x-2 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-accent-blue';
-                        let costString = ""; let canAfford = true; let meetsCondition = true;
+                    const adjTile = window.mapManager.getTile(adjX, adjY);
+                    const currentZoneData = typeof window.WORLD_ZONES !== 'undefined' ? window.WORLD_ZONES[gameState.currentZoneId] : null;
 
-                        if(action.cost && typeof getCostString === 'function'){
-                            costString = ` (Coût: ${getCostString(action.cost, false, true)})`;
-                            for(const res in action.cost){ if((gameState.resources[res] || 0) < action.cost[res]) canAfford = false; }
-                        }
-                        if(action.condition && typeof action.condition === 'function'){
-                            if(!action.condition(gameState)) meetsCondition = false;
-                        }
-                        actionButton.innerHTML = `<i class="${action.icon || 'ti-question-mark'} text-lg text-blue-300 flex-shrink-0"></i><div class="flex-grow"><strong class="text-sm text-gray-100">${action.name}</strong><p class="text-xs text-gray-400">${action.description}${costString}</p></div>`;
-                        if(!canAfford || !meetsCondition) {
-                            actionButton.classList.add('btn-disabled', 'opacity-50'); actionButton.disabled = true;
-                            if(!canAfford && action.cost) actionButton.title = `Manque: ${Object.entries(action.cost).filter(([r,v]) => (gameState.resources[r]||0) < v).map(([r,v]) => `${v - (gameState.resources[r]||0)} ${r}`).join(', ')}`;
-                            else if(!meetsCondition) actionButton.title = "Conditions non remplies.";
-                        }
-                        actionButton.onclick = () => {
-                            if (!actionButton.disabled && typeof window.explorationController !== 'undefined' && typeof window.explorationController.handleActionOnActiveTile === 'function') {
-                                window.explorationController.handleActionOnActiveTile(action.originalActionId || action.id, centerX, centerY, action.dynamicData || null);
+                    if (currentZoneData && adjX >= 0 && adjX < currentZoneData.mapSize.width && adjY >= 0 && adjY < currentZoneData.mapSize.height && adjTile) {
+                        let terrainName, contentName = "", contentClass = "", terrainIcon = "ti-map-pin";
+                        const isExploredOrScanned = adjTile.isExplored || (adjTile.isScannedFromMap && gameState.gameTime <= adjTile.scannedFromMapRevealTime);
+                        
+                        if (isExploredOrScanned) {
+                            const typeToDisplay = (adjTile.isScannedFromMap && gameState.gameTime <= adjTile.scannedFromMapRevealTime) ? adjTile.scannedFromMapActualType : adjTile.actualType;
+                            terrainName = this.getTerrainTypeName(typeToDisplay);
+                            terrainIcon = this.getTileIcon(typeToDisplay, adjTile.content);
+                            if (adjTile.content) {
+                                contentName = this.getTileContentName(typeToDisplay, adjTile.content);
+                                if (contentName === terrainName && adjTile.content.type !== 'resource') contentName = ""; 
+                                if (adjTile.content.type === 'enemy_patrol' || adjTile.content.type === 'enemy_base') contentClass = 'enemy';
+                                else if (adjTile.content.type === 'resource') contentClass = 'resource';
                             }
-                        };
-                        this.activeTileUiElements.currentTileActionsGrid.appendChild(actionButton);
-                    });
-                } else if (!tile.isFullyExplored) {
-                     this.activeTileUiElements.currentTileActionsGrid.innerHTML = `<p class="text-sm text-gray-400 italic p-2 text-center">Aucune action disponible pour le moment.</p>`;
+                        } else {
+                            terrainName = `Inconnue`;
+                            terrainIcon = this.getTileIcon(adjTile.baseType, null, true); 
+                        }
+                        
+                        cellDiv.innerHTML += `<i class="${terrainIcon}"></i>
+                                             <span class="terrain-name-preview">${terrainName}</span>`;
+                        if (contentName) {
+                            cellDiv.innerHTML += `<span class="content-preview ${contentClass}">${contentName}</span>`;
+                        }
+
+                        let isTraversable = true; let traversalBlockReason = "";
+                        if (typeof window.TILE_TYPES !== 'undefined' && typeof window.explorationController !== 'undefined') {
+                            if (adjTile.actualType === window.TILE_TYPES.IMPASSABLE_DEEP_WATER || adjTile.actualType === window.TILE_TYPES.IMPASSABLE_HIGH_PEAK) {isTraversable = false;}
+                            else if (adjTile.actualType === window.TILE_TYPES.DEBRIS_FIELD && !window.explorationController.nanobotHasModuleAbility('canTraverse', window.TILE_TYPES.DEBRIS_FIELD)) {isTraversable = false; traversalBlockReason="Module Foreuse requis";}
+                            else if (adjTile.actualType === window.TILE_TYPES.THICK_VINES && !window.explorationController.nanobotHasModuleAbility('canTraverse', window.TILE_TYPES.THICK_VINES)) {isTraversable = false; traversalBlockReason="Module Découpeur requis";}
+                        } else { isTraversable = false; traversalBlockReason="Erreur config."; }
+
+                        if (!isNanobotPos && isTraversable) {
+                            cellDiv.classList.add('can-move');
+                            cellDiv.title = `Aller à (${adjX},${adjY})`;
+                            cellDiv.onclick = () => {
+                                if (typeof window.explorationController !== 'undefined' && typeof window.explorationController.attemptMoveInActiveExplorationByCoords === 'function') {
+                                    window.explorationController.attemptMoveInActiveExplorationByCoords(adjX, adjY);
+                                } else {
+                                    console.error("attemptMoveInActiveExplorationByCoords non définie!");
+                                }
+                            };
+                        } else if (!isNanobotPos && !isTraversable) {
+                            cellDiv.classList.add('blocked-preview');
+                            cellDiv.title = traversalBlockReason || "Infranchissable";
+                        }
+                    } else { 
+                        cellDiv.innerHTML = `<i class="ti ti-border-outer"></i><span class="terrain-name-preview">Hors Limites</span>`;
+                        cellDiv.classList.add('blocked-preview');
+                    }
+                    this.activeTileUiElements.mainGridView.appendChild(cellDiv);
                 }
             }
         }
 
-        const directions = [
-            { dir: 'north', dx: 0, dy: -1, element: this.activeTileUiElements.previewNorth, navBtn: this.activeTileUiElements.navNorthBtn },
-            { dir: 'south', dx: 0, dy: 1, element: this.activeTileUiElements.previewSouth, navBtn: this.activeTileUiElements.navSouthBtn },
-            { dir: 'east',  dx: 1, dy: 0, element: this.activeTileUiElements.previewEast, navBtn: this.activeTileUiElements.navEastBtn },
-            { dir: 'west',  dx: -1,dy: 0, element: this.activeTileUiElements.previewWest, navBtn: this.activeTileUiElements.navWestBtn }
-        ];
-        directions.forEach(d => {
-            if (!d.element || !d.navBtn) { return; }
-            d.element.innerHTML = ''; d.navBtn.classList.add('btn-disabled'); d.navBtn.disabled = true;
-            d.element.classList.remove('can-move', 'cursor-pointer', 'hover:bg-gray-700', 'blocked-preview');
-            d.element.title = ""; d.element.onclick = null;
 
-            const adjX = centerX + d.dx; const adjY = centerY + d.dy;
-            const currentZoneData = typeof window.WORLD_ZONES !== 'undefined' ? window.WORLD_ZONES[gameState.currentZoneId] : null; // MODIFIÉ
+        if (this.activeTileUiElements.detailPanel) {
+            if (this.activeTileUiElements.activeExplorationTitle) {
+                this.activeTileUiElements.activeExplorationTitle.textContent = `Exploration: ${this.getTileContentName(currentTile.actualType, null)} (${centerX},${centerY})`;
+            }
 
-            if (currentZoneData && adjX >= 0 && adjX < currentZoneData.mapSize.width && adjY >= 0 && adjY < currentZoneData.mapSize.height) {
-                const adjTile = window.mapManager.getTile(adjX, adjY);
-                if (adjTile) {
-                    let terrainName, contentName = "", contentClass = "", terrainIcon = "ti-help-circle";
-                    if (adjTile.isExplored || (adjTile.isScannedFromMap && gameState.gameTime <= adjTile.scannedFromMapRevealTime)) {
-                        const typeToDisplay = (adjTile.isScannedFromMap && gameState.gameTime <= adjTile.scannedFromMapRevealTime) ? adjTile.scannedFromMapActualType : adjTile.actualType;
-                        terrainName = this.getTerrainTypeName(typeToDisplay);
-                        terrainIcon = this.getTileIcon(typeToDisplay, adjTile.content);
-                        if (adjTile.content) {
-                            contentName = this.getTileContentName(typeToDisplay, adjTile.content);
-                            if (contentName === terrainName) contentName = "";
-                            if (adjTile.content.type === 'enemy_patrol' || adjTile.content.type === 'enemy_base') contentClass = 'enemy';
-                            else if (adjTile.content.type === 'resource') contentClass = 'resource';
+            const tileViewConfigKey = currentTile.actualType || 'default';
+            const tileViewConfig = (typeof window.activeTileViewData !== 'undefined' && window.activeTileViewData[tileViewConfigKey]) || 
+                                   (typeof window.activeTileViewData !== 'undefined' ? window.activeTileViewData.default : {image: "images/tile_view/default_detail.png"});
+
+            if (this.activeTileUiElements.currentTileImage) {
+                this.activeTileUiElements.currentTileImage.style.backgroundImage = `url('${tileViewConfig.image || (typeof window.activeTileViewData !== 'undefined' ? window.activeTileViewData.default.image : "")}')`;
+            }
+            if (this.activeTileUiElements.currentTileDescription) {
+                let desc = `<strong>${this.getTileContentName(currentTile.actualType, null)} (${centerX},${centerY})</strong><br>`;
+                desc += (typeof window.MAP_FEATURE_DATA !== 'undefined' && window.MAP_FEATURE_DATA[currentTile.actualType]?.description) || "Une zone d'apparence ordinaire.";
+                if (currentTile.content) { desc += `<br>Présence détectée: ${this.getTileContentName(currentTile.actualType, currentTile.content)}.`; }
+                if (currentTile.isFullyExplored) { desc += "<br><em class='text-green-400'>Cette zone a été entièrement explorée.</em>";
+                } else if (currentTile.usedActions && currentTile.usedActions['scan_local_active'] && (!currentTile.hiddenFeatures || currentTile.hiddenFeatures.length === 0) && (!currentTile.revealedFeatures || currentTile.revealedFeatures.length === 0)) {
+                     desc += "<br><em class='text-gray-400'>Le scan local n'a rien révélé de plus.</em>";
+                }
+                if (currentTile.hasActiveTrap) { desc += "<br><strong class='text-red-500 animate-pulse'>DANGER: Piège actif détecté !</strong>"; }
+                this.activeTileUiElements.currentTileDescription.innerHTML = desc;
+            }
+
+            if (this.activeTileUiElements.currentTileActionsGrid) {
+                this.activeTileUiElements.currentTileActionsGrid.innerHTML = ''; 
+                if (currentTile.isFullyExplored) {
+                     this.activeTileUiElements.currentTileActionsGrid.innerHTML = `<p class="text-sm text-green-400 italic p-2 text-center">Rien de plus à faire ici.</p>`;
+                } else {
+                    let availableActions = [];
+                    const tileViewDataForType = window.activeTileViewData[currentTile.actualType] || window.activeTileViewData.default;
+                    const baseActions = currentTile.baseActions || tileViewDataForType?.baseActions || [];
+    
+                    if (baseActions && typeof window.tileActiveExplorationOptions !== 'undefined') {
+                        baseActions.forEach(actionId => {
+                            const actionDef = window.tileActiveExplorationOptions[actionId];
+                            if (actionDef) {
+                                const isRepeatable = actionDef.canRepeat;
+                                const isMaxedOut = isRepeatable && actionId === 'search_area_active' && (currentTile.searchAttempts || 0) >= (actionDef.maxRepeats || 3);
+                                const isUsed = !isRepeatable && currentTile.usedActions && currentTile.usedActions[actionId];
+    
+                                if (!isMaxedOut && !isUsed) {
+                                    availableActions.push({ ...actionDef, id: actionId, originalActionId: actionId });
+                                }
+                            }
+                        });
+                    }
+                    if (currentTile.content && typeof window.tileActiveExplorationOptions !== 'undefined' && typeof window.TILE_TYPES_TO_RESOURCE_KEY !== 'undefined' && typeof window.MAP_FEATURE_DATA !== 'undefined') {
+                        if (currentTile.content.type === 'resource' && currentTile.content.amount > 0) {
+                            const actionDef = window.tileActiveExplorationOptions['collect_visible_resource_active'];
+                            if(actionDef) availableActions.push({ ...actionDef, name: actionDef.name.replace('{resourceName}', (window.TILE_TYPES_TO_RESOURCE_KEY[currentTile.content.resourceType] || "Ressource") ), originalActionId: 'collect_visible_resource_active' });
+                        } else if (currentTile.content.type === 'enemy_patrol') {
+                            const actionDef = window.tileActiveExplorationOptions['engage_visible_enemy_active'];
+                            if(actionDef && currentTile.content.details) availableActions.push({ ...actionDef, name: actionDef.name.replace('{enemyName}', currentTile.content.details.name), originalActionId: 'engage_visible_enemy_active' });
+                        } else if (currentTile.content.type === 'poi' && !currentTile.content.isInteracted) {
+                            const actionDef = window.tileActiveExplorationOptions['interact_poi_active'];
+                            if(actionDef && currentTile.content.poiType) availableActions.push({ ...actionDef, name: actionDef.name.replace('{poiName}', window.MAP_FEATURE_DATA[currentTile.content.poiType]?.name || "POI"), originalActionId: 'interact_poi_active'});
+                        } else if (currentTile.content.type === 'enemy_base' && currentTile.content.currentHealth > 0) {
+                             const actionDef = window.tileActiveExplorationOptions['attack_enemy_base_active'];
+                            if(actionDef && currentTile.content.details) availableActions.push({ ...actionDef, name: actionDef.name.replace('{baseName}', currentTile.content.details.name), originalActionId: 'attack_enemy_base_active' });
                         }
-                    } else {
-                        terrainName = `Zone Inconnue (${this.getTerrainTypeName(adjTile.baseType)})`;
-                        terrainIcon = this.getTileIcon(adjTile.baseType, null, true);
                     }
-                    let previewHtml = `<strong class="text-xs">${d.dir.charAt(0).toUpperCase() + d.dir.slice(1)} (${adjX},${adjY})</strong>`;
-                    previewHtml += `<i class="${terrainIcon} text-xl my-1"></i>`;
-                    previewHtml += `<span class="terrain-name-preview">${terrainName}</span>`;
-                    if (contentName) previewHtml += `<span class="content-preview ${contentClass}">${contentName}</span>`;
-                    d.element.innerHTML = previewHtml;
-
-                    let isTraversable = true; let traversalBlockReason = "";
-                    if (typeof window.TILE_TYPES !== 'undefined' && typeof window.explorationController !== 'undefined') {
-                        if (adjTile.actualType === window.TILE_TYPES.IMPASSABLE_DEEP_WATER || adjTile.actualType === window.TILE_TYPES.IMPASSABLE_HIGH_PEAK) {isTraversable = false;}
-                        else if (adjTile.actualType === window.TILE_TYPES.DEBRIS_FIELD && !window.explorationController.nanobotHasModuleAbility('canTraverse', window.TILE_TYPES.DEBRIS_FIELD)) {isTraversable = false; traversalBlockReason="Module Foreuse requis";}
-                        else if (adjTile.actualType === window.TILE_TYPES.THICK_VINES && !window.explorationController.nanobotHasModuleAbility('canTraverse', window.TILE_TYPES.THICK_VINES)) {isTraversable = false; traversalBlockReason="Module Découpeur requis";}
-                    } else { isTraversable = false; traversalBlockReason="Erreur config déplacement."; }
-
-                    if (isTraversable) {
-                        d.navBtn.classList.remove('btn-disabled'); d.navBtn.disabled = false;
-                        d.element.classList.add('can-move', 'cursor-pointer', 'hover:bg-gray-700');
-                        d.element.onclick = () => d.navBtn.click();
-                    } else {
-                        d.element.classList.add('blocked-preview');
-                        if (traversalBlockReason) d.element.title = traversalBlockReason;
-                        else if(typeof window.TILE_TYPES !== 'undefined' && (adjTile.actualType === window.TILE_TYPES.IMPASSABLE_DEEP_WATER || adjTile.actualType === window.TILE_TYPES.IMPASSABLE_HIGH_PEAK)) d.element.title = "Terrain infranchissable";
+                    if(currentTile.revealedFeatures && typeof window.tileActiveExplorationOptions !== 'undefined'){
+                        currentTile.revealedFeatures.forEach((feature, index) => {
+                            let actionDef, actionName, actionIdToUse, originalActionId;
+                            if (feature.type === 'small_resource_cache') {
+                                actionDef = window.tileActiveExplorationOptions['collect_revealed_resource'];
+                                if(actionDef) { actionName = actionDef.name.replace('{resourceName}', feature.resourceType || 'Cache'); originalActionId = 'collect_revealed_resource'; actionIdToUse = `${originalActionId}_feat_${index}`; }
+                            } else if (feature.type === 'ancient_data_fragment') {
+                                actionDef = window.tileActiveExplorationOptions['decipher_data_fragment'];
+                                if(actionDef) { actionName = actionDef.name; originalActionId = 'decipher_data_fragment'; actionIdToUse = `${originalActionId}_feat_${index}`; }
+                            } else if (feature.type === 'hidden_trap' && currentTile.hasActiveTrap) {
+                                actionDef = window.tileActiveExplorationOptions['disarm_trap_active'];
+                                if(actionDef) { actionName = actionDef.name; originalActionId = 'disarm_trap_active'; actionIdToUse = `${originalActionId}_feat_${index}`; }
+                            }
+                            if (actionDef) {
+                                 availableActions.push({ ...actionDef, name: actionName, id: actionIdToUse, originalActionId: originalActionId, dynamicData: feature });
+                            }
+                        });
                     }
-                } else { d.element.innerHTML = `<strong class="text-xs">${d.dir.charAt(0).toUpperCase() + d.dir.slice(1)}</strong><br><span class="text-xs text-gray-600 italic">Erreur données</span>`; }
-            } else { d.element.innerHTML = `<strong class="text-xs">${d.dir.charAt(0).toUpperCase() + d.dir.slice(1)}</strong><br><span class="text-xs text-gray-500 italic">Hors Limites</span>`; }
-        });
+    
+                    if (availableActions.length > 0) {
+                        availableActions.forEach(action => {
+                            const actionButton = document.createElement('button');
+                            actionButton.className = 'btn btn-secondary btn-sm w-full text-left p-2 flex items-center gap-x-2 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-accent-blue';
+                            let costString = ""; let canAfford = true; let meetsCondition = true;
+    
+                            if(action.cost && typeof getCostString === 'function'){
+                                costString = ` (Coût: ${getCostString(action.cost, false, true)})`;
+                                for(const res in action.cost){ if((gameState.resources[res] || 0) < action.cost[res]) canAfford = false; }
+                            }
+                            if(action.condition && typeof action.condition === 'function'){
+                                if(!action.condition(gameState)) meetsCondition = false;
+                            }
+                            actionButton.innerHTML = `<i class="${action.icon || 'ti-question-mark'} text-lg text-blue-300 flex-shrink-0"></i><div class="flex-grow"><strong class="text-sm text-gray-100">${action.name}</strong><p class="text-xs text-gray-400">${action.description}${costString}</p></div>`;
+                            if(!canAfford || !meetsCondition) {
+                                actionButton.classList.add('btn-disabled', 'opacity-50'); actionButton.disabled = true;
+                                if(!canAfford && action.cost) actionButton.title = `Manque: ${Object.entries(action.cost).filter(([r,v]) => (gameState.resources[r]||0) < v).map(([r,v]) => `${v - (gameState.resources[r]||0)} ${r}`).join(', ')}`;
+                                else if(!meetsCondition) actionButton.title = "Conditions non remplies.";
+                            }
+                            actionButton.onclick = () => {
+                                if (!actionButton.disabled && typeof window.explorationController !== 'undefined' && typeof window.explorationController.handleActionOnActiveTile === 'function') {
+                                    window.explorationController.handleActionOnActiveTile(action.originalActionId || action.id, centerX, centerY, action.dynamicData || null);
+                                }
+                            };
+                            this.activeTileUiElements.currentTileActionsGrid.appendChild(actionButton);
+                        });
+                    } else if (!currentTile.isFullyExplored) {
+                         this.activeTileUiElements.currentTileActionsGrid.innerHTML = `<p class="text-sm text-gray-400 italic p-2 text-center">Aucune action disponible pour le moment.</p>`;
+                    }
+                }
+            }
+        }
 
         if (this.activeTileUiElements.nanobotStatusContainer && gameState.nanobotStats && typeof window.MAX_MOBILITY_POINTS !== 'undefined') {
             this.activeTileUiElements.nanobotStatusContainer.innerHTML =
@@ -289,8 +301,8 @@ var explorationUI = {
     },
 
     addLogToActiveTileView: function(message, type = "info") {
-        if (!this.activeTileUiElements.currentTileLog) this.initializeActiveTileUIElements();
-        if (!this.activeTileUiElements.currentTileLog) { console.warn("addLogToActiveTileView: Élément currentTileLog non trouvé."); return;}
+        if (!this.activeTileUiElements.activeTileLog) this.initializeActiveTileUIElements();
+        if (!this.activeTileUiElements.activeTileLog) { console.warn("addLogToActiveTileView: Élément activeTileLog non trouvé."); return;}
 
         const entry = document.createElement('p');
         entry.className = 'text-xs mb-1';
@@ -300,8 +312,8 @@ var explorationUI = {
         else if (type === "system") entry.classList.add("text-gray-500", "italic");
         else entry.classList.add("text-gray-300");
         entry.innerHTML = message;
-        this.activeTileUiElements.currentTileLog.appendChild(entry);
-        this.activeTileUiElements.currentTileLog.scrollTop = this.activeTileUiElements.currentTileLog.scrollHeight;
+        this.activeTileUiElements.activeTileLog.appendChild(entry);
+        this.activeTileUiElements.activeTileLog.scrollTop = this.activeTileUiElements.activeTileLog.scrollHeight;
     },
 
     updateFullExplorationView: function() {
@@ -330,27 +342,12 @@ var explorationUI = {
         const tileInfoDisp = window.tileInfoDisplayEl; const explorationTitle = window.explorationTitleEl;
         if(!mapGrid || !nanobotMapPos || !tileInfoDisp || !explorationTitle ) { console.warn("explorationUI.updateExplorationMapDisplay: Eléments DOM carte manquants."); return; }
         
-        // LOGS DE DÉBOGAGE AJOUTÉS ICI
-        console.log("DEBUG explorationUI.updateExplorationMapDisplay - typeof window.WORLD_ZONES:", typeof window.WORLD_ZONES);
-        if(typeof window.WORLD_ZONES !== 'undefined' && window.WORLD_ZONES !== null) { // Vérifier aussi null
-            console.log("DEBUG explorationUI.updateExplorationMapDisplay - window.WORLD_ZONES keys:", Object.keys(window.WORLD_ZONES));
-        }
-        console.log("DEBUG explorationUI.updateExplorationMapDisplay - gameState:", typeof gameState);
-        if(gameState) {
-            console.log("DEBUG explorationUI.updateExplorationMapDisplay - gameState.map:", typeof gameState.map);
-            console.log("DEBUG explorationUI.updateExplorationMapDisplay - gameState.currentZoneId:", gameState.currentZoneId);
-            if(typeof window.WORLD_ZONES !== 'undefined' && window.WORLD_ZONES !== null && gameState.currentZoneId) { // Vérifier aussi null pour WORLD_ZONES
-                console.log("DEBUG explorationUI.updateExplorationMapDisplay - window.WORLD_ZONES[gameState.currentZoneId]:", typeof window.WORLD_ZONES[gameState.currentZoneId], window.WORLD_ZONES[gameState.currentZoneId]);
-            }
-        }
-        // FIN DES LOGS DE DÉBOGAGE
-
-        if (typeof window.WORLD_ZONES === 'undefined' || !gameState || !gameState.map || !gameState.currentZoneId || !window.WORLD_ZONES[gameState.currentZoneId]) { // MODIFIÉ
+        if (typeof window.WORLD_ZONES === 'undefined' || !gameState || !gameState.map || !gameState.currentZoneId || !window.WORLD_ZONES[gameState.currentZoneId]) { 
             mapGrid.innerHTML = "<p class='text-red-400 text-xs'>Erreur: Données de zone indisponibles.</p>"; return;
         }
         if(typeof this.updateZoneSelectionUI === 'function') this.updateZoneSelectionUI();
 
-        const currentZone = window.WORLD_ZONES[gameState.currentZoneId]; // MODIFIÉ
+        const currentZone = window.WORLD_ZONES[gameState.currentZoneId]; 
         explorationTitle.textContent = `Carte: ${currentZone.name}`;
         
         const mapScrollContainer = window.mapScrollContainerEl;
@@ -364,19 +361,32 @@ var explorationUI = {
         } else { return; }
 
         let scanButton = window.scanMapButtonEl;
-        if (scanButton && typeof window.SCAN_ENERGY_COST !== 'undefined' && typeof window.SCAN_COOLDOWN_DURATION_SECONDS !== 'undefined' && typeof window.TICK_SPEED !== 'undefined' && gameState && gameState.nanobotStats) {
-            const stats = gameState.nanobotStats; const scanCost = window.SCAN_ENERGY_COST;
-            const scanCooldownTimeInSeconds = window.SCAN_COOLDOWN_DURATION_SECONDS; // gameState.gameTime est en secondes
+        if (scanButton && typeof window.SCAN_MOBILITY_COST !== 'undefined' && typeof window.SCAN_COOLDOWN_DURATION_SECONDS !== 'undefined' && typeof window.TICK_SPEED !== 'undefined' && gameState && gameState.nanobotStats) {
+            const stats = gameState.nanobotStats; 
+            const scanCost = window.SCAN_MOBILITY_COST; 
+            const scanCooldownTimeInSeconds = window.SCAN_COOLDOWN_DURATION_SECONDS; 
             const onCooldown = gameState.gameTime < (stats.lastMapScanTime || 0) + scanCooldownTimeInSeconds;
-            const canAffordScan = gameState.resources.energy >= scanCost;
+            const canAffordScan = gameState.resources.mobility >= scanCost; 
             scanButton.disabled = onCooldown || !canAffordScan;
             scanButton.classList.toggle('btn-disabled', onCooldown || !canAffordScan);
             scanButton.classList.toggle('btn-info', !onCooldown && canAffordScan);
-            if (onCooldown) scanButton.textContent = `Scan Carte (CD: ${formatTime(Math.ceil(((stats.lastMapScanTime || 0) + scanCooldownTimeInSeconds - gameState.gameTime))) })`;
-            else if (!canAffordScan) scanButton.textContent = `Scan Carte (${scanCost} NRG) - Insuff.`;
-            else scanButton.textContent = `Scanner Carte (${scanCost} NRG)`;
+            
+            if (onCooldown) {
+                 scanButton.textContent = `Scan Carte (CD: ${formatTime(Math.ceil(((stats.lastMapScanTime || 0) + scanCooldownTimeInSeconds - gameState.gameTime))) })`;
+            } else if (!canAffordScan) {
+                 scanButton.textContent = `Scan Carte (${scanCost} MOB) - Insuff.`; 
+                 scanButton.title = `Nécessite ${scanCost} Mobilité. Vous avez ${Math.floor(gameState.resources.mobility)}.`;
+            } else {
+                 scanButton.textContent = `Scanner Carte (${scanCost} MOB)`; 
+                 scanButton.title = `Scanner la zone autour du Nanobot. Coût: ${scanCost} Mobilité.`;
+            }
+            
             if (!scanButton.dataset.listenerAttached) {
-                scanButton.addEventListener('click', () => { if (typeof window.explorationController !== 'undefined' && typeof window.explorationController.performScanOnWorldMap === 'function') window.explorationController.performScanOnWorldMap(); });
+                scanButton.addEventListener('click', () => { 
+                    if (!scanButton.disabled && typeof window.explorationController !== 'undefined' && typeof window.explorationController.performScanOnWorldMap === 'function') {
+                        window.explorationController.performScanOnWorldMap(); 
+                    }
+                });
                 scanButton.dataset.listenerAttached = 'true';
             }
         }
@@ -439,8 +449,7 @@ var explorationUI = {
                 case window.TILE_TYPES.THICK_VINES: classes.push('thick-vines'); break;
                 case window.TILE_TYPES.IMPASSABLE_DEEP_WATER: classes.push('impassable-water', 'explored-impassable'); break;
                 case window.TILE_TYPES.IMPASSABLE_HIGH_PEAK: classes.push('impassable-mountain', 'explored-impassable'); break;
-                case window.TILE_TYPES.PLAYER_BASE: classes.push('player-base-tile'); break; // Classe spécifique pour la tuile de base
-                // ... autres cas ...
+                case window.TILE_TYPES.PLAYER_BASE: classes.push('player-base-tile'); break; 
                 default: classes.push(this.getBaseTerrainClass(actualType) || 'grassland'); break;
             }
             if (tile.isFullyExplored && !isNanobotCurrentPos) classes.push('fully-explored-overlay');
@@ -455,7 +464,6 @@ var explorationUI = {
                 case window.TILE_TYPES.PRE_THICK_VINES: classes.push('unexplored-vines'); break;
                 case window.TILE_TYPES.PRE_RUIN_SILHOUETTE: classes.push('unexplored-ruin-outline'); break;
                 case window.TILE_TYPES.PRE_HOSTILE_STRUCTURE: classes.push('unexplored-enemy-base-outline'); break;
-                // ... autres cas ...
                 default: classes.push('unexplored-flat'); break;
             }
             if (tile.isScannedFromMap && tile.scannedFromMapActualType !== null && gameState.gameTime <= tile.scannedFromMapRevealTime) {
@@ -508,7 +516,7 @@ var explorationUI = {
         return window.tileData[baseOrActualType].name || "Terrain Inconnu";
     },
 
-    getStructureTypeName: function(structureType) { // Cette fonction n'est plus directement utilisée par getTileInfoForWorldMap
+    getStructureTypeName: function(structureType) { 
         return (typeof window.MAP_FEATURE_DATA !== 'undefined' && window.MAP_FEATURE_DATA[structureType]) ? window.MAP_FEATURE_DATA[structureType].name || "Struct. Non Ident." : "Struct. Inconnue";
     },
 
@@ -520,13 +528,12 @@ var explorationUI = {
         }
         if (content?.type === 'poi' && content.poiType && typeof window.MAP_FEATURE_DATA !== 'undefined' && window.MAP_FEATURE_DATA[content.poiType]?.name) return window.MAP_FEATURE_DATA[content.poiType].name;
         
-        // Fallback sur le nom du type de terrain si aucun contenu spécifique
         return this.getTerrainTypeName(actualType);
     },
 
     getTileIcon: function(type, content, isUnexploredBase = false) {
         if (isUnexploredBase) {
-            if (typeof window.tileData !== 'undefined' && window.tileData[type]?.icon) return window.tileData[type].icon; // Utiliser l'icône de tileData pour les PRE_ types
+            if (typeof window.tileData !== 'undefined' && window.tileData[type]?.icon) return window.tileData[type].icon; 
             return "ti ti-help-circle";
         }
         if (content) {
@@ -627,10 +634,10 @@ var explorationUI = {
     },
 
     updateZoneSelectionUI: function() {
-        if (!window.zoneListEl || typeof window.WORLD_ZONES === 'undefined' || !gameState) return; // MODIFIÉ
+        if (!window.zoneListEl || typeof window.WORLD_ZONES === 'undefined' || !gameState) return; 
         window.zoneListEl.innerHTML = '';
-        for (const zoneId in window.WORLD_ZONES) { // MODIFIÉ
-            const zone = window.WORLD_ZONES[zoneId]; // MODIFIÉ
+        for (const zoneId in window.WORLD_ZONES) { 
+            const zone = window.WORLD_ZONES[zoneId]; 
             const button = document.createElement('button');
             button.className = `btn btn-xs mr-1 mb-1 ${gameState.currentZoneId === zoneId ? 'btn-primary' : (gameState.unlockedZones.includes(zoneId) ? 'btn-secondary' : 'btn-disabled')}`;
             if (!gameState.unlockedZones.includes(zoneId)) button.disabled = true;

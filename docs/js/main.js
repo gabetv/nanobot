@@ -16,10 +16,10 @@ let eventLogEl, biomassEl, nanitesEl, mobilityEl, energyEl, crystalShardsEl, cry
     scanMapButtonEl, explorationLogEl, zoneListEl, tileInteractionPanelEl, tileInteractionDetailsEl, tileInteractionActionsEl,
     explorationTitleEl, worldSectionContentEl,
     activeTileExplorationUIEl, activeExplorationTitleEl, exitActiveExplorationBtnEl,
-    previewNorthEl, previewWestEl, previewEastEl, previewSouthEl,
+    // previewNorthEl, previewWestEl, previewEastEl, previewSouthEl, // Anciens previews supprimés
     currentTileViewContainerEl, currentTileViewEl, currentTileImageEl, currentTileDescriptionEl, currentTileActionsGridEl,
     activeTileLogContainerEl, activeTileLogEl,
-    activeExploreNavNorthBtn, activeExploreNavWestBtn, activeExploreNavEastBtn, activeExploreNavSouthBtn,
+    // activeExploreNavNorthBtn, activeExploreNavWestBtn, activeExploreNavEastBtn, activeExploreNavSouthBtn, // Anciens boutons de nav supprimés
     activeExplorationNanobotStatusEl,
     modalEl, modalTitleEl, modalMessageEl, modalConfirmBtn, modalCancelBtn,
     combatModalEl, combatModalContentEl, combatTurnIndicatorEl, combatNanobotEl, combatNanobotSpriteEl, combatNanobotHealthbarEl,
@@ -104,25 +104,20 @@ function initDOMReferences() {
     explorationTitleEl = document.getElementById('exploration-title'); window.explorationTitleEl = explorationTitleEl;
     worldSectionContentEl = document.getElementById('world-section-content'); window.worldSectionContentEl = worldSectionContentEl;
 
+    // UI Exploration Active (nouvelle structure)
     activeTileExplorationUIEl = document.getElementById('active-tile-exploration-ui'); window.activeTileExplorationUIEl = activeTileExplorationUIEl;
     activeExplorationTitleEl = document.getElementById('active-exploration-title'); window.activeExplorationTitleEl = activeExplorationTitleEl;
     exitActiveExplorationBtnEl = document.getElementById('exit-active-exploration-btn'); window.exitActiveExplorationBtnEl = exitActiveExplorationBtnEl;
-    previewNorthEl = document.getElementById('preview-north'); window.previewNorthEl = previewNorthEl;
-    previewWestEl = document.getElementById('preview-west'); window.previewWestEl = previewWestEl;
-    previewEastEl = document.getElementById('preview-east'); window.previewEastEl = previewEastEl;
-    previewSouthEl = document.getElementById('preview-south'); window.previewSouthEl = previewSouthEl;
-    currentTileViewContainerEl = document.getElementById('current-tile-view-container'); window.currentTileViewContainerEl = currentTileViewContainerEl;
-    currentTileViewEl = document.getElementById('current-tile-view'); window.currentTileViewEl = currentTileViewEl;
+    // Plus besoin de previewNorthEl, WestEl, EastEl, SouthEl et des boutons de nav directionnels ici car la grille 3x3 les remplace
+    
+    // Éléments dans le panneau de détails de l'exploration active
     currentTileImageEl = document.getElementById('current-tile-image'); window.currentTileImageEl = currentTileImageEl;
     currentTileDescriptionEl = document.getElementById('current-tile-description'); window.currentTileDescriptionEl = currentTileDescriptionEl;
     currentTileActionsGridEl = document.getElementById('current-tile-actions-grid'); window.currentTileActionsGridEl = currentTileActionsGridEl;
     activeTileLogContainerEl = document.getElementById('active-tile-log-container'); window.activeTileLogContainerEl = activeTileLogContainerEl;
     activeTileLogEl = document.getElementById('active-tile-log'); window.activeTileLogEl = activeTileLogEl;
-    activeExploreNavNorthBtn = document.getElementById('active-explore-nav-north'); window.activeExploreNavNorthBtn = activeExploreNavNorthBtn;
-    activeExploreNavWestBtn = document.getElementById('active-explore-nav-west'); window.activeExploreNavWestBtn = activeExploreNavWestBtn;
-    activeExploreNavEastBtn = document.getElementById('active-explore-nav-east'); window.activeExploreNavEastBtn = activeExploreNavEastBtn;
-    activeExploreNavSouthBtn = document.getElementById('active-explore-nav-south'); window.activeExploreNavSouthBtn = activeExploreNavSouthBtn;
     activeExplorationNanobotStatusEl = document.getElementById('active-exploration-nanobot-status'); window.activeExplorationNanobotStatusEl = activeExplorationNanobotStatusEl;
+
 
     modalEl = document.getElementById('modal'); window.modalEl = modalEl;
     modalTitleEl = document.getElementById('modal-title'); window.modalTitleEl = modalTitleEl;
@@ -288,7 +283,7 @@ function checkAllConfigLoaded() {
         { name: "BASE_COORDINATES", data: typeof window.BASE_COORDINATES !== 'undefined' ? window.BASE_COORDINATES : undefined, canBeEmpty: false },
         { name: "DEFAULT_MAP_SIZE", data: typeof window.DEFAULT_MAP_SIZE !== 'undefined' ? window.DEFAULT_MAP_SIZE : undefined, canBeEmpty: false },
         { name: "TILE_TYPES_TO_RESOURCE_KEY", data: typeof window.TILE_TYPES_TO_RESOURCE_KEY !== 'undefined' ? window.TILE_TYPES_TO_RESOURCE_KEY : undefined, canBeEmpty: true },
-        { name: "NANOBOT_BASE_PATROL_POINTS", data: typeof window.NANOBOT_BASE_PATROL_POINTS !== 'undefined' ? window.NANOBOT_BASE_PATROL_POINTS : undefined, isArray: true, canBeEmpty: true }, // Ajouté
+        { name: "NANOBOT_BASE_PATROL_POINTS", data: typeof window.NANOBOT_BASE_PATROL_POINTS !== 'undefined' ? window.NANOBOT_BASE_PATROL_POINTS : undefined, isArray: true, canBeEmpty: true },
     ];
     let allLoaded = true;
     let missingConfigsMessages = [];
@@ -483,9 +478,19 @@ function gameLoop(manualTriggerTime) {
     if(typeof window.uiUpdates !== 'undefined') {
         if (typeof window.uiUpdates.updateResourceDisplay === 'function') window.uiUpdates.updateResourceDisplay();
         if (typeof window.uiUpdates.updateXpBar === 'function') window.uiUpdates.updateXpBar();
+        
         const activeMainSectionButton = document.querySelector('#main-navigation .nav-button.active');
         if (activeMainSectionButton && activeMainSectionButton.dataset.section === 'base-section') {
             if (typeof window.uiUpdates.updateBaseStatusDisplay === 'function') window.uiUpdates.updateBaseStatusDisplay();
+        }
+        if (activeMainSectionButton && activeMainSectionButton.dataset.section === 'world-section') {
+            const activeSubTabButton = document.querySelector('#world-section .sub-nav-button.active');
+            if (activeSubTabButton && activeSubTabButton.dataset.subtab === 'exploration-subtab') {
+                // Vérifier si on est PAS en mode exploration active avant de mettre à jour le bouton scan
+                 if (!gameState.map.activeExplorationTileCoords && typeof window.uiUpdates.updateScanButtonCooldown === 'function') {
+                    window.uiUpdates.updateScanButtonCooldown();
+                }
+            }
         }
     }
     if(typeof updateGameTimeAndCycleDisplay === 'function') updateGameTimeAndCycleDisplay();

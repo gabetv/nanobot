@@ -152,62 +152,128 @@
         }
         #center-map-btn { position: absolute; bottom: 8px; right: 8px; z-index: 20; }
 
-        /* Styles UI Exploration Active */
-        #active-tile-exploration-ui { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(var(--bg-primary-rgb), 0.98); z-index: 100; display: flex; flex-direction: column; padding: 0.75rem; box-sizing: border-box; overflow: hidden; }
+        /* Styles UI Exploration Active - Refonte */
+        #active-tile-exploration-ui { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(var(--bg-primary-rgb), 0.98); z-index: 100; display: flex; flex-direction: column; padding: 0.5rem; box-sizing: border-box; overflow: hidden; }
         #active-tile-exploration-ui.hidden { display: none !important; }
         #active-exploration-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-shrink: 0; }
         #active-exploration-header h2 { font-family: 'Orbitron'; font-size: 1.1rem; color: var(--accent-blue); }
-        @media (min-width: 640px) { #active-exploration-header h2 { font-size: 1.25rem; } }
-        #active-exploration-main-content { flex-grow: 1; display: grid; grid-template-columns: 1fr 2.5fr 1fr; grid-template-rows: auto 1fr auto; gap: 0.5rem; overflow: hidden; }
-        #preview-north { grid-column: 1 / 4; grid-row: 1 / 2; } #preview-west { grid-column: 1 / 2; grid-row: 2 / 3; }
-        #current-tile-view-container { grid-column: 2 / 3; grid-row: 2 / 3; display: flex; flex-direction: column; overflow:hidden; }
-        #preview-east { grid-column: 3 / 4; grid-row: 2 / 3; } #active-tile-log-container { grid-column: 1 / 4; grid-row: 3 / 4; }
-        #preview-south { display:none; }
-        .adjacent-preview-slot { background-color: rgba(var(--bg-secondary-rgb), 0.7); border: 1px solid var(--border-color); border-radius: 0.25rem; padding: 0.3rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 60px; transition: background-color 0.2s; gap: 0.1rem; }
-        .adjacent-preview-slot.can-move { cursor: pointer; } .adjacent-preview-slot.can-move:hover { background-color: var(--bg-tertiary); }
-        .adjacent-preview-slot strong { font-size: 0.65rem; color: var(--text-secondary); display: block; line-height: 1.1; }
-        .adjacent-preview-slot i { font-size: 1.4rem; color: var(--text-primary); margin-top: 0; margin-bottom: 0; }
-        .adjacent-preview-slot .terrain-name-preview { font-size: 0.6rem; color: var(--text-secondary); line-height: 1.1; display: block; }
-        .adjacent-preview-slot .content-preview { font-size: 0.55rem; font-style: italic; line-height: 1.1; display: block; }
-        .adjacent-preview-slot .content-preview.enemy { color: var(--accent-red); font-weight: bold; } .adjacent-preview-slot .content-preview.resource { color: var(--accent-green); }
-        .adjacent-preview-slot.blocked-preview { opacity: 0.6; cursor: not-allowed; border-style: dashed; }
-        .adjacent-preview-slot.blocked-preview:hover { background-color: rgba(var(--bg-secondary-rgb), 0.7); }
-        #current-tile-view { border: 2px solid var(--accent-blue); box-shadow: 0 0 8px rgba(var(--accent-blue-rgb), 0.4); background-color: var(--bg-tertiary); border-radius: 0.375rem; padding: 0.5rem; display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; }
-        #current-tile-image { width: 100%; height: 120px; background-color: var(--bg-primary); background-size: cover; background-position: center; border-radius: 0.25rem; margin-bottom: 0.5rem; border: 1px solid var(--border-color); }
-        #current-tile-description { font-size: 0.75rem; margin-bottom: 0.5rem; color: var(--text-secondary); max-height:60px; overflow-y:auto;}
+        
+        #active-exploration-content-wrapper { flex-grow: 1; display: flex; flex-direction: column; md:flex-row; gap: 0.5rem; overflow: hidden; }
+
+        #active-exploration-main-grid-view { 
+            flex-grow: 1; display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            grid-template-rows: repeat(3, 1fr); 
+            gap: 0.25rem; 
+            aspect-ratio: 1 / 1; /* Pour une grille carrée */
+            max-width: 45vh; /* Limiter la taille de la grille pour ne pas être trop grande */
+            max-height: 45vh;
+            margin: 0 auto; /* Centrer la grille */
+            align-self: center; /* Centrer verticalement dans le flex column */
+        }
+        
+        .active-explore-grid-cell {
+            background-color: rgba(var(--bg-secondary-rgb), 0.7);
+            border: 1px solid var(--border-color);
+            border-radius: 0.25rem;
+            padding: 0.2rem; /* Réduire padding pour plus de place */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            transition: background-color 0.2s, transform 0.1s;
+            overflow: hidden; /* Pour les textes longs */
+            position: relative; /* Pour les overlays (ex: Nanobot) */
+        }
+        .active-explore-grid-cell.current-nanobot-pos {
+            border: 2px solid var(--accent-blue);
+            box-shadow: 0 0 8px rgba(var(--accent-blue-rgb), 0.5);
+            transform: scale(1.05);
+            z-index: 10;
+        }
+        .active-explore-grid-cell.can-move:hover {
+            background-color: var(--bg-tertiary);
+            transform: scale(1.03);
+        }
+        .active-explore-grid-cell.blocked-preview {
+            opacity: 0.6; cursor: not-allowed; border-style: dashed;
+        }
+        .active-explore-grid-cell.blocked-preview:hover {
+            background-color: rgba(var(--bg-secondary-rgb), 0.7); transform: scale(1);
+        }
+
+        .active-explore-grid-cell i { font-size: 1.2rem; /* Ajuster pour la taille de la cellule */ color: var(--text-primary); margin-bottom: 0.1rem; }
+        .active-explore-grid-cell .terrain-name-preview { font-size: 0.5rem; color: var(--text-secondary); line-height: 1; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+        .active-explore-grid-cell .content-preview { font-size: 0.45rem; font-style: italic; line-height: 1; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;}
+        .active-explore-grid-cell .content-preview.enemy { color: var(--accent-red); font-weight: bold; }
+        .active-explore-grid-cell .content-preview.resource { color: var(--accent-green); }
+
+        /* Nanobot icon in grid view */
+        .nanobot-grid-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5rem; color: var(--accent-blue); z-index: 5; animation: idle-breath 3s infinite ease-in-out; }
+
+
+        #active-exploration-detail-panel {
+            /* md:w-1/3; Pour desktop, panneau à côté */
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Important pour que les enfants avec overflow-y scrollent */
+            margin-top: 0.5rem; /* Espace entre grille et panneau détails en mode mobile */
+            flex-shrink: 0; /* Pour éviter qu'il ne rétrécisse trop en mobile */
+            height: 40vh; /* Hauteur pour mobile, sera ajusté pour desktop */
+        }
+        
+        #current-tile-view-details { flex-grow: 1; overflow-y: auto; /* Contenu principal des détails */ }
+        #current-tile-image { width: 100%; height: 100px; background-color: var(--bg-primary); background-size: cover; background-position: center; border-radius: 0.25rem; margin-bottom: 0.5rem; border: 1px solid var(--border-color); }
+        #current-tile-description { font-size: 0.75rem; margin-bottom: 0.5rem; color: var(--text-secondary); max-height:50px; overflow-y:auto;}
         #current-tile-description strong { color: var(--text-primary); }
-        #current-tile-actions-grid { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.3rem; padding-right: 0.25rem; }
-        #current-tile-actions-grid .btn { justify-content: flex-start; background-color: var(--bg-secondary); border: 1px solid var(--border-color); transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out; padding: 0.5rem; align-items: flex-start; }
+        #current-tile-actions-grid { overflow-y: auto; display: flex; flex-direction: column; gap: 0.3rem; padding-right:0.2rem; max-height: calc(40vh - 160px); /* Ajuster selon hauteur image + description + log */ }
+        #current-tile-actions-grid .btn { justify-content: flex-start; background-color: var(--bg-secondary); border: 1px solid var(--border-color); transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out; padding: 0.4rem; align-items: flex-start; }
         #current-tile-actions-grid .btn:not(.btn-disabled):hover { background-color: var(--border-color); border-color: var(--text-secondary); }
-        #current-tile-actions-grid .btn i { font-size: 1.25rem; margin-right: 0.5rem; color: var(--accent-blue); flex-shrink: 0; margin-top: 0.1rem; }
-        #current-tile-actions-grid .btn div strong { font-size: 0.8rem; color: var(--text-primary); display: block; margin-bottom: 0.1rem; }
-        #current-tile-actions-grid .btn div p { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.3; }
+        #current-tile-actions-grid .btn i { font-size: 1.1rem; margin-right: 0.4rem; color: var(--accent-blue); flex-shrink: 0; margin-top: 0.05rem; }
+        #current-tile-actions-grid .btn div strong { font-size: 0.75rem; color: var(--text-primary); display: block; margin-bottom: 0.05rem; }
+        #current-tile-actions-grid .btn div p { font-size: 0.65rem; color: var(--text-secondary); line-height: 1.2; }
         #current-tile-actions-grid .btn.btn-disabled div strong, #current-tile-actions-grid .btn.btn-disabled div p, #current-tile-actions-grid .btn.btn-disabled i { color: var(--text-secondary) !important; opacity: 0.6; }
         #current-tile-actions-grid .btn div p .cost-part.insufficient { color: var(--accent-red) !important; font-weight: bold; }
-        #active-tile-log-container { background-color: rgba(var(--bg-secondary-rgb),0.7); border: 1px solid var(--border-color); padding: 0.3rem; border-radius: 0.25rem; height: 70px; overflow-y: auto; font-size: 0.7rem; }
+        
+        #active-tile-log-container { background-color: rgba(var(--bg-secondary-rgb),0.7); border: 1px solid var(--border-color); padding: 0.3rem; border-radius: 0.25rem; height: 60px; overflow-y: auto; font-size: 0.65rem; margin-top: 0.5rem; flex-shrink:0; }
         #active-tile-log p { margin-bottom: 0.1rem; }
-        #active-exploration-navigation-buttons { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 0.25rem; width: 100px; height:100px; margin: 0.5rem auto 0; flex-shrink: 0; }
-        #active-explore-nav-north { grid-column: 2; grid-row: 1; } #active-explore-nav-west  { grid-column: 1; grid-row: 2; }
-        #active-exploration-navigation-buttons > div {display: flex; align-items:center; justify-content:center;}
-        #active-explore-nav-east  { grid-column: 3; grid-row: 2; } #active-explore-nav-south { grid-column: 2; grid-row: 3; }
-        #active-exploration-navigation-buttons .btn { padding: 0.25rem; font-size:1rem; }
-        #active-exploration-navigation-buttons .btn-disabled { background-color: var(--border-color) !important; opacity:0.5; }
-        #active-exploration-footer { margin-top: 0.5rem; padding-top: 0.3rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; font-size: 0.7rem; color: var(--text-secondary); }
-        @media (min-width: 640px) { /* sm */
-            #active-exploration-header h2 { font-size: 1.25rem; } .adjacent-preview-slot { min-height: 80px; } .adjacent-preview-slot i { font-size:1.5rem; } .adjacent-preview-slot strong {font-size: 0.7rem;} .adjacent-preview-slot .terrain-name-preview { font-size: 0.65rem; } .adjacent-preview-slot .content-preview { font-size: 0.6rem; } #current-tile-image { height: 150px; } #current-tile-description { font-size:0.8rem; } #current-tile-actions-grid .btn div strong {font-size: 0.8rem;} #current-tile-actions-grid .btn div p {font-size: 0.7rem;} #active-tile-log-container { height: 80px; } #active-exploration-footer {font-size:0.75rem;} }
-        @media (min-width: 768px) { /* md */
-             #active-exploration-main-content { grid-template-columns: 1fr 1.5fr 1fr; }
-             #current-tile-image { height: 180px; }
-             #current-tile-actions-grid .btn i { font-size: 1.35rem; }
-             #current-tile-actions-grid .btn div strong { font-size: 0.875rem; }
-             #current-tile-actions-grid .btn div p { font-size: 0.75rem; }
-             #active-tile-log-container { height: 90px; }
+
+        #active-exploration-footer { margin-top: auto; padding-top: 0.3rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; font-size: 0.7rem; color: var(--text-secondary); }
+
+        /* Responsive pour la nouvelle UI d'exploration active */
+        @media (min-width: 768px) { /* md et plus */
+            #active-exploration-content-wrapper { flex-direction: row; }
+            #active-exploration-main-grid-view { 
+                max-width: none; max-height: none; /* Permettre à la grille de prendre plus de place */
+                width: 200px; /* Fixer une largeur pour la grille */
+                height: 200px; /* Fixer une hauteur pour la grille */
+                align-self: flex-start; /* Aligner en haut */
+                margin: 0;
+            }
+            .active-explore-grid-cell i { font-size: 1.5rem; }
+            .active-explore-grid-cell .terrain-name-preview { font-size: 0.6rem; }
+            .active-explore-grid-cell .content-preview { font-size: 0.55rem; }
+            .nanobot-grid-icon { font-size: 2rem; }
+
+            #active-exploration-detail-panel { 
+                flex-grow: 1; margin-top: 0; height: auto; /* Prend le reste de la hauteur */
+            }
+            #current-tile-image { height: 150px; }
+            #current-tile-actions-grid { max-height: none; /* Permettre plus d'espace pour les actions */ }
+             #active-tile-log-container { height: 80px; }
         }
-         @media (min-width: 1024px) { /* lg */
-             #active-exploration-main-content { grid-template-columns: 200px 1fr 200px; gap: 0.75rem; }
-             .adjacent-preview-slot { padding: 0.5rem; } .adjacent-preview-slot i { font-size: 1.75rem; }
-             #current-tile-image { height: 200px; } #active-tile-log-container { height: 100px; }
-         }
+        @media (min-width: 1024px) { /* lg */
+            #active-exploration-main-grid-view { width: 250px; height: 250px; }
+            .active-explore-grid-cell i { font-size: 1.75rem; }
+            .nanobot-grid-icon { font-size: 2.5rem; }
+            #current-tile-image { height: 180px; }
+        }
+
 
         /* Styles Communs (Boutons, Modales, Scrollbar, Animations) */
         .btn { transition: all 0.3s ease; border-radius: 0.375rem; padding: 0.5rem 1rem; font-weight: 600; cursor: pointer; text-align: center; display: inline-flex; align-items: center; justify-content: center; }
@@ -615,30 +681,23 @@
                 <h2 id="active-exploration-title">Exploration Active</h2>
                 <button id="exit-active-exploration-btn" class="btn btn-danger btn-sm"><i class="ti ti-arrow-back-up mr-1"></i> Carte</button>
             </header>
-            <div id="active-exploration-main-content">
-                <div id="preview-north" class="adjacent-preview-slot"></div>
-                <div id="preview-west" class="adjacent-preview-slot"></div>
-                <div id="current-tile-view-container">
-                    <div id="current-tile-view">
+            <div id="active-exploration-content-wrapper">
+                 <!-- Grille de prévisualisation -->
+                <div id="active-exploration-main-grid-view">
+                    <!-- Les 9 cellules de la grille seront générées par JS ici -->
+                </div>
+                 <!-- Panneau de détails pour la case actuelle (celle du Nanobot) -->
+                <div id="active-exploration-detail-panel">
+                    <div id="current-tile-view-details">
                         <div id="current-tile-image"></div>
                         <div id="current-tile-description"></div>
                         <div id="current-tile-actions-grid"></div>
                     </div>
+                    <div id="active-tile-log-container">
+                        <h4 class="font-orbitron text-xs text-gray-400 mb-1">Journal de Case:</h4>
+                        <div id="active-tile-log"></div>
+                    </div>
                 </div>
-                <div id="preview-east" class="adjacent-preview-slot"></div>
-                <div id="active-tile-log-container">
-                    <h4 class="font-orbitron text-xs text-gray-400 mb-1">Journal de Case:</h4>
-                    <div id="active-tile-log"></div>
-                </div>
-                 <!-- Preview South (caché par défaut mais peut être activé via CSS/JS si besoin) -->
-                 <div id="preview-south" class="adjacent-preview-slot" style="display:none;"></div>
-            </div>
-             <div id="active-exploration-navigation-buttons">
-                <button id="active-explore-nav-north" class="btn btn-primary"><i class="ti ti-arrow-up"></i></button>
-                <button id="active-explore-nav-west"  class="btn btn-primary"><i class="ti ti-arrow-left"></i></button>
-                <div class="flex items-center justify-content:center"><i class="ti ti-compass text-2xl text-gray-500"></i></div>
-                <button id="active-explore-nav-east"  class="btn btn-primary"><i class="ti ti-arrow-right"></i></button>
-                <button id="active-explore-nav-south" class="btn btn-primary"><i class="ti ti-arrow-down"></i></button>
             </div>
             <footer id="active-exploration-footer">
                 <div id="active-exploration-nanobot-status"></div>
