@@ -203,39 +203,88 @@ function gainXP(amount) {
 }
 window.gainXP = gainXP;
 
+// Doit être défini avant son utilisation dans toggleNanobotDefendBase
+const NANOBOT_BASE_PATROL_POINTS = (typeof window.BASE_GRID_SIZE !== 'undefined' && window.BASE_GRID_SIZE.rows && window.BASE_GRID_SIZE.cols) ? [
+    { row: Math.floor(window.BASE_GRID_SIZE.rows / 2) - 2, col: Math.floor(window.BASE_GRID_SIZE.cols / 2) }, // Nord
+    { row: Math.floor(window.BASE_GRID_SIZE.rows / 2), col: Math.floor(window.BASE_GRID_SIZE.cols / 2) + 2 }, // Est
+    { row: Math.floor(window.BASE_GRID_SIZE.rows / 2) + 2, col: Math.floor(window.BASE_GRID_SIZE.cols / 2) }, // Sud
+    { row: Math.floor(window.BASE_GRID_SIZE.rows / 2), col: Math.floor(window.BASE_GRID_SIZE.cols / 2) - 2 }, // Ouest
+] : []; // Tableau vide si BASE_GRID_SIZE n'est pas prêt (devrait être initialisé avant)
+window.NANOBOT_BASE_PATROL_POINTS = NANOBOT_BASE_PATROL_POINTS;
+
+
 function toggleNanobotDefendBase() {
-    if (!window.gameState || !window.gameState.nanobotStats ) {
-        console.error("toggleNanobotDefendBase: gameState ou nanobotStats manquants.");
+    if (!window.gameState || !window.gameState.nanobotStats || typeof window.BASE_GRID_SIZE === 'undefined') {
+        console.error("toggleNanobotDefendBase: gameState, nanobotStats ou BASE_GRID_SIZE manquants.");
         if(typeof addLogEntry === 'function') addLogEntry("Erreur système : Impossible de basculer le mode défense.", "error", window.eventLogEl, window.gameState?.eventLog);
         return;
     }
 
-    let playerBaseZone = null;
-    let playerBaseCoords = window.BASE_COORDINATES || {x:0, y:0}; // Fallback
-
-    if (typeof window.WORLD_ZONES !== 'undefined') { // MODIFIÉ ICI pour WORLD_ZONES
-        const playerBaseZoneKey = Object.keys(window.WORLD_ZONES).find(key => window.WORLD_ZONES[key].basePlayerCoordinates);
-        if (playerBaseZoneKey) {
-            playerBaseZone = window.WORLD_ZONES[playerBaseZoneKey];
-            playerBaseCoords = playerBaseZone.basePlayerCoordinates || playerBaseCoords;
-        }
-    } else {
-        // Ce log sera affiché si WORLD_ZONES n'est pas défini au moment de l'appel
-        console.warn("toggleNanobotDefendBase: window.WORLD_ZONES non défini au moment de l'appel. Utilisation des coordonnées de base par défaut.");
-    }
-
     window.gameState.nanobotStats.isDefendingBase = !window.gameState.nanobotStats.isDefendingBase;
+
+    if (window.gameState.nanobotStats.isDefendingBase) {
+        if (NANOBOT_BASE_PATROL_POINTS.length > 0) {
+            let initialPatrolPoint = NANOBOT_BASE_PATROL_POINTS[0];
+            let r = initialPatrolPoint.row;
+            let c = initialPatrolPoint.col;
+
+            // S'assurer que la grille de base est initialisée et que la case de patrouille est valide
+            if (window.gameState.baseGrid && window.gameState.baseGrid[r] && 
+                r >= 0 && r < window.BASE_GRID_SIZE.rows && 
+                c >= 0 && c < window.BASE_GRID_SIZE.cols &&
+                !window.gameState.baseGrid[r][c]) { // Vérifie si la case est vide (null)
+                window.gameState.nanobotStats.baseDefensePosition = { ...initialPatrolPoint };
+                window.gameState.nanobotStats.baseDefensePatrolIndex = 0;
+            } else { 
+                const coreRow = Math.floor(window.BASE_GRID_SIZE.rows / 2);
+                const coreCol = Math.floor(window.BASE_GRID_SIZE.cols / 2);
+                const adjacents = [
+                    {r: coreRow-1, c: coreCol}, {r: coreRow+1, c: coreCol}, 
+                    {r: coreRow, c: coreCol-1}, {r: coreRow, c: coreCol+1}
+                ];
+                let foundSpot = false;
+                for (const spot of adjacents) {
+                    if (window.gameState.baseGrid && window.gameState.baseGrid[spot.r] &&
+                        spot.r >= 0 && spot.r < window.BASE_GRID_SIZE.rows && 
+                        spot.c >= 0 && spot.c < window.BASE_GRID_SIZE.cols &&
+                        !window.gameState.baseGrid[spot.r][spot.c]) {
+                        window.gameState.nanobotStats.baseDefensePosition = { row: spot.r, col: spot.c };
+                        window.gameState.nanobotStats.baseDefensePatrolIndex = 0; 
+                        foundSpot = true;
+                        break;
+                    }
+                }
+                if (!foundSpot) {
+                    console.warn("Impossible de trouver une case vide pour placer le Nanobot en défense.");
+                    window.gameState.nanobotStats.baseDefensePosition = null;
+                }
+            }
+        } else {
+            window.gameState.nanobotStats.baseDefensePosition = null; 
+            console.warn("Aucun point de patrouille défini pour la défense du Nanobot.");
+        }
+        window.gameState.nanobotStats.baseDefenseTargetEnemyId = null;
+        window.gameState.nanobotStats.baseDefenseLastActionTime = window.gameState.gameTime;
+
+        if(typeof addLogEntry === 'function') addLogEntry(`Nexus-7 se déploie pour défendre le noyau.`, 'system', window.eventLogEl, window.gameState.eventLog);
+    } else {
+        if(typeof addLogEntry === 'function') addLogEntry(`Nexus-7 revient en mode autonome.`, 'system', window.eventLogEl, window.gameState.eventLog);
+        window.gameState.nanobotStats.baseDefensePosition = null;
+        window.gameState.nanobotStats.baseDefenseTargetEnemyId = null;
+    }
+    
     const btn = window.toggleNanobotDefendBaseBtn;
     if (btn) {
-        btn.textContent = window.gameState.nanobotStats.isDefendingBase ? "Nexus-7 assiste le Noyau" : "Nexus-7 en mode autonome";
+        btn.innerHTML = `<i class="ti ti-home-shield mr-2"></i>${window.gameState.nanobotStats.isDefendingBase ? "Nexus-7 Déf. Noyau" : "Nexus-7 Autonome"}`;
         btn.classList.toggle('btn-success', window.gameState.nanobotStats.isDefendingBase);
         btn.classList.toggle('btn-secondary', !window.gameState.nanobotStats.isDefendingBase);
     }
-    if(typeof addLogEntry === 'function') addLogEntry(`Nexus-7 ${window.gameState.nanobotStats.isDefendingBase ? "assiste maintenant la défense du noyau." : "est revenu en mode autonome."}`, 'system', window.eventLogEl, window.gameState.eventLog);
     
-    if(typeof calculateBaseStats === 'function') calculateBaseStats();
-    if(typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.updateBaseStatusDisplay === 'function') window.uiUpdates.updateBaseStatusDisplay();
+    if(typeof calculateBaseStats === 'function') calculateBaseStats(); 
+    if(typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.updateBaseStatusDisplay === 'function') window.uiUpdates.updateBaseStatusDisplay(); 
+    if(typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.updateBasePreview === 'function') window.uiUpdates.updateBasePreview(); 
 }
 window.toggleNanobotDefendBase = toggleNanobotDefendBase;
+
 
 console.log("gameplayLogic_nanobot.js - Fonctions liées au Nanobot définies.");

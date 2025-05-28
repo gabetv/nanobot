@@ -277,14 +277,30 @@
         .health-bar-container { width: 60px; height: 7px; background-color: #718096; border-radius: 3px; margin: 3px auto 0; overflow: hidden; border: 1px solid var(--border-color);}
         .health-bar { height: 100%; background-color: var(--accent-green); width: 100%; transition: width 0.5s ease; }
         .health-bar.low { background-color: #f56565; /* red-500 */ } .health-bar.medium { background-color: #faf089; /* yellow-300 */ }
+        .health-bar.shielded { background-color: var(--accent-blue) !important; } /* Style pour barre avec bouclier */
+        
+        .combatant-effects-display { display: flex; gap: 0.25rem; margin-top: 0.25rem; justify-content: center; flex-wrap: wrap; min-height: 18px; /* Pour éviter saut de layout */}
+        .effect-badge { font-size: 0.6rem; padding: 0.1rem 0.3rem; border-radius: 0.75rem; border-width: 1px; white-space: nowrap; }
+        .effect-badge i { font-size: 0.7rem; vertical-align: middle; }
+
+
         .damage-float { position: absolute; top: -15px; left: 50%; font-size: 1rem; font-weight: bold; color: var(--accent-red); animation: floatUpBase 1s ease-out forwards; opacity: 0; white-space: nowrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.7); z-index: 20; }
         .damage-float.critical { color: var(--accent-yellow) !important; font-size: 1.3rem; animation: floatUpCritical 1.5s ease-out forwards;}
         .damage-float[style*="color: rgb(72, 187, 120)"] { animation: floatUpHeal 1.2s ease-out forwards; } /* Soin (vert) */
         .damage-float[style*="color: rgb(160, 174, 192)"] { animation: floatMiss 0.8s ease-in forwards; } /* Raté (gris) */
+        .damage-float[style*="color: var(--accent-blue)"] { color: var(--accent-blue) !important; animation: floatUpShieldHit 1s ease-out forwards; } /* Dégât sur bouclier */
 
-        #combat-actions-container button { min-width: 100px; }
+
+        #combat-actions-container { margin-top: 0.5rem; display:flex; flex-wrap:wrap; gap:0.5rem; justify-content: center; align-items: stretch;}
+        #combat-actions-container button { min-width: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0.4rem 0.6rem; height: auto; }
+        #combat-actions-container button i { font-size: 1.1rem; margin-bottom: 0.1rem; }
+        #combat-actions-container button .skill-name { font-size: 0.75rem; line-height: 1.1; display: block; } /* Classe ajoutée si besoin via JS */
+        #combat-actions-container button .skill-details { font-size: 0.6rem; color: var(--text-secondary); line-height: 1; display: block; margin-top: 0.1rem; } /* Classe ajoutée si besoin via JS */
+
         #combat-actions-container button.skill-button.on-cooldown { background-color: var(--border-color) !important; color: var(--text-secondary) !important; cursor: not-allowed; opacity: 0.6; }
-        #combat-actions-container button.skill-button.insufficient-resources { background-color: var(--accent-red) !important; color: white !important; opacity: 0.7; cursor: not-allowed; }
+        #combat-actions-container button.skill-button.insufficient-resources { background-color: rgba(var(--accent-red-rgb),0.7) !important; color: white !important; opacity: 0.8; cursor: not-allowed; border: 1px solid var(--accent-red); }
+        #combat-actions-container button.skill-button.insufficient-resources .skill-details { color: #fed7d7 !important; }
+
 
         .quest-item { background-color: var(--bg-secondary); padding: 0.5rem; border-radius: 0.25rem; margin-bottom: 0.5rem; border-left: 4px solid transparent; }
         .quest-item h4 { font-size: 0.875rem; margin-bottom: 0.1rem;} .quest-item p { font-size: 0.75em; }
@@ -319,16 +335,21 @@
         .skill-effect { color: var(--text-secondary); font-style: italic;}
 
         #base-preview-container { max-width: 100%; aspect-ratio: calc(var(--base-grid-cols, 13) / var(--base-grid-rows, 9)); background-color: var(--bg-secondary); display: grid; gap: 1px; border: 1px solid var(--border-color); position: relative; overflow: hidden; }
-        .base-preview-cell { background-color: var(--bg-primary); display: flex; align-items: center; justify-content: center; box-sizing: border-box; font-size: 0.5rem; }
+        .base-preview-cell { background-color: var(--bg-primary); display: flex; align-items: center; justify-content: center; box-sizing: border-box; font-size: 0.5rem; position:relative; /* Pour positionner le nanobot */ }
         .base-preview-cell.core .base-core-visual { width: 60%; height: 60%; background-color: var(--accent-green); border: 1px solid #38a169; border-radius: 2px; color: var(--bg-primary); font-weight: bold; display: flex; align-items: center; justify-content: center; }
         .base-preview-cell.occupied { background-color: var(--bg-tertiary); }
         .base-preview-cell.placement-blocked { cursor: not-allowed; background-color: rgba(var(--accent-red-rgb),0.2) !important; }
         .base-preview-cell.placement-active { cursor: copy; background-color: rgba(var(--accent-green-rgb),0.4) !important; }
         .base-preview-cell.placement-active:hover { background-color: rgba(var(--accent-green-rgb),0.6) !important; }
-        .defense-visual-on-grid { text-align: center; font-weight: bold; transition: background-color 0.3s ease, border-color 0.3s ease; z-index: 2; box-sizing: border-box; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding: 1px; }
+        .defense-visual-on-grid { text-align: center; font-weight: bold; transition: background-color 0.3s ease, border-color 0.3s ease; z-index: 2; box-sizing: border-box; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding: 1px; display:flex; align-items:center; justify-content:center; width:100%; height:100%;}
         .defense-visual-on-grid.laserTurret { background-color: rgba(230, 160, 40, 0.7); border: 1px solid #F6E05E; color: black; }
         .defense-visual-on-grid.gatlingTurret { background-color: rgba(160, 174, 192, 0.7); border: 1px solid #A0AEC0; color: black; }
         .defense-visual-on-grid.reinforcedWall { background-color: rgba(113, 128, 150, 0.7); border: 1px solid  #718096; font-size: 0.5rem !important; writing-mode: vertical-rl; text-orientation: mixed; color: white; }
+        
+        .base-nanobot-visual { /* background-color: rgba(var(--accent-blue-rgb), 0.5); */ display: flex; align-items: center; justify-content: center; font-size: 1rem; width: 100%; height: 100%; }
+        .base-nanobot-visual i { animation: idle-breath 2.5s infinite ease-in-out; }
+
+
         .base-enemy-visual { width: 10px; height: 10px; background-color: var(--accent-red); border: 1px solid white; border-radius: 50%; position: absolute; transition: transform 0.5s ease-out, left 0.5s linear, top 0.5s linear; box-shadow: 0 0 4px var(--accent-red); z-index: 15; background-size: contain; background-repeat: no-repeat; background-position: center; }
         .base-enemy-visual.drone { background-color: #e53e3e; } .base-enemy-visual.bot { background-color: #dd6b20; } .base-enemy-visual.crawler { background-color: #d69e2e; }
         .boss-visual-dynamic { width: 26px; height: 26px; background-color: #7f1d1d; border: 2px solid gold; border-radius: 3px; box-shadow: 0 0 8px gold; z-index: 15; background-size: contain; background-repeat: no-repeat; background-position: center; }
@@ -361,6 +382,8 @@
         @keyframes floatUpCritical { 0% { opacity: 1; transform: translate(-50%, 0px) scale(1); } 15% { transform: translate(-50%, -15px) scale(1.4); } 30% { transform: translate(-50%, -10px) scale(1.2); } 100% { opacity: 0; transform: translate(-50%, -60px) scale(0.8); } }
         @keyframes floatUpHeal { 0% { opacity: 1; transform: translate(-50%, 5px) scale(0.9); } 100% { opacity: 0; transform: translate(-50%, -30px) scale(1.1); } }
         @keyframes floatMiss { 0% { opacity: 1; transform: translate(-50%, 0px) translateX(0); } 50% { opacity: 0.8; transform: translate(-50%, -10px) translateX(10px); } 100% { opacity: 0; transform: translate(-50%, -15px) translateX(-15px); } }
+        @keyframes floatUpShieldHit { 0% { opacity: 1; transform: translate(-50%, 0px) scale(0.9); } 100% { opacity: 0; transform: translate(-50%, -35px) scale(1); } }
+
         .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; } /* Tailwind's pulse */
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 
@@ -417,8 +440,9 @@
                                     <h4 class="font-orbitron text-xs text-[color:var(--accent-red)] mt-2 mb-1">Menaces:</h4>
                                     <div id="night-assault-enemies-display" class="min-h-[18px] text-xs"><p class="text-gray-500 italic text-xs">Aucune menace.</p></div>
                                     <div class="mt-2 grid grid-cols-2 gap-1">
-                                        <button id="repair-base-btn" class="btn btn-success btn-xs"><i class="ti ti-tool mr-1"></i>Réparer Noyau</button>
-                                        <button id="repair-defenses-btn" class="btn btn-info btn-xs"><i class="ti ti-recycle mr-1"></i>Réparer Déf.</button>
+                                        <button id="repair-base-btn" class="btn btn-success btn-xs"><i class="ti ti-tool mr-1"></i>Rép. Noyau</button>
+                                        <button id="repair-base-full-btn" class="btn btn-success btn-xs"><i class="ti ti-activity-heartbeat mr-1"></i>Rép. Total</button>
+                                        <button id="repair-defenses-btn" class="btn btn-info btn-xs col-span-2"><i class="ti ti-recycle mr-1"></i>Réparer Toutes Déf.</button>
                                     </div>
                                     <button id="force-cycle-change-btn" class="btn btn-warning btn-xs w-full mt-1"><i class="ti ti-refresh-alert mr-1"></i>Forcer Cycle</button>
                                 </div>
@@ -556,8 +580,14 @@
                              <div id="quests-content" class="flex-grow overflow-y-auto">
                                 <h2 class="font-orbitron text-md mb-2 text-blue-300 border-b border-[color:var(--border-color)] pb-1">Journal des Quêtes</h2>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <div><h3 class="font-orbitron text-sm text-yellow-300 mb-1 panel p-2">Actives & Disponibles</h3><div id="active-quests-list" class="space-y-1 max-h-56 overflow-y-auto text-xs pr-1 panel p-2"></div></div>
-                                    <div><h3 class="font-orbitron text-sm text-gray-500 mb-1 panel p-2">Terminées</h3><div id="completed-quests-list" class="space-y-1 max-h-56 overflow-y-auto text-xs pr-1 panel p-2"></div></div>
+                                    <div>
+                                        <h3 class="font-orbitron text-md text-yellow-300 mb-1">Actives & Disponibles</h3>
+                                        <div id="active-quests-list" class="space-y-1 max-h-[calc(100vh-250px)] md:max-h-[calc(100vh-200px)] overflow-y-auto text-xs pr-1 panel p-2"></div>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-orbitron text-md text-gray-500 mb-1">Terminées</h3>
+                                        <div id="completed-quests-list" class="space-y-1 max-h-[calc(100vh-250px)] md:max-h-[calc(100vh-200px)] overflow-y-auto text-xs pr-1 panel p-2"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -618,7 +648,7 @@
 
     <div id="modal" class="modal hidden"><div class="modal-content"><h3 id="modal-title" class="font-orbitron text-lg mb-2">Titre</h3><p id="modal-message" class="mb-3 text-sm">Message.</p><div class="flex justify-end space-x-2"><button id="modal-cancel" class="btn btn-secondary btn-sm">Annuler</button><button id="modal-confirm" class="btn btn-primary btn-sm">OK</button></div></div></div>
     <div id="combat-modal" class="modal hidden">
-        <div id="combat-modal-content" class="modal-content"> <!-- md:min-w-[500px] remplacé par media query CSS -->
+        <div id="combat-modal-content" class="modal-content"> 
             <h2 class="font-orbitron text-xl mb-1 text-center text-[color:var(--accent-red)]">Affrontement!</h2>
             <div id="combat-turn-indicator" class="text-center font-semibold text-lg mb-2 text-sky-300">Préparation...</div>
             <div class="combat-arena">
@@ -630,11 +660,13 @@
                         <span title="Rage">🔥 <span id="combat-nanobot-rage">0</span></span>
                         <span title="Énergie Globale" class="ml-2">⚡ <span id="combat-nanobot-global-energy">0</span></span>
                     </div>
+                    <div id="combat-nanobot-effects" class="combatant-effects-display"></div>
                 </div>
                 <div id="combat-enemy" class="combatant">
                     <div class="combatant-name" id="combat-enemy-name">Ennemi</div>
                     <div class="combatant-sprite" id="combat-enemy-sprite"></div>
                     <div class="health-bar-container"><div id="combat-enemy-healthbar" class="health-bar"></div></div>
+                    <div id="combat-enemy-effects" class="combatant-effects-display"></div>
                 </div>
             </div>
             <details id="combat-log-details-container" class="mt-0.5 mb-1 cursor-pointer bg-[color:var(--bg-primary)] border border-[color:var(--border-color)] rounded p-1 text-xs">
@@ -642,7 +674,7 @@
                 <div id="combat-log-visual" class="mt-1 max-h-24 overflow-y-auto pr-1"></div>
             </details>
             <div id="combat-actions-container" class="mt-2 flex justify-center items-center gap-2 flex-wrap"></div>
-            <div class="text-center mt-3"><button id="combat-action-flee" class="btn btn-warning btn-sm">Fuir (-10 PV)</button></div>
+            <div class="text-center mt-3"><button id="combat-action-flee" class="btn btn-warning btn-sm">Fuir (-10% PV)</button></div>
         </div>
     </div>
     <div id="combat-end-modal" class="modal hidden"><div class="modal-content text-center"><h3 id="combat-end-title" class="font-orbitron text-md mb-1">Victoire!</h3><p id="combat-end-rewards" class="mb-1 text-xs"></p><h4 class="text-blue-300 mt-1 mb-0.5 font-orbitron text-xs">XP & Niveau</h4><p id="xp-gain" class="text-xs mb-0.5"></p><div class="w-full bg-gray-700 rounded-full h-1.5 mb-1"><div id="xp-bar" class="bg-blue-500 h-1.5 rounded-full" style="width: 0%"></div></div><h4 class="text-yellow-300 mt-1 mb-0.5 font-orbitron text-xs">Butin</h4><ul id="loot-list" class="text-xs text-gray-300 list-disc list-inside mb-1"></ul><button id="close-end-modal" class="btn btn-primary btn-xs mt-1">Fermer</button></div></div>
@@ -672,14 +704,14 @@
     <script src="js/questController.js"></script>
     <script src="js/combat.js"></script>
     <script src="js/inventoryShop.js"></script> 
-    <script src="js/craftingLogic.js"></script> <!-- NOUVEAU -->
+    <script src="js/craftingLogic.js"></script> 
     
     <!-- 4. UI et Logique de Jeu -->
     <script src="js/uiNavigation.js"></script>
     <script src="js/explorationUI.js"></script>
     <script src="js/questUI.js"></script>
     <script src="js/tutorialController.js"></script>
-    <script src="js/craftingUI.js"></script> <!-- NOUVEAU -->
+    <script src="js/craftingUI.js"></script> 
     <script src="js/uiUpdates.js"></script> 
     <script src="js/gameplayLogic_nanobot.js"></script>
     <script src="js/gameplayLogic_base.js"></script>

@@ -151,12 +151,10 @@ function processNightAssaultTick() {
     }
     window.gameState.nightAssault.lastAttackTime = window.gameState.gameTime;
 
-    // 1. Actions des défenses
     if (typeof processDefenseActions === 'function') {
         processDefenseActions();
     }
 
-    // 2. Spawning des ennemis
     if (window.gameState.nightAssault.spawnQueue && window.gameState.nightAssault.spawnQueue.length > 0) {
         const enemyToSpawnData = window.gameState.nightAssault.spawnQueue.shift();
         let enemyTypeInfo;
@@ -189,16 +187,14 @@ function processNightAssaultTick() {
                 speed: enemyTypeInfo.speed || 2,
                 attackRange: enemyTypeInfo.attackRange || (enemyTypeInfo.visualSize?.width || 10) * 1.5,
                 typeInfo: enemyTypeInfo, targetCell: null, lastMoveTime: window.gameState.gameTime,
-                gridTarget: null // {row, col} of the wall they are attacking, or null
+                gridTarget: null 
             };
             window.gameState.nightAssault.enemies.push(newEnemy);
             if(typeof addLogEntry === 'function') addLogEntry(`${newEnemy.typeInfo.name} est apparu !`, "base-assault-event", window.nightAssaultLogEl, window.gameState.nightAssault.log);
         }
     }
 
-    // 3. Actions des ennemis (mouvement et attaque)
-    const coreCellElement = document.getElementById('base-core-visual-cell');
-    const TILE_SIZE_IN_PIXELS = 25; // Doit correspondre à la taille visuelle des cases de la grille
+    const TILE_SIZE_IN_PIXELS = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--map-tile-effective-size')) || 22;
     const CORE_ROW = Math.floor((window.BASE_GRID_SIZE?.rows || 9) / 2);
     const CORE_COL = Math.floor((window.BASE_GRID_SIZE?.cols || 13) / 2);
 
@@ -212,26 +208,68 @@ function processNightAssaultTick() {
         let targetX = targetX_core_pixel;
         let targetY = targetY_core_pixel;
         let attackingWall = false;
+        let attackingNanobot = false;
 
-        // Vérifier si l'ennemi cible déjà un mur
-        if (enemy.gridTarget) {
+        if (window.gameState.nanobotStats.isDefendingBase && window.gameState.nanobotStats.baseDefensePosition && window.gameState.nanobotStats.currentHealth > 0) {
+            const nanobotPos = window.gameState.nanobotStats.baseDefensePosition;
+            const nanobotPixelX = nanobotPos.col * TILE_SIZE_IN_PIXELS + TILE_SIZE_IN_PIXELS / 2;
+            const nanobotPixelY = nanobotPos.row * TILE_SIZE_IN_PIXELS + TILE_SIZE_IN_PIXELS / 2;
+
+            const dxToNanobot = nanobotPixelX - enemy.x;
+            const dyToNanobot = nanobotPixelY - enemy.y;
+            const distanceToNanobotSq = dxToNanobot * dxToNanobot + dyToNanobot * dyToNanobot;
+            const ENEMY_AGGRO_RANGE_ON_NANOBOT_SQ = (enemy.attackRange * 1.5) * (enemy.attackRange * 1.5); 
+
+            if (distanceToNanobotSq <= ENEMY_AGGRO_RANGE_ON_NANOBOT_SQ) {
+                 if (window.gameState.nanobotStats.baseDefenseTargetEnemyId === enemy.id || Math.random() < 0.3) { 
+                    targetX = nanobotPixelX;
+                    targetY = nanobotPixelY;
+                    attackingNanobot = true;
+                    enemy.gridTarget = null; 
+                 }
+            }
+        }
+
+        if (!attackingNanobot && enemy.gridTarget) {
             const wallInstance = window.gameState.defenses[window.gameState.baseGrid[enemy.gridTarget.row][enemy.gridTarget.col]?.instanceId];
             if (wallInstance && wallInstance.currentHealth > 0) {
                 targetX = enemy.gridTarget.col * TILE_SIZE_IN_PIXELS + TILE_SIZE_IN_PIXELS / 2;
                 targetY = enemy.gridTarget.row * TILE_SIZE_IN_PIXELS + TILE_SIZE_IN_PIXELS / 2;
                 attackingWall = true;
             } else {
-                enemy.gridTarget = null; // Le mur a été détruit
+                enemy.gridTarget = null; 
             }
         }
-
 
         const dx = targetX - enemy.x; 
         const dy = targetY - enemy.y;
         const distanceToTarget = Math.sqrt(dx * dx + dy * dy);
         
-        if (distanceToTarget <= enemy.attackRange) { // L'ennemi est à portée de sa cible (mur ou noyau)
-            if (attackingWall && enemy.gridTarget) {
+        if (distanceToTarget <= enemy.attackRange) { 
+            if (attackingNanobot && window.gameState.nanobotStats.currentHealth > 0) {
+                let damageToNanobot = enemy.attack;
+                damageToNanobot = Math.max(1, damageToNanobot - (window.gameState.nanobotStats.defense || 0));
+                window.gameState.nanobotStats.currentHealth -= damageToNanobot;
+                if(typeof addLogEntry === 'function') addLogEntry(`${enemy.typeInfo.name} attaque Nexus-7 (Base) pour ${damageToNanobot} PV! (Restants: ${Math.max(0, window.gameState.nanobotStats.currentHealth)})`, "base-assault-event", window.nightAssaultLogEl, window.gameState.nightAssault.log);
+                
+                if (typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.drawLaserShot === 'function') { 
+                     window.uiUpdates.drawLaserShot(enemy.x, enemy.y, targetX, targetY, 'enemy');
+                }
+
+                if (window.gameState.nanobotStats.currentHealth <= 0) {
+                    window.gameState.nanobotStats.currentHealth = 0;
+                    if(typeof addLogEntry === 'function') addLogEntry(`Nexus-7 a été mis hors de combat par ${enemy.typeInfo.name} pendant la défense !`, "error", window.nightAssaultLogEl, window.gameState.nightAssault.log);
+                    window.gameState.nanobotStats.isDefendingBase = false; 
+                    window.gameState.nanobotStats.baseDefensePosition = null;
+                     if(typeof window.uiUpdates !== 'undefined') {
+                        if(typeof window.uiUpdates.updateBasePreview === 'function') window.uiUpdates.updateBasePreview();
+                        if(typeof window.uiUpdates.updateNanobotDisplay === 'function') window.uiUpdates.updateNanobotDisplay(); 
+                     }
+                }
+                 if (typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.updateNanobotDisplay === 'function') window.uiUpdates.updateNanobotDisplay();
+
+
+            } else if (attackingWall && enemy.gridTarget) {
                 const wallInstanceId = window.gameState.baseGrid[enemy.gridTarget.row][enemy.gridTarget.col]?.instanceId;
                 const wallDefense = window.gameState.defenses[wallInstanceId];
                 if (wallDefense && wallDefense.currentHealth > 0) {
@@ -246,13 +284,13 @@ function processNightAssaultTick() {
                         if(typeof addLogEntry === 'function') addLogEntry(`${wallDefense.name} en (${enemy.gridTarget.row},${enemy.gridTarget.col}) détruit!`, "error", window.nightAssaultLogEl, window.gameState.nightAssault.log);
                         delete window.gameState.defenses[wallInstanceId];
                         window.gameState.baseGrid[enemy.gridTarget.row][enemy.gridTarget.col] = null;
-                        enemy.gridTarget = null; // L'ennemi doit trouver une nouvelle cible
+                        enemy.gridTarget = null; 
                         if(typeof calculateBaseStats === 'function') calculateBaseStats();
                         if(typeof calculateProductionAndConsumption === 'function') calculateProductionAndConsumption();
                         if(typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.updateBasePreview === 'function') window.uiUpdates.updateBasePreview();
                     }
                 }
-            } else if (window.gameState.baseStats.currentHealth > 0) { // Attaque le noyau
+            } else if (window.gameState.baseStats.currentHealth > 0 && !attackingNanobot) { 
                 let damage = enemy.attack;
                 if (window.gameState.nightAssault.globalModifiers && window.gameState.nightAssault.globalModifiers.enemyAttackFactor) {
                     damage *= window.gameState.nightAssault.globalModifiers.enemyAttackFactor;
@@ -269,13 +307,12 @@ function processNightAssaultTick() {
                 }
                  if (typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.updateBaseStatusDisplay === 'function') window.uiUpdates.updateBaseStatusDisplay();
             }
-        } else { // L'ennemi doit se déplacer
+        } else { 
             const moveX = (dx / distanceToTarget) * enemy.speed; 
             const moveY = (dy / distanceToTarget) * enemy.speed;
             const nextX = enemy.x + moveX;
             const nextY = enemy.y + moveY;
 
-            // Détection de collision avec un mur
             const enemyGridRow = Math.floor(nextY / TILE_SIZE_IN_PIXELS);
             const enemyGridCol = Math.floor(nextX / TILE_SIZE_IN_PIXELS);
 
@@ -286,17 +323,16 @@ function processNightAssaultTick() {
                 if (cellContent && cellContent.id === 'reinforcedWall') {
                     const wallInstance = window.gameState.defenses[cellContent.instanceId];
                     if (wallInstance && wallInstance.currentHealth > 0) {
-                        enemy.gridTarget = { row: enemyGridRow, col: enemyGridCol }; // Cible le mur
-                        // L'attaque se fera au prochain tick si à portée
-                    } else { // Mur déjà détruit ou invalide, continue vers le noyau
+                        enemy.gridTarget = { row: enemyGridRow, col: enemyGridCol }; 
+                    } else { 
                         enemy.x = nextX;
                         enemy.y = nextY;
                     }
-                } else { // Case vide ou autre type de défense (non bloquant pour l'instant)
+                } else { 
                     enemy.x = nextX;
                     enemy.y = nextY;
                 }
-            } else { // Hors de la grille de la base, continue de se déplacer
+            } else { 
                  enemy.x = nextX;
                  enemy.y = nextY;
             }

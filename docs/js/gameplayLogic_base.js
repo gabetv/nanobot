@@ -3,11 +3,10 @@ console.log("gameplayLogic_base.js - Fichier chargé et en cours d'analyse...");
 
 function calculateBaseStats() {
     if (!window.gameState || !window.gameState.baseStats ||
-        typeof window.BASE_INITIAL_HEALTH === 'undefined' || // Peut être BASE_STATS_CONFIG.initial.maxHealth
+        typeof window.BASE_INITIAL_HEALTH === 'undefined' || 
         typeof window.buildingsData === 'undefined' ||
         typeof window.WORLD_ZONES === 'undefined' || 
         typeof window.BASE_COORDINATES === 'undefined') {
-        // console.warn("calculateBaseStats: Dépendances pas encore prêtes.");
         return;
     }
 
@@ -38,7 +37,7 @@ function calculateBaseStats() {
     if (energyNeededByDefenses > 0 && effectiveEnergyForDefenses < energyNeededByDefenses) {
         defenseEfficiencyFactor = effectiveEnergyForDefenses > 0 ? Math.max(0, effectiveEnergyForDefenses) / energyNeededByDefenses : 0;
     }
-    window.gameState.baseStats.defenseEfficiencyFactor = defenseEfficiencyFactor; // Stocker pour usage par les tourelles
+    window.gameState.baseStats.defenseEfficiencyFactor = defenseEfficiencyFactor; 
 
     if (window.gameState.defenses) {
         for(const instanceId in window.gameState.defenses){
@@ -48,16 +47,13 @@ function calculateBaseStats() {
             }
         }
     }
-
-    const playerBaseZoneKey = Object.keys(window.WORLD_ZONES).find(key => window.WORLD_ZONES[key].basePlayerCoordinates);
-    const playerBaseZone = playerBaseZoneKey ? window.WORLD_ZONES[playerBaseZoneKey] : null;
-    const playerBaseCoords = playerBaseZone?.basePlayerCoordinates || (window.BASE_COORDINATES || {x:15,y:15});
-
-
-    if (window.gameState.nanobotStats.isDefendingBase && playerBaseZone && window.gameState.currentZoneId === playerBaseZone.id &&
-        window.gameState.map.nanobotPos && window.gameState.map.nanobotPos.x === playerBaseCoords.x && window.gameState.map.nanobotPos.y === playerBaseCoords.y) {
-        defensePower += window.gameState.nanobotStats.attack || 0;
-    }
+    
+    // Le Nanobot contribue à la défense s'il est en mode défense ET sur la case de la base
+    // (sa position sur la grille de base n'est pas nécessaire pour ce calcul, juste son statut global)
+    // if (window.gameState.nanobotStats.isDefendingBase) {
+    //     defensePower += window.gameState.nanobotStats.attack || 0;
+    // }
+    // La logique d'attaque du Nanobot sera séparée (processNanobotBaseDefenseAction)
 
     window.gameState.baseStats.maxHealth = maxHealth;
     window.gameState.baseStats.defensePower = defensePower;
@@ -89,6 +85,25 @@ function build(buildingId) {
 
     if (!costObject) {
         addLogEntry(`Données de coût manquantes pour ${building.name} Niv. ${currentLevel + 1}.`, "error", window.eventLogEl, window.gameState.eventLog); return;
+    }
+    
+    if (currentLevel === 0 && costObject.researchId) {
+        if (!window.gameState.research || !window.gameState.research[costObject.researchId]) {
+            const researchName = (window.researchData && window.researchData[costObject.researchId]?.name) || costObject.researchId;
+            addLogEntry(`Recherche "${researchName}" requise pour débloquer ${building.name}.`, "warning", window.eventLogEl, window.gameState.eventLog);
+            return;
+        }
+        window.gameState.buildings[buildingId] = currentLevel + 1;
+        addLogEntry(`Technologie ${building.name} débloquée au Niveau ${currentLevel + 1} via recherche.`, "success", window.eventLogEl, window.gameState.eventLog);
+        
+        if (typeof calculateBaseStats === 'function') calculateBaseStats();
+        if (typeof calculateProductionAndConsumption === 'function') calculateProductionAndConsumption();
+        if (typeof calculateResourceCapacities === 'function') calculateResourceCapacities();
+        if (typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.updateDisplays === 'function') window.uiUpdates.updateDisplays();
+        if (typeof window.questController !== 'undefined' && typeof window.questController.checkQuestProgress === 'function') {
+            window.questController.checkQuestProgress({ type: "build_level", buildingId: buildingId, level: window.gameState.buildings[buildingId] });
+        }
+        return; 
     }
 
     for (const resource in costObject) {
@@ -187,7 +202,60 @@ function startResearch(researchId) {
 }
 window.startResearch = startResearch;
 
-function repairBase(amount = 10) {
+function attemptInstantResearch() {
+    if (!window.gameState || !window.gameState.activeResearch || typeof window.INSTANT_RESEARCH_CRYSTAL_COST_PER_10_SECONDS === 'undefined') {
+        if(typeof addLogEntry === 'function') addLogEntry("Aucune recherche active à accélérer ou configuration manquante.", "warning");
+        return;
+    }
+
+    const activeRes = window.gameState.activeResearch;
+    const researchDef = window.researchData[activeRes.id];
+    if (!researchDef) {
+        if(typeof addLogEntry === 'function') addLogEntry("Erreur: Recherche active invalide.", "error");
+        return;
+    }
+
+    const elapsedSeconds = window.gameState.gameTime - activeRes.startTime;
+    const timeRemainingSeconds = Math.max(0, activeRes.actualTotalTimeSeconds - elapsedSeconds);
+    
+    if (timeRemainingSeconds <= 0) {
+        if(typeof addLogEntry === 'function') addLogEntry("La recherche est déjà terminée ou sur le point de se terminer.", "info");
+        return;
+    }
+
+    const crystalCost = Math.ceil(timeRemainingSeconds / 10) * window.INSTANT_RESEARCH_CRYSTAL_COST_PER_10_SECONDS;
+
+    if ((window.gameState.resources.crystal_shards || 0) < crystalCost) {
+        if(typeof addLogEntry === 'function') addLogEntry(`Cristaux insuffisants pour terminer la recherche instantanément. Requis: ${crystalCost}.`, "error");
+        return;
+    }
+
+    const confirmMessage = `Terminer la recherche "${researchDef.name}" instantanément pour ${crystalCost} <i class="ti ti-diamond text-cyan-400"></i> ?`;
+    if (typeof showModal === 'function') {
+        showModal("Accélérer Recherche", confirmMessage, () => {
+            window.gameState.resources.crystal_shards -= crystalCost;
+            
+            window.gameState.research[activeRes.id] = true;
+            if(typeof addLogEntry === 'function') addLogEntry(`Recherche "${researchDef.name}" terminée instantanément avec ${crystalCost} cristaux!`, "success", window.eventLogEl, window.gameState.eventLog);
+            
+            if (researchDef.grantsStatBoost && typeof calculateNanobotStats === 'function') calculateNanobotStats();
+            if (researchDef.unlocksBuilding && typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.updateBuildingDisplay === 'function') window.uiUpdates.updateBuildingDisplay();
+            if (researchDef.grantsModule && typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.updateNanobotModulesDisplay === 'function') window.uiUpdates.updateNanobotModulesDisplay();
+            
+            window.gameState.activeResearch = null; 
+            
+            if (typeof window.questController !== 'undefined' && typeof window.questController.checkAllQuestsProgress === 'function') window.questController.checkAllQuestsProgress();
+            if (typeof window.uiUpdates !== 'undefined') {
+                window.uiUpdates.updateResourceDisplay();
+                window.uiUpdates.updateResearchDisplay(); 
+            }
+        });
+    }
+}
+window.attemptInstantResearch = attemptInstantResearch;
+
+
+function repairBase(amount = 10) { 
     if (!window.gameState || !window.gameState.baseStats || typeof window.BASE_STATS_CONFIG?.repairCostPerHp === 'undefined') {
         console.error("repairBase: Dépendances manquantes."); return;
     }
@@ -213,6 +281,43 @@ function repairBase(amount = 10) {
     }
 }
 window.repairBase = repairBase;
+
+function repairBaseFull() { 
+    if (!window.gameState || !window.gameState.baseStats || typeof window.BASE_STATS_CONFIG?.repairCostPerHp === 'undefined') {
+        console.error("repairBaseFull: Dépendances manquantes."); return;
+    }
+    if (window.gameState.baseStats.currentHealth >= window.gameState.baseStats.maxHealth) {
+        if(typeof addLogEntry === 'function') addLogEntry("Le Noyau est déjà à son intégrité maximale.", "info", window.eventLogEl, window.gameState.eventLog); return;
+    }
+    const healthToRestore = window.gameState.baseStats.maxHealth - window.gameState.baseStats.currentHealth;
+    if (healthToRestore <= 0) return; 
+    
+    const costBiomassPerHp = window.BASE_STATS_CONFIG.repairCostPerHp.biomass || 1;
+    const costNanitesPerHp = window.BASE_STATS_CONFIG.repairCostPerHp.nanites || 2;
+    const totalCostBiomass = healthToRestore * costBiomassPerHp;
+    const totalCostNanites = healthToRestore * costNanitesPerHp;
+
+    if (window.gameState.resources.biomass < totalCostBiomass || window.gameState.resources.nanites < totalCostNanites) {
+        if(typeof addLogEntry === 'function') addLogEntry(`Ressources insuffisantes pour réparation totale du Noyau. Requis: ${totalCostBiomass} Biomasse, ${totalCostNanites} Nanites. Vous avez: ${Math.floor(window.gameState.resources.biomass)} Biomasse, ${Math.floor(window.gameState.resources.nanites)} Nanites.`, "error", window.eventLogEl, window.gameState.eventLog); 
+        return;
+    }
+
+    const confirmMessage = `Réparer totalement le Noyau (${healthToRestore} PV) ?<br>Coût: ${totalCostBiomass} Biomasse, ${totalCostNanites} Nanites.`;
+    if(typeof showModal === 'function') {
+        showModal("Réparation Totale du Noyau", confirmMessage, () => {
+            window.gameState.resources.biomass -= totalCostBiomass;
+            window.gameState.resources.nanites -= totalCostNanites;
+            window.gameState.baseStats.currentHealth += healthToRestore;
+            if(typeof addLogEntry === 'function') addLogEntry(`Noyau entièrement réparé (+${healthToRestore} PV). Coût: ${totalCostBiomass} Biomasse, ${totalCostNanites} Nanites.`, "success", window.eventLogEl, window.gameState.eventLog);
+            if(typeof window.uiUpdates !== 'undefined') {
+                if(typeof window.uiUpdates.updateResourceDisplay === 'function') window.uiUpdates.updateResourceDisplay();
+                if(typeof window.uiUpdates.updateBaseStatusDisplay === 'function') window.uiUpdates.updateBaseStatusDisplay();
+            }
+        });
+    }
+}
+window.repairBaseFull = repairBaseFull;
+
 
 function repairAllDefenses() {
     if (!window.gameState || !window.gameState.defenses || typeof window.BASE_STATS_CONFIG?.defenseRepairCostFactor === 'undefined' || typeof window.buildingsData === 'undefined') {
@@ -256,7 +361,6 @@ function repairAllDefenses() {
     }
 }
 window.repairAllDefenses = repairAllDefenses;
-
 
 function enterPlacementMode(defenseTypeId) {
     if (!window.buildingsData || !window.buildingsData[defenseTypeId] || !window.gameState || !window.placementInfoEl || !window.selectedDefenseForPlacementEl || !window.cancelPlacementBtnEl) {
@@ -331,6 +435,15 @@ function handleGridCellClick(row, col) {
         if(typeof addLogEntry === 'function') addLogEntry("Impossible de placer une défense sur le Noyau.", "warning", window.eventLogEl, window.gameState.eventLog);
         return;
     }
+    // Vérifier si le Nanobot est sur cette case
+    if (window.gameState.nanobotStats.isDefendingBase && 
+        window.gameState.nanobotStats.baseDefensePosition &&
+        window.gameState.nanobotStats.baseDefensePosition.row === row && 
+        window.gameState.nanobotStats.baseDefensePosition.col === col) {
+        if(typeof addLogEntry === 'function') addLogEntry("Impossible de placer une défense, Nexus-7 occupe cette case.", "warning", window.eventLogEl, window.gameState.eventLog);
+        return;
+    }
+
 
     for (const resource in placementCost) {
         if (window.itemsData[resource]) {
@@ -352,14 +465,14 @@ function handleGridCellClick(row, col) {
         }
     }
 
-    const instanceLevelData = defenseData.levels[0]; // Les défenses sont toujours placées au niveau d'instance 1 initialement
+    const instanceLevelData = defenseData.levels[0]; 
 
     const instanceId = `def_${defenseData.id}_${row}_${col}_${Date.now()}`;
     const newDefenseInstance = {
         instanceId: instanceId,
         id: defenseData.id,
         name: defenseData.name,
-        level: 1, // Niveau d'instance
+        level: 1, 
         currentHealth: instanceLevelData.stats.health,
         maxHealth: instanceLevelData.stats.health,
         attack: instanceLevelData.stats.attack,
@@ -367,7 +480,7 @@ function handleGridCellClick(row, col) {
         fireRate: instanceLevelData.stats.fireRate,
         damageType: instanceLevelData.stats.damageType,
         row: row, col: col,
-        lastAttackTime: 0 // Pour le fireRate
+        lastAttackTime: 0 
     };
     window.gameState.baseGrid[row][col] = { id: defenseData.id, instanceId: instanceId };
     window.gameState.defenses[instanceId] = newDefenseInstance;
@@ -446,7 +559,6 @@ function sellPlacedDefense(instanceId, row, col) {
     const refundFactor = window.SELL_REFUND_FACTOR || 0.5;
     let totalRefundValue = 0;
 
-    // Rembourser en fonction du coût de PLACEMENT, pas du coût d'amélioration de la technologie
     if (defenseTypeData.placementCost) {
         for (const resource in defenseTypeData.placementCost) {
             const refundAmount = Math.floor(defenseTypeData.placementCost[resource] * refundFactor);
@@ -458,9 +570,8 @@ function sellPlacedDefense(instanceId, row, col) {
             totalRefundValue += refundAmount * (window.itemsData[resource]?.value || 1);
         }
     }
-    // Ajouter aussi le remboursement des améliorations d'instance passées
     for(let i = 1; i < defenseInstance.level; i++) {
-        const prevLevelData = defenseTypeData.levels.find(l => l.level === i + 1); // Coût pour passer de i à i+1
+        const prevLevelData = defenseTypeData.levels.find(l => l.level === i + 1); 
         if (prevLevelData && prevLevelData.costToUpgradeInstance) {
             for (const resource in prevLevelData.costToUpgradeInstance) {
                 const refundAmount = Math.floor(prevLevelData.costToUpgradeInstance[resource] * refundFactor);
@@ -492,25 +603,24 @@ function processDefenseActions() {
     if (!window.gameState || !window.gameState.defenses || !window.gameState.nightAssault || !window.gameState.nightAssault.isActive || window.gameState.nightAssault.enemies.length === 0) {
         return;
     }
-    const efficiencyFactor = window.gameState.baseStats.defenseEfficiencyFactor || 1;
-    if (efficiencyFactor <= 0) return; // Pas d'énergie, pas d'attaque
+    const efficiencyFactor = window.gameState.baseStats.defenseEfficiencyFactor !== undefined ? window.gameState.baseStats.defenseEfficiencyFactor : 1;
+    if (efficiencyFactor <= 0 && Object.values(window.gameState.defenses).some(d => d.attack > 0) ) { 
+        return; 
+    }
 
-    const TILE_SIZE_IN_PIXELS = 25; // Approximatif, à ajuster si la grille visuelle est différente
+    const TILE_SIZE_IN_PIXELS = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--map-tile-effective-size')) || 22; 
 
     for (const defInstanceId in window.gameState.defenses) {
         const defense = window.gameState.defenses[defInstanceId];
         if (!defense || defense.currentHealth <= 0 || !defense.attack || defense.attack <= 0 || !defense.range) {
-            continue; // Ignore les défenses détruites, passives, ou sans portée/attaque
+            continue; 
         }
 
-        // Vérifier le fireRate
         const currentTime = window.gameState.gameTime;
-        if (defense.fireRate > 0 && currentTime < defense.lastAttackTime + (1 / defense.fireRate)) {
-            continue; // Pas encore prêt à tirer
+        if (defense.fireRate > 0 && currentTime < (defense.lastAttackTime || 0) + (1 / defense.fireRate)) {
+            continue; 
         }
 
-        // Coordonnées de la défense en pixels (approximatif, basé sur la grille)
-        // Supposons que la grille (0,0) est en haut à gauche du conteneur #base-preview-container
         const defensePixelX = defense.col * TILE_SIZE_IN_PIXELS + TILE_SIZE_IN_PIXELS / 2;
         const defensePixelY = defense.row * TILE_SIZE_IN_PIXELS + TILE_SIZE_IN_PIXELS / 2;
         const defenseRangePixels = defense.range * TILE_SIZE_IN_PIXELS;
@@ -533,7 +643,7 @@ function processDefenseActions() {
         if (closestEnemy) {
             defense.lastAttackTime = currentTime;
             let damage = Math.floor(defense.attack * efficiencyFactor);
-            damage = Math.max(1, damage); // Au moins 1 dégât
+            damage = Math.max(1, damage); 
 
             closestEnemy.currentHealth -= damage;
             if (typeof addLogEntry === 'function') addLogEntry(`${defense.name} tire sur ${closestEnemy.typeInfo.name} pour ${damage} dégâts. PV Restants: ${Math.max(0, closestEnemy.currentHealth)}`, "base-defense-event", window.nightAssaultLogEl, window.gameState.nightAssault.log);
@@ -545,12 +655,121 @@ function processDefenseActions() {
 
             if (closestEnemy.currentHealth <= 0) {
                 if (typeof addLogEntry === 'function') addLogEntry(`${closestEnemy.typeInfo.name} détruit par ${defense.name}!`, "success", window.nightAssaultLogEl, window.gameState.nightAssault.log);
-                // Retirer l'ennemi (sera fait dans processNightAssaultTick à la fin)
+            }
+            if (typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.drawNightAssaultEnemiesOnPreview === 'function') {
+                window.uiUpdates.drawNightAssaultEnemiesOnPreview();
             }
         }
     }
 }
 window.processDefenseActions = processDefenseActions;
+
+function processNanobotBaseDefenseAction() {
+    if (!window.gameState || !window.gameState.nanobotStats || !window.gameState.nanobotStats.isDefendingBase ||
+        !window.gameState.nanobotStats.baseDefensePosition || !window.NANOBOT_BASE_PATROL_POINTS ||
+        typeof window.BASE_GRID_SIZE === 'undefined' ||
+        typeof window.TICK_SPEED === 'undefined'
+    ) {
+        return;
+    }
+
+    const nanobot = window.gameState.nanobotStats;
+    const currentTime = window.gameState.gameTime;
+    const NANOBOT_ACTION_COOLDOWN_SECONDS = 1.5; 
+
+    if (currentTime < (nanobot.baseDefenseLastActionTime || 0) + NANOBOT_ACTION_COOLDOWN_SECONDS) {
+        return; 
+    }
+
+    const TILE_SIZE_IN_PIXELS = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--map-tile-effective-size')) || 22; 
+    const nanobotAttackRangeCells = 2; 
+    const nanobotAttackRangePixels = nanobotAttackRangeCells * TILE_SIZE_IN_PIXELS;
+
+    let targetEnemy = null;
+    if (window.gameState.nightAssault && window.gameState.nightAssault.isActive && window.gameState.nightAssault.enemies.length > 0) {
+        let closestEnemy = null;
+        let minDistanceSq = Infinity;
+
+        const nanobotPixelX = nanobot.baseDefensePosition.col * TILE_SIZE_IN_PIXELS + TILE_SIZE_IN_PIXELS / 2;
+        const nanobotPixelY = nanobot.baseDefensePosition.row * TILE_SIZE_IN_PIXELS + TILE_SIZE_IN_PIXELS / 2;
+
+        window.gameState.nightAssault.enemies.forEach(enemy => {
+            if (enemy.currentHealth > 0) {
+                const dx = enemy.x - nanobotPixelX;
+                const dy = enemy.y - nanobotPixelY;
+                const distanceSq = dx * dx + dy * dy;
+                if (distanceSq < minDistanceSq && distanceSq <= nanobotAttackRangePixels * nanobotAttackRangePixels) {
+                    minDistanceSq = distanceSq;
+                    closestEnemy = enemy;
+                }
+            }
+        });
+        targetEnemy = closestEnemy;
+    }
+
+    if (targetEnemy) {
+        nanobot.baseDefenseTargetEnemyId = targetEnemy.id;
+        nanobot.baseDefenseLastActionTime = currentTime;
+
+        let damage = nanobot.attack; 
+        damage = Math.max(1, Math.floor(damage));
+
+        targetEnemy.currentHealth -= damage;
+        if (typeof addLogEntry === 'function') addLogEntry(`Nexus-7 (Base) tire sur ${targetEnemy.typeInfo.name} pour ${damage} dégâts. PV Restants: ${Math.max(0, targetEnemy.currentHealth)}`, "base-defense-event", window.nightAssaultLogEl, window.gameState.nightAssault.log);
+        
+        if (typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.drawLaserShot === 'function') {
+            const nanobotPixelX = nanobot.baseDefensePosition.col * TILE_SIZE_IN_PIXELS + TILE_SIZE_IN_PIXELS / 2;
+            const nanobotPixelY = nanobot.baseDefensePosition.row * TILE_SIZE_IN_PIXELS + TILE_SIZE_IN_PIXELS / 2;
+            window.uiUpdates.drawLaserShot(nanobotPixelX, nanobotPixelY, targetEnemy.x, targetEnemy.y, 'nanobot-base'); 
+        }
+
+        if (targetEnemy.currentHealth <= 0) {
+            if (typeof addLogEntry === 'function') addLogEntry(`${targetEnemy.typeInfo.name} détruit par Nexus-7 (Base)!`, "success", window.nightAssaultLogEl, window.gameState.nightAssault.log);
+            nanobot.baseDefenseTargetEnemyId = null; 
+        }
+        if (typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.drawNightAssaultEnemiesOnPreview === 'function') {
+            window.uiUpdates.drawNightAssaultEnemiesOnPreview();
+        }
+        return; 
+    }
+
+    nanobot.baseDefenseTargetEnemyId = null; 
+    if (NANOBOT_BASE_PATROL_POINTS.length > 0) {
+        const currentPatrolTarget = NANOBOT_BASE_PATROL_POINTS[nanobot.baseDefensePatrolIndex];
+        
+        if (nanobot.baseDefensePosition.row === currentPatrolTarget.row && nanobot.baseDefensePosition.col === currentPatrolTarget.col) {
+            nanobot.baseDefensePatrolIndex = (nanobot.baseDefensePatrolIndex + 1) % NANOBOT_BASE_PATROL_POINTS.length;
+            nanobot.baseDefenseLastActionTime = currentTime;
+            if(typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.updateBasePreview === 'function') window.uiUpdates.updateBasePreview();
+            return;
+        } else {
+            let newRow = nanobot.baseDefensePosition.row;
+            let newCol = nanobot.baseDefensePosition.col;
+
+            if (currentPatrolTarget.row < newRow) newRow--;
+            else if (currentPatrolTarget.row > newRow) newRow++;
+            else if (currentPatrolTarget.col < newCol) newCol--;
+            else if (currentPatrolTarget.col > newCol) newCol++;
+            
+            const coreRow = Math.floor(window.BASE_GRID_SIZE.rows / 2);
+            const coreCol = Math.floor(window.BASE_GRID_SIZE.cols / 2);
+
+            if (newRow >= 0 && newRow < window.BASE_GRID_SIZE.rows &&
+                newCol >= 0 && newCol < window.BASE_GRID_SIZE.cols &&
+                !(newRow === coreRow && newCol === coreCol) && 
+                (!window.gameState.baseGrid[newRow] || !window.gameState.baseGrid[newRow][newCol])) { 
+                
+                nanobot.baseDefensePosition = { row: newRow, col: newCol };
+                nanobot.baseDefenseLastActionTime = currentTime;
+                if(typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.updateBasePreview === 'function') window.uiUpdates.updateBasePreview();
+            } else {
+                nanobot.baseDefensePatrolIndex = (nanobot.baseDefensePatrolIndex + 1) % NANOBOT_BASE_PATROL_POINTS.length;
+                nanobot.baseDefenseLastActionTime = currentTime; 
+            }
+        }
+    }
+}
+window.processNanobotBaseDefenseAction = processNanobotBaseDefenseAction;
 
 
 console.log("gameplayLogic_base.js - Fonctions liées à la base définies.");

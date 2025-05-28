@@ -38,7 +38,7 @@ var uiUpdates = {
     },
 
     updateBuildingDisplay: function() {
-        const buildingsContainer = window.buildingsContainerEl; // Utiliser la ref globale
+        const buildingsContainer = window.buildingsContainerEl; 
         if (!buildingsContainer) { console.warn("UI: updateBuildingDisplay - Conteneur #buildings-section non trouvé."); return; }
         
         if (typeof window.buildingsData === 'undefined' || Object.keys(window.buildingsData).length === 0) {
@@ -57,36 +57,39 @@ var uiUpdates = {
             const nextLevelDefinition = building.levels && building.levels[level] ? building.levels[level] : null;
             
             const div = document.createElement('div');
-            div.className = 'panel p-2.5 mb-2.5 rounded-lg shadow-md border border-gray-700 bg-gray-800 bg-opacity-60'; // Style amélioré
+            div.className = 'panel p-2.5 mb-2.5 rounded-lg shadow-md border border-gray-700 bg-gray-800 bg-opacity-60'; 
             div.dataset.tooltipType = 'building-card';
             div.dataset.tooltipId = id;
 
-            // Info Icon
             const infoIconContainer = document.createElement('div');
             infoIconContainer.className = 'info-icon-container';
             const infoIcon = document.createElement('i');
             infoIcon.className = 'ti ti-info-circle info-icon text-sky-400 hover:text-sky-300';
             infoIcon.title = `Plus d'infos sur ${building.name}`;
-            // infoIcon.onclick est géré par le listener global dans main.js
             infoIconContainer.appendChild(infoIcon);
             div.appendChild(infoIconContainer);
 
             let content = `<h4 class="text-md font-semibold mb-1 ${building.type === 'defense' ? 'text-yellow-300' : 'text-sky-300'}">${building.name} <span class="text-sm text-gray-400">(Niv. ${level})</span></h4>`;
-            content += `<p class="text-xs text-gray-400 mb-1.5 leading-relaxed">${building.description}</p>`; // leading-relaxed
+            content += `<p class="text-xs text-gray-400 mb-1.5 leading-relaxed">${building.description}</p>`; 
 
             if (currentLevelData) {
-                content += `<div class="text-xs space-y-0.5 mb-1.5">`; // Conteneur pour les stats
+                content += `<div class="text-xs space-y-0.5 mb-1.5">`; 
                 if(currentLevelData.production) content += `<p class="text-green-300">Prod: ${Object.entries(currentLevelData.production).map(([res,val])=>`${val}/s ${res}`).join(', ')}</p>`;
                 if(currentLevelData.capacity) content += `<p class="text-blue-300">Cap: ${Object.entries(currentLevelData.capacity).map(([res,val])=>`${val} ${res}`).join(', ')}</p>`;
                 if(currentLevelData.researchSpeedFactor) content += `<p class="text-purple-300">Vitesse Rech: x${currentLevelData.researchSpeedFactor}</p>`;
                 if(currentLevelData.energyConsumption) content += `<p class="text-red-400">Conso. Énergie: ${currentLevelData.energyConsumption}</p>`;
                 if(currentLevelData.baseHealthBonus && building.id === 'reinforcedWall') content += `<p class="text-teal-300">Bonus PV Noyau: +${currentLevelData.baseHealthBonus}</p>`;
-                if(currentLevelData.defensePowerBonus) content += `<p class="text-sky-400">Bonus Déf. Base: +${currentLevelData.defensePowerBonus}</p>`; // Ajouté
+                if(currentLevelData.defensePowerBonus) content += `<p class="text-sky-400">Bonus Déf. Base: +${currentLevelData.defensePowerBonus}</p>`;
                 if(building.type === 'crafting' && currentLevelData.unlockedCategories) content += `<p class="text-orange-300">Catégories débloq.: ${currentLevelData.unlockedCategories.join(', ')}</p>`;
-
                 content += `</div>`;
             } else if (level === 0) {
                 content += `<p class="text-xs text-yellow-400 italic">Non débloqué.</p>`;
+                if (nextLevelDefinition && nextLevelDefinition.costToUnlockOrUpgrade && nextLevelDefinition.costToUnlockOrUpgrade.researchId) {
+                    const researchReqId = nextLevelDefinition.costToUnlockOrUpgrade.researchId;
+                    const researchReqName = (window.researchData && window.researchData[researchReqId]?.name) || researchReqId;
+                    const researchDone = gameState.research && gameState.research[researchReqId];
+                    content += `<p class="text-xs mt-1 ${researchDone ? 'text-green-400' : 'text-red-400'}">Recherche requise: ${researchReqName} ${researchDone ? '(Complétée)' : '(Non complétée)'}</p>`;
+                }
             }
             div.insertAdjacentHTML('beforeend', content);
 
@@ -94,25 +97,42 @@ var uiUpdates = {
                 const costObject = level === 0 ? nextLevelDefinition.costToUnlockOrUpgrade : nextLevelDefinition.costToUpgrade;
                 if (costObject) {
                     let canAfford = true;
-                    for (const resource in costObject) {
-                        if (typeof window.itemsData !== 'undefined' && window.itemsData[resource]) { // C'est un item
-                            if ((gameState.inventory.filter(invId => invId === resource).length || 0) < costObject[resource]) { canAfford = false; break; }
-                        } else { // C'est une ressource standard
-                            if ((gameState.resources[resource]||0) < costObject[resource]) { canAfford = false; break; }
+                    let isResearchRequirement = false;
+                    
+                    if (costObject.researchId) { 
+                        isResearchRequirement = true;
+                        canAfford = gameState.research && gameState.research[costObject.researchId];
+                    } else { 
+                        for (const resource in costObject) {
+                            if (typeof window.itemsData !== 'undefined' && window.itemsData[resource]) { 
+                                if ((gameState.inventory.filter(invId => invId === resource).length || 0) < costObject[resource]) { canAfford = false; break; }
+                            } else { 
+                                if ((gameState.resources[resource]||0) < costObject[resource]) { canAfford = false; break; }
+                            }
                         }
                     }
+
                     const button = document.createElement('button');
-                    button.className = `btn ${canAfford ? 'btn-primary' : 'btn-disabled'} btn-xs mt-2 w-full`; // mt-2
-                    let buttonTextContent = level === 0 ? `<i class="ti ti-lock-open mr-1"></i>Débloquer (` : `<i class="ti ti-arrow-up-circle mr-1"></i>Améliorer Niv. ${level + 1} (`;
-                    buttonTextContent += Object.entries(costObject).map(([res, val]) => {
-                        const resourceName = (typeof window.itemsData !== 'undefined' && window.itemsData[res]) ? window.itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1);
-                        return `<span class="cost-part" data-resource-id="${res}" data-required-amount="${val}">${val} ${resourceName}</span>`;
-                    }).join(', ');
-                    buttonTextContent += `)`;
+                    button.className = `btn ${canAfford ? 'btn-primary' : 'btn-disabled'} btn-xs mt-2 w-full`; 
+                    let buttonTextContent = level === 0 ? `<i class="ti ti-lock-open mr-1"></i>Débloquer` : `<i class="ti ti-arrow-up-circle mr-1"></i>Améliorer Niv. ${level + 1}`;
+                    
+                    if (!isResearchRequirement && Object.keys(costObject).length > 0) { 
+                        buttonTextContent += ` (`;
+                        buttonTextContent += Object.entries(costObject).map(([res, val]) => {
+                            const resourceName = (typeof window.itemsData !== 'undefined' && window.itemsData[res]) ? window.itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1);
+                            return `<span class="cost-part" data-resource-id="${res}" data-required-amount="${val}">${val} ${resourceName}</span>`;
+                        }).join(', ');
+                        buttonTextContent += `)`;
+                    } else if (isResearchRequirement && !canAfford) {
+                         buttonTextContent = `<i class="ti ti-flask-off mr-1"></i>Recherche Requise`;
+                    }
+
+
                     button.innerHTML = buttonTextContent;
                     if (!canAfford) button.disabled = true;
-                    button.onclick = (e) => { /*e.stopPropagation();*/ if(typeof build === 'function') build(id); }; // build est global
-                    if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') { // Fonctions globales de utils.js
+                    
+                    button.onclick = (e) => { if(typeof build === 'function') build(id); }; 
+                    if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function' && !isResearchRequirement) { 
                         button.addEventListener('mouseover', () => highlightInsufficientCosts(button, costObject));
                         button.addEventListener('mouseout', () => clearCostHighlights(button));
                     }
@@ -124,9 +144,9 @@ var uiUpdates = {
 
             if (building.type === 'defense' && level > 0 && building.placementCost) {
                 const placeButton = document.createElement('button');
-                placeButton.className = 'btn btn-info btn-xs mt-1.5 w-full'; // mt-1.5
+                placeButton.className = 'btn btn-info btn-xs mt-1.5 w-full'; 
                 placeButton.innerHTML = `<i class="ti ti-map-pin-plus mr-1"></i>Placer ${building.name}`;
-                placeButton.onclick = (e) => { /*e.stopPropagation();*/ if(typeof enterPlacementMode === 'function') enterPlacementMode(id); else console.error("enterPlacementMode non défini"); }; // enterPlacementMode est global
+                placeButton.onclick = (e) => { if(typeof enterPlacementMode === 'function') enterPlacementMode(id); else console.error("enterPlacementMode non défini"); }; 
                 div.appendChild(placeButton);
             }
             buildingsContainer.appendChild(div);
@@ -135,7 +155,7 @@ var uiUpdates = {
     },
 
     updateResearchDisplay: function() {
-        const researchContainer = window.researchContainerEl; // Utiliser la ref globale
+        const researchContainer = window.researchContainerEl; 
         if(!researchContainer) { console.warn("UI: updateResearchDisplay - Conteneur #research-content non trouvé."); return; }
 
         if (typeof window.researchData === 'undefined' || Object.keys(window.researchData).length === 0) {
@@ -150,19 +170,17 @@ var uiUpdates = {
             const research = window.researchData[gameState.activeResearch.id];
             const labLevel = gameState.buildings['researchLab'] || 0;
             const researchLabData = window.buildingsData['researchLab'];
-            let researchSpeedFactor = 0.5; // Default or base speed if lab data is missing
+            let researchSpeedFactor = 0.5; 
             if (labLevel > 0 && researchLabData && researchLabData.levels[labLevel-1] && researchLabData.levels[labLevel-1].researchSpeedFactor) {
                 researchSpeedFactor = researchLabData.levels[labLevel - 1].researchSpeedFactor;
             }
-            // Utiliser actualTotalTimeSeconds si disponible, sinon le recalculer
             const effectiveTotalTimeSeconds = gameState.activeResearch.actualTotalTimeSeconds || (research.time / researchSpeedFactor);
-            const elapsedTicks = gameState.gameTime - gameState.activeResearch.startTime;
-            const elapsedSeconds = elapsedTicks; // gameTime et startTime sont déjà en secondes
+            const elapsedSeconds = gameState.gameTime - gameState.activeResearch.startTime;
             const timeRemainingSecondsDisplay = Math.max(0, effectiveTotalTimeSeconds - elapsedSeconds);
             const progress = Math.min(100, (effectiveTotalTimeSeconds > 0 ? (elapsedSeconds / effectiveTotalTimeSeconds) : 0) * 100);
 
             const researchDiv = document.createElement('div');
-            researchDiv.className = 'panel p-2.5 mb-2.5 rounded-lg shadow-md border border-yellow-500 bg-gray-800 bg-opacity-70'; // Style en cours
+            researchDiv.className = 'panel p-2.5 mb-2.5 rounded-lg shadow-md border border-yellow-500 bg-gray-800 bg-opacity-70'; 
             researchDiv.dataset.tooltipType = 'research-card'; researchDiv.dataset.tooltipId = gameState.activeResearch.id;
 
             const infoIconContainer = document.createElement('div'); infoIconContainer.className = 'info-icon-container';
@@ -176,18 +194,30 @@ var uiUpdates = {
                  <div class="w-full bg-gray-700 rounded-full h-2.5 mb-1">
                      <div class="bg-blue-500 h-2.5 rounded-full" style="width: ${progress.toFixed(2)}%"></div>
                  </div>
-                 <p class="text-xs text-gray-300">Temps Restant: ${formatTime(timeRemainingSecondsDisplay)} (Facteur Labo: x${researchSpeedFactor.toFixed(1)})</p>`); // formatTime global
+                 <p class="text-xs text-gray-300">Temps Restant: ${formatTime(timeRemainingSecondsDisplay)} (Facteur Labo: x${researchSpeedFactor.toFixed(1)})</p>`);
+            
+            // Bouton pour accélérer la recherche
+            if (typeof window.INSTANT_RESEARCH_CRYSTAL_COST_PER_10_SECONDS !== 'undefined' && timeRemainingSecondsDisplay > 0) {
+                const crystalCost = Math.ceil(timeRemainingSecondsDisplay / 10) * window.INSTANT_RESEARCH_CRYSTAL_COST_PER_10_SECONDS;
+                const canAffordInstant = (gameState.resources.crystal_shards || 0) >= crystalCost;
+                const instantButton = document.createElement('button');
+                instantButton.className = `btn ${canAffordInstant ? 'btn-warning' : 'btn-disabled'} btn-xs mt-1.5 w-full`;
+                instantButton.innerHTML = `<i class="ti ti-player-skip-forward mr-1"></i>Terminer (${crystalCost} <i class="ti ti-diamond text-xs"></i>)`;
+                if (!canAffordInstant) instantButton.disabled = true;
+                instantButton.onclick = () => { if (typeof attemptInstantResearch === 'function') attemptInstantResearch(); };
+                researchDiv.appendChild(instantButton);
+            }
+
             researchContainer.appendChild(researchDiv);
             researchAvailableCount++;
         }
 
         for (const id in window.researchData) {
             const research = window.researchData[id];
-            if (gameState.research[id]) { // Si la recherche est complétée
+            if (gameState.research[id]) { 
                 const div = document.createElement('div');
-                div.className = 'panel p-2.5 mb-2.5 opacity-70 rounded-lg shadow border border-gray-700 bg-gray-900'; // Style complété
+                div.className = 'panel p-2.5 mb-2.5 opacity-70 rounded-lg shadow border border-gray-700 bg-gray-900'; 
                 div.dataset.tooltipType = 'research-card'; div.dataset.tooltipId = id;
-                // ... info icon ...
                 const infoIconContainer = document.createElement('div'); infoIconContainer.className = 'info-icon-container';
                 const infoIcon = document.createElement('i'); infoIcon.className = 'ti ti-info-circle info-icon text-sky-400 hover:text-sky-300';
                 infoIcon.title = `Plus d'infos sur ${research.name}`;
@@ -197,7 +227,7 @@ var uiUpdates = {
                 researchAvailableCount++; continue;
             }
 
-            if (gameState.activeResearch && gameState.activeResearch.id === id) continue; // Déjà affiché comme "en cours"
+            if (gameState.activeResearch && gameState.activeResearch.id === id) continue; 
 
             let canResearch = true; let requirementText = "";
             if (research.requirements) {
@@ -220,9 +250,8 @@ var uiUpdates = {
             }
 
             const div = document.createElement('div');
-            div.className = 'panel p-2.5 mb-2.5 rounded-lg shadow border border-gray-700 bg-gray-800 bg-opacity-60'; // Style disponible
+            div.className = 'panel p-2.5 mb-2.5 rounded-lg shadow border border-gray-700 bg-gray-800 bg-opacity-60'; 
             div.dataset.tooltipType = 'research-card'; div.dataset.tooltipId = id;
-            // ... info icon ...
             const infoIconContainer = document.createElement('div'); infoIconContainer.className = 'info-icon-container';
             const infoIcon = document.createElement('i'); infoIcon.className = 'ti ti-info-circle info-icon text-sky-400 hover:text-sky-300';
             infoIcon.title = `Plus d'infos sur ${research.name}`;
@@ -231,11 +260,10 @@ var uiUpdates = {
             let effectsText = "";
             if(research.grantsStatBoost) effectsText += `Stats: ${Object.entries(research.grantsStatBoost).map(([s,v])=>`${s}:+${v}`).join(', ')}. `;
             if(research.grantsModule && typeof window.nanobotModulesData !== 'undefined' && window.nanobotModulesData[research.grantsModule]) effectsText += `Module: ${window.nanobotModulesData[research.grantsModule].name}. `;
-            // ... autres effets ...
             
             let content = `<h4 class="text-md font-semibold text-sky-300 mb-1">${research.name}</h4> <p class="text-xs text-gray-400 mb-1">${research.description}</p>`;
             if (effectsText) content += `<p class="text-xs text-green-300 mb-1">Effets: ${effectsText}</p>`;
-            if (requirementText) content += `<div class="text-xs mt-1 text-red-400">${requirementText}</div>`; // text-red-400 pour les prérequis non remplis
+            if (requirementText) content += `<div class="text-xs mt-1 text-red-400">${requirementText}</div>`; 
             div.insertAdjacentHTML('beforeend', content);
 
             const button = document.createElement('button');
@@ -248,12 +276,12 @@ var uiUpdates = {
                 const resourceName = (typeof window.itemsData !== 'undefined' && window.itemsData[res]) ? window.itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1);
                 return `<span class="cost-part" data-resource-id="${res}" data-required-amount="${val}">${val} ${resourceName}</span>`;
             }).join(', ');
-            buttonTextContent += ` - ${formatTime(research.time)})`; // formatTime global
+            buttonTextContent += ` - ${formatTime(research.time)})`; 
             button.innerHTML = buttonTextContent;
 
             if (!canResearch || !canAfford || gameState.activeResearch) button.disabled = true;
-            button.onclick = (e) => { /*e.stopPropagation();*/ if(typeof startResearch === 'function') startResearch(id); }; // startResearch global
-            if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') { // Fonctions globales
+            button.onclick = (e) => { if(typeof startResearch === 'function') startResearch(id); }; 
+            if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') { 
                 button.addEventListener('mouseover', () => highlightInsufficientCosts(button, research.cost));
                 button.addEventListener('mouseout', () => clearCostHighlights(button));
             }
@@ -265,7 +293,7 @@ var uiUpdates = {
     },
 
     updateNanobotModulesDisplay: function() {
-        const container = window.equippedModulesDisplayEl; // Utiliser ref globale
+        const container = window.equippedModulesDisplayEl; 
         if (!container) { console.warn("UI: updateNanobotModulesDisplay - #equipped-modules-display non trouvé."); return; }
         container.innerHTML = ''; let hasModules = false;
 
@@ -280,17 +308,16 @@ var uiUpdates = {
             const moduleData = window.nanobotModulesData[moduleId];
             if (!moduleData) { console.error(`[ModulesDisplay] ERREUR: Aucune donnée pour module ID '${moduleId}'.`); continue; }
             if (!moduleData.levels || !Array.isArray(moduleData.levels) || moduleData.levels.length === 0) {
-                // ... gestion erreur données niveaux manquantes ...
                 console.error(`[ModulesDisplay] ERREUR: Données de niveaux manquantes pour module '${moduleId}'.`);
-                const errorDiv = document.createElement('div'); /* ... style erreur ... */ container.appendChild(errorDiv);
+                const errorDiv = document.createElement('div');  container.appendChild(errorDiv);
                 hasModules = true; continue;
             }
 
-            let isUnlocked = false; // Logique de déblocage du module
+            let isUnlocked = false; 
             if (moduleData.unlockMethod) {
                  if (moduleData.unlockMethod.research && gameState.research && gameState.research[moduleData.unlockMethod.research]) isUnlocked = true;
                  else if (moduleData.unlockMethod.building && typeof window.buildingsData !== 'undefined' && window.buildingsData[moduleData.unlockMethod.building] && (gameState.buildings[moduleData.unlockMethod.building] || 0) >= (moduleData.unlockMethod.buildingLevel || 1) ) isUnlocked = true;
-            } else { isUnlocked = true; } // Débloqué par défaut si pas de méthode spécifiée
+            } else { isUnlocked = true; } 
 
 
             let currentLevel = gameState.nanobotModuleLevels[moduleId] || 0;
@@ -300,7 +327,6 @@ var uiUpdates = {
                     isReplacedByActiveHigherTier = true; break;
                 }
             }
-            // Ne pas afficher si non débloqué ET niveau 0 ET remplacé (évite d'afficher des modules de bas niveau obsolètes jamais activés)
             if(isReplacedByActiveHigherTier && currentLevel === 0 && !isUnlocked) continue;
 
             if (isUnlocked || currentLevel > 0) {
@@ -308,7 +334,6 @@ var uiUpdates = {
                 const moduleDiv = document.createElement('div');
                 moduleDiv.className = 'module-card bg-gray-700 bg-opacity-70 p-2.5 rounded-md shadow border border-gray-600';
                 moduleDiv.dataset.tooltipType = 'module-card'; moduleDiv.dataset.tooltipId = moduleId;
-                // ... info icon ...
                 const infoIconContainer = document.createElement('div'); infoIconContainer.className = 'info-icon-container';
                 const infoIcon = document.createElement('i'); infoIcon.className = 'ti ti-info-circle info-icon text-sky-400 hover:text-sky-300';
                 infoIcon.title = `Plus d'infos sur ${moduleData.name}`;
@@ -332,9 +357,9 @@ var uiUpdates = {
                 if (costDataForNextLevel && (currentLevel < moduleData.levels.length) && !isReplacedByActiveHigherTier) {
                     let canAfford = true;
                     for(const res_1 in costDataForNextLevel) {
-                        if (typeof window.itemsData !== 'undefined' && window.itemsData[res_1]) { // Item
+                        if (typeof window.itemsData !== 'undefined' && window.itemsData[res_1]) { 
                             if ((gameState.inventory || []).filter(itemId => itemId === res_1).length < costDataForNextLevel[res_1]) canAfford = false;
-                        } else { // Ressource
+                        } else { 
                             if ((gameState.resources[res_1] || 0) < costDataForNextLevel[res_1]) canAfford = false;
                         }
                         if (!canAfford) break;
@@ -350,8 +375,8 @@ var uiUpdates = {
                     buttonHtmlContent += `)`;
                     upgradeButton.innerHTML = buttonHtmlContent;
                     if(!canAfford) upgradeButton.disabled = true;
-                    upgradeButton.onclick = (e) => { /*e.stopPropagation();*/ if(typeof upgradeNanobotModule === 'function') upgradeNanobotModule(moduleId);}; // upgradeNanobotModule global
-                    if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') { // global
+                    upgradeButton.onclick = (e) => { if(typeof upgradeNanobotModule === 'function') upgradeNanobotModule(moduleId);}; 
+                    if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') { 
                         upgradeButton.addEventListener('mouseover', () => highlightInsufficientCosts(upgradeButton, costDataForNextLevel));
                         upgradeButton.addEventListener('mouseout', () => clearCostHighlights(upgradeButton));
                     }
@@ -373,7 +398,7 @@ var uiUpdates = {
         if(window.nanobotSpeedEl) window.nanobotSpeedEl.textContent = gameState.nanobotStats.speed;
         
         if(window.nanobotVisualBody) {
-            window.nanobotVisualBody.innerHTML = ''; // Vider
+            window.nanobotVisualBody.innerHTML = ''; 
             const nanobotBaseImagePath = 'images/nanobot_base_body.png';
             window.nanobotVisualBody.style.backgroundImage = `url('${nanobotBaseImagePath}')`;
         }
@@ -384,7 +409,7 @@ var uiUpdates = {
                 if (currentLevel > 0) {
                     const moduleData = window.nanobotModulesData[moduleId];
                     if (moduleData) {
-                        const imagePath = `images/module_visual_${moduleId}.png`; // Assurez-vous que ces images existent
+                        const imagePath = `images/module_visual_${moduleId}.png`; 
                         const createAndAppendVisual = (baseClass, specificClassFromData) => {
                             const visualEl = document.createElement('div');
                             visualEl.className = `${baseClass} ${specificClassFromData || ''}`;
@@ -407,7 +432,7 @@ var uiUpdates = {
                     const item = window.itemsData[itemId];
                     equippedItemsNames.push(item.name);
                     if (item.visualClass) {
-                        const imagePath = `images/item_visual_${itemId}.png`; // Assurez-vous que ces images existent
+                        const imagePath = `images/item_visual_${itemId}.png`; 
                         const visualEl = document.createElement('div');
                         visualEl.className = `nanobot-item-visual ${item.visualClass}`;
                         visualEl.style.backgroundImage = `url('${imagePath}')`;
@@ -419,11 +444,11 @@ var uiUpdates = {
         if(window.equippedItemsDisplayBriefEl) window.equippedItemsDisplayBriefEl.textContent = equippedItemsNames.length > 0 ? `Actif: ${equippedItemsNames.join(', ')}` : "Aucun équipement (visuel).";
         
         if(typeof this.updateEquippedItemsDisplay === 'function') this.updateEquippedItemsDisplay();
-        if(typeof this.updateNanobotModulesDisplay === 'function') this.updateNanobotModulesDisplay(); // S'assurer que c'est appelé
+        if(typeof this.updateNanobotModulesDisplay === 'function') this.updateNanobotModulesDisplay(); 
     },
 
     updateEquippedItemsDisplay: function() {
-        const container = window.nanobotEquipmentSlotsEl; // Ref globale
+        const container = window.nanobotEquipmentSlotsEl; 
         if(!container) { console.warn("UI: updateEquippedItemsDisplay - #nanobot-equipment-slots non trouvé."); return;}
         container.innerHTML = '';
         if (typeof window.EQUIPMENT_SLOTS === 'undefined' || typeof window.itemsData === 'undefined' || !gameState || !gameState.nanobotEquipment) {
@@ -453,10 +478,10 @@ var uiUpdates = {
                 if (item.damageType && typeof window.DAMAGE_TYPES !== 'undefined') itemEffects.push(`<span class="text-xs text-cyan-300">Type Dégât: ${window.DAMAGE_TYPES[item.damageType]?.charAt(0).toUpperCase() + window.DAMAGE_TYPES[item.damageType]?.slice(1) || item.damageType}</span>`);
                 if (itemEffects.length > 0) contentHtml += `<div class="text-xs text-gray-300 mt-0.5 mb-1.5">${itemEffects.join('; ')}</div>`;
                 contentHtml += `<p class="text-xs text-gray-400 mb-2 italic">${item.description}</p>`;
-                contentHtml += `<button class="btn btn-outline btn-danger btn-xs w-full" onclick="/*event.stopPropagation();*/ if(typeof unequipItem === 'function') unequipItem('${slotId}');"><i class="ti ti-player-eject mr-1"></i>Retirer</button>`; // unequipItem global
+                contentHtml += `<button class="btn btn-outline btn-danger btn-xs w-full" onclick=" if(typeof unequipItem === 'function') unequipItem('${slotId}');"><i class="ti ti-player-eject mr-1"></i>Retirer</button>`; 
             } else {
                 contentHtml += `<span class="empty-slot text-sm text-gray-500 italic">Vide</span></div>`;
-                contentHtml += `<p class="text-xs text-gray-500 h-10 mb-2 flex items-center justify-center italic">Choisissez un objet depuis l'inventaire.</p>`; // Centré et placeholder
+                contentHtml += `<p class="text-xs text-gray-500 h-10 mb-2 flex items-center justify-center italic">Choisissez un objet depuis l'inventaire.</p>`; 
                 contentHtml += `<button class="btn btn-disabled btn-xs w-full" disabled>Retirer</button>`;
             }
             slotDiv.insertAdjacentHTML('beforeend', contentHtml);
@@ -465,19 +490,25 @@ var uiUpdates = {
     },
 
     updateXpBar: function() {
-        // Assurer que window.xpBarEl est la bonne référence (celui de la modale de fin de combat est combatXpBarEl)
-        const generalXpBar = window.xpBarEl; // Celui dans le header ou panneau joueur principal
+        const generalXpBar = window.xpBarEl; 
         if(!generalXpBar || !gameState || !gameState.nanobotStats || gameState.nanobotStats.level === undefined) return;
         const stats = gameState.nanobotStats;
-        const xpToNextLevel = stats.xpToNext > 0 && stats.xpToNext !== Infinity ? stats.xpToNext : 1; // Éviter division par zéro
+        const xpToNextLevel = stats.xpToNext > 0 && stats.xpToNext !== Infinity ? stats.xpToNext : 1; 
         const percent = (stats.xp / xpToNextLevel) * 100;
         generalXpBar.style.width = `${Math.min(100, Math.max(0, percent))}%`;
     },
 
     updateBaseStatusDisplay: function() {
-        // Utiliser les refs globales
-        if(!window.baseHealthValueEl || !window.baseMaxHealthValueEl || !window.overviewBaseHealthEl || !window.baseHealthBarEl || !window.baseDefensePowerEl || !window.repairBaseBtn || !window.repairDefensesBtn || !window.baseHealthDisplayEl ) return;
-        if (!gameState || !gameState.baseStats || !gameState.nightAssault) return;
+        if(!window.baseHealthValueEl || !window.baseMaxHealthValueEl || !window.overviewBaseHealthEl || 
+           !window.baseHealthBarEl || !window.baseDefensePowerEl || !window.repairBaseBtn || 
+           !window.repairBaseFullBtn || !window.repairDefensesBtn || !window.baseHealthDisplayEl ) { 
+            console.warn("UI: updateBaseStatusDisplay - Un ou plusieurs éléments DOM sont manquants.");
+            return;
+        }
+        if (!gameState || !gameState.baseStats || !gameState.nightAssault) {
+            console.warn("UI: updateBaseStatusDisplay - gameState, baseStats ou nightAssault non défini.");
+            return;
+        }
 
         const base = gameState.baseStats;
         window.baseHealthValueEl.textContent = Math.floor(base.currentHealth);
@@ -486,14 +517,19 @@ var uiUpdates = {
         
         const healthPercent = (base.maxHealth > 0 ? (base.currentHealth / base.maxHealth) : 0) * 100;
         window.baseHealthBarEl.style.width = `${healthPercent}%`;
-        window.baseHealthBarEl.classList.remove('bg-red-500', 'bg-yellow-500', 'bg-green-500'); // Enlever anciennes classes de couleur Tailwind
-        if (healthPercent < 30) window.baseHealthBarEl.classList.add('bg-red-500'); // low
-        else if (healthPercent < 60) window.baseHealthBarEl.classList.add('bg-yellow-500'); // medium
-        else window.baseHealthBarEl.classList.add('bg-green-500'); // high
+        window.baseHealthBarEl.classList.remove('bg-red-500', 'bg-yellow-500', 'bg-green-500'); 
+        if (healthPercent < 30) window.baseHealthBarEl.classList.add('bg-red-500'); 
+        else if (healthPercent < 60) window.baseHealthBarEl.classList.add('bg-yellow-500'); 
+        else window.baseHealthBarEl.classList.add('bg-green-500'); 
 
         window.baseDefensePowerEl.textContent = `Défense: ${base.defensePower}`;
-        window.repairBaseBtn.disabled = gameState.baseStats.currentHealth >= gameState.baseStats.maxHealth;
-        window.repairBaseBtn.classList.toggle('btn-disabled', window.repairBaseBtn.disabled);
+        
+        const needsRepair = gameState.baseStats.currentHealth < gameState.baseStats.maxHealth;
+        window.repairBaseBtn.disabled = !needsRepair;
+        window.repairBaseBtn.classList.toggle('btn-disabled', !needsRepair);
+        
+        window.repairBaseFullBtn.disabled = !needsRepair; 
+        window.repairBaseFullBtn.classList.toggle('btn-disabled', !needsRepair);
         
         let hasDamagedDefenses = false;
         if (gameState.defenses) {
@@ -506,30 +542,30 @@ var uiUpdates = {
         window.repairDefensesBtn.disabled = !hasDamagedDefenses;
         window.repairDefensesBtn.classList.toggle('btn-disabled', window.repairDefensesBtn.disabled);
         
-        const baseStatusSection = document.getElementById('base-status-section'); // Peut être null si pas sur la page
+        const baseStatusSection = document.getElementById('base-status-section'); 
         if(baseStatusSection) baseStatusSection.classList.toggle('night-assault-active', gameState.nightAssault.isActive && !gameState.isDay);
         
-        // Clignotement du texte de santé de la base pendant l'assaut
         window.baseHealthDisplayEl.classList.toggle('text-[var(--accent-red)]', gameState.nightAssault.isActive && !gameState.isDay);
         window.baseHealthDisplayEl.classList.toggle('font-bold', gameState.nightAssault.isActive && !gameState.isDay);
         window.baseHealthDisplayEl.classList.toggle('animate-pulse', gameState.nightAssault.isActive && !gameState.isDay);
-
 
         if(typeof this.updateBasePreview === 'function') this.updateBasePreview();
     },
 
     updateBasePreview: function() {
-        const previewContainer = window.basePreviewContainerEl; // Ref globale
-        if (!previewContainer) { /* console.error("UI: updateBasePreview - basePreviewContainerEl est null !"); */ return; }
+        const previewContainer = window.basePreviewContainerEl; 
+        if (!previewContainer) { return; }
         
         if (typeof window.BASE_GRID_SIZE === 'undefined' || !gameState || !Array.isArray(gameState.baseGrid) || typeof gameState.defenses !== 'object' || typeof window.buildingsData === 'undefined') {
             previewContainer.innerHTML = "<p class='text-red-500 text-xs p-2'>Erreur: Schéma base indisponible.</p>"; return;
         }
-        previewContainer.style.setProperty('--base-grid-cols', String(window.BASE_GRID_SIZE.cols)); // S'assurer que c'est une chaîne
+        previewContainer.style.setProperty('--base-grid-cols', String(window.BASE_GRID_SIZE.cols)); 
         previewContainer.style.setProperty('--base-grid-rows', String(window.BASE_GRID_SIZE.rows));
         previewContainer.innerHTML = '';
         previewContainer.style.gridTemplateRows = `repeat(${window.BASE_GRID_SIZE.rows}, minmax(0, 1fr))`;
         previewContainer.style.gridTemplateColumns = `repeat(${window.BASE_GRID_SIZE.cols}, minmax(0, 1fr))`;
+
+        let nanobotDefenseCell = null;
 
         for (let r = 0; r < window.BASE_GRID_SIZE.rows; r++) {
             for (let c = 0; c < window.BASE_GRID_SIZE.cols; c++) {
@@ -563,11 +599,29 @@ var uiUpdates = {
                         cell.title = `Placer ${window.buildingsData[gameState.placementMode.selectedDefenseType]?.name || 'défense'}`;
                     }
                 }
-                if(typeof handleGridCellClick === 'function') cell.addEventListener('click', () => handleGridCellClick(r, c)); // handleGridCellClick global
+                
+                if (gameState.nanobotStats.isDefendingBase && gameState.nanobotStats.baseDefensePosition &&
+                    gameState.nanobotStats.baseDefensePosition.row === r && gameState.nanobotStats.baseDefensePosition.col === c) {
+                    if (!cell.classList.contains('occupied') && !cell.classList.contains('core')) {
+                        nanobotDefenseCell = cell; 
+                    }
+                }
+
+                if(typeof handleGridCellClick === 'function') cell.addEventListener('click', () => handleGridCellClick(r, c)); 
                 previewContainer.appendChild(cell);
             }
         }
-        // Logique de dessin des ennemis et projectiles (sera appelée par la boucle de jeu principale si besoin)
+        
+        if (nanobotDefenseCell) {
+            const nanobotVisual = document.createElement('div');
+            nanobotVisual.className = 'base-nanobot-visual defense-visual-on-grid'; 
+            nanobotVisual.innerHTML = '<i class="ti ti-robot text-xl text-[var(--accent-blue)]"></i>';
+            nanobotVisual.style.zIndex = "5"; 
+            nanobotDefenseCell.appendChild(nanobotVisual);
+            nanobotDefenseCell.classList.add('occupied'); 
+        }
+
+
         if(gameState.nightAssault.isActive && gameState.nightAssault.enemies.length > 0){
             this.drawNightAssaultEnemiesOnPreview();
         }
@@ -575,18 +629,17 @@ var uiUpdates = {
 
     drawNightAssaultEnemiesOnPreview: function() {
         if (!window.basePreviewContainerEl || !gameState || !gameState.nightAssault || !gameState.nightAssault.enemies) return;
-        // Enlever les anciens visuels d'ennemis et barres de vie
         window.basePreviewContainerEl.querySelectorAll('.base-enemy-visual, .enemy-health-bar-on-grid-container').forEach(el => el.remove());
 
         gameState.nightAssault.enemies.forEach(enemy => {
             if (enemy.currentHealth <= 0) return;
             const enemyVisual = document.createElement('div');
-            enemyVisual.className = `base-enemy-visual ${enemy.typeInfo.id || 'generic-enemy'}`; // Classe basée sur l'ID du type d'ennemi
-            enemyVisual.style.left = `${enemy.x}px`; // Supposant que x,y sont déjà en pixels relatifs au conteneur
+            enemyVisual.className = `base-enemy-visual ${enemy.typeInfo.id || 'generic-enemy'}`; 
+            enemyVisual.style.left = `${enemy.x}px`; 
             enemyVisual.style.top = `${enemy.y}px`;
-            enemyVisual.style.width = `${enemy.typeInfo.visualSize?.width || 10}px`; // Taille par défaut
+            enemyVisual.style.width = `${enemy.typeInfo.visualSize?.width || 10}px`; 
             enemyVisual.style.height = `${enemy.typeInfo.visualSize?.height || 10}px`;
-            if (enemy.typeInfo.spritePathGrid) { // Si une image spécifique pour la grille
+            if (enemy.typeInfo.spritePathGrid) { 
                 enemyVisual.style.backgroundImage = `url('${enemy.typeInfo.spritePathGrid}')`;
                 enemyVisual.style.backgroundColor = 'transparent';
             } else {
@@ -594,14 +647,13 @@ var uiUpdates = {
             }
             window.basePreviewContainerEl.appendChild(enemyVisual);
 
-            // Barre de vie
             const healthBarContainer = document.createElement('div');
             healthBarContainer.className = 'enemy-health-bar-on-grid-container';
             const healthPercent = (enemy.maxHealth > 0 ? (enemy.currentHealth / enemy.maxHealth) : 0) * 100;
             healthBarContainer.style.width = `${enemy.typeInfo.visualSize?.width || 10}px`;
             healthBarContainer.style.height = `3px`;
             healthBarContainer.style.left = `${enemy.x}px`;
-            healthBarContainer.style.top = `${enemy.y - 5}px`; // Au-dessus du visuel
+            healthBarContainer.style.top = `${enemy.y - 5}px`; 
 
             const healthBarFill = document.createElement('div');
             healthBarFill.className = 'enemy-health-bar-on-grid-fill';
@@ -611,11 +663,11 @@ var uiUpdates = {
         });
     },
 
-    drawLaserShot: function(startX, startY, endX, endY, type = 'friendly') {
-        if (typeof drawProjectileVisual === 'function') drawProjectileVisual(startX, startY, endX, endY, type, 'laser'); // drawProjectileVisual global
+    drawLaserShot: function(startX, startY, endX, endY, type = 'friendly', visualType = 'laser') {
+        if (typeof drawProjectileVisual === 'function') drawProjectileVisual(startX, startY, endX, endY, type, 'laser'); 
     },
     drawEnemyProjectile: function(startX, startY, endX, endY, damageType) {
-        this.drawLaserShot(startX, startY, endX, endY, 'enemy'); // Simplifié pour l'instant
+        this.drawLaserShot(startX, startY, endX, endY, 'enemy'); 
     },
 
     managePlacedDefense: function(instanceId, row, col) {
@@ -625,7 +677,7 @@ var uiUpdates = {
         }
         const defenseInstance = gameState.defenses[instanceId];
         const defenseTypeData = window.buildingsData[defenseInstance.id];
-        const currentTechLevel = gameState.buildings[defenseInstance.id] || 0; // Niveau technologique du type de défense
+        const currentTechLevel = gameState.buildings[defenseInstance.id] || 0; 
 
         let modalContent = `<h4 class="font-orbitron text-md mb-1">${defenseInstance.name} (Niv. Instance ${defenseInstance.level} / Tech ${currentTechLevel})</h4>`;
         modalContent += `<p class="text-xs">PV: ${Math.floor(defenseInstance.currentHealth)} / ${defenseInstance.maxHealth}</p>`;
@@ -638,8 +690,8 @@ var uiUpdates = {
 
         if (canUpgradeInstance) {
             const nextLevelData = defenseTypeData.levels.find(l => l.level === defenseInstance.level + 1);
-            if (nextLevelData && nextLevelData.costToUpgradeInstance) { // Renommé de costToUpgrade
-                let costStringForButton = typeof getCostString === 'function' ? getCostString(nextLevelData.costToUpgradeInstance, false, true) : "Coût non affichable"; // getCostString global
+            if (nextLevelData && nextLevelData.costToUpgradeInstance) { 
+                let costStringForButton = typeof getCostString === 'function' ? getCostString(nextLevelData.costToUpgradeInstance, false, true) : "Coût non affichable"; 
                 
                 const upgradeButton = document.createElement('button');
                 upgradeButton.className = 'btn btn-primary btn-sm';
@@ -647,17 +699,17 @@ var uiUpdates = {
                 
                 let canAffordUpgrade = true;
                 for(const res in nextLevelData.costToUpgradeInstance) {
-                    if (window.itemsData[res]) { // Item
+                    if (window.itemsData[res]) { 
                         if ((gameState.inventory.filter(id => id === res).length || 0) < nextLevelData.costToUpgradeInstance[res]) {canAffordUpgrade=false; break;}
-                    } else { // Ressource
+                    } else { 
                         if ((gameState.resources[res] || 0) < nextLevelData.costToUpgradeInstance[res]) {canAffordUpgrade=false; break;}
                     }
                 }
                 if (!canAffordUpgrade) { upgradeButton.classList.add('btn-disabled'); upgradeButton.disabled = true; }
-                upgradeButton.onclick = (e) => { /*e.stopPropagation();*/ handleDefenseAction(instanceId, 'upgrade'); }; // handleDefenseAction global
+                upgradeButton.onclick = (e) => {  handleDefenseAction(instanceId, 'upgrade'); }; 
                 
-                if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') { // global
-                    const costWrapper = document.createElement('div'); costWrapper.innerHTML = costStringForButton; // Pour que querySelectorAll fonctionne
+                if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') { 
+                    const costWrapper = document.createElement('div'); costWrapper.innerHTML = costStringForButton; 
                     upgradeButton.addEventListener('mouseover', () => highlightInsufficientCosts(upgradeButton, nextLevelData.costToUpgradeInstance));
                     upgradeButton.addEventListener('mouseout', () => clearCostHighlights(upgradeButton));
                 }
@@ -669,17 +721,17 @@ var uiUpdates = {
             actionsHtml += `<p class="text-xs text-green-400 italic">Niveau d'instance maximum atteint.</p>`;
         }
 
-        actionsHtml += `<button class="btn btn-danger btn-sm" onclick="/*event.stopPropagation();*/ handleDefenseAction('${instanceId}', 'sell', ${row}, ${col})">Vendre</button>`; // handleDefenseAction global
+        actionsHtml += `<button class="btn btn-danger btn-sm" onclick=" handleDefenseAction('${instanceId}', 'sell', ${row}, ${col})">Vendre</button>`; 
         actionsHtml += `</div>`;
         modalContent += actionsHtml;
-        if (typeof showModal === 'function') showModal("Gérer Défense", modalContent, null, true); // showModal global
+        if (typeof showModal === 'function') showModal("Gérer Défense", modalContent, null, true); 
     },
 
     updateDisplays: function() {
-        if (!gameState) { /*console.warn("UI: updateDisplays - gameState non défini, arrêt.");*/ return; }
+        if (!gameState) { return; }
         
         if(typeof this.updateResourceDisplay === 'function') this.updateResourceDisplay();
-        if(typeof this.updateXpBar === 'function') this.updateXpBar(); // XpBar général du header
+        if(typeof this.updateXpBar === 'function') this.updateXpBar(); 
 
         const activeMainSectionButton = document.querySelector('#main-navigation .nav-button.active');
         if (!activeMainSectionButton) return;
@@ -700,7 +752,7 @@ var uiUpdates = {
                 if (activeSubTabId === 'nanobot-config-subtab' && typeof this.updateNanobotDisplay === 'function') this.updateNanobotDisplay();
                 else if (activeSubTabId === 'inventory-subtab' && typeof updateInventoryDisplay === 'function') updateInventoryDisplay(); 
             }
-        } else if (activeMainSectionId === 'crafting-section') { // NOUVELLE SECTION
+        } else if (activeMainSectionId === 'crafting-section') { 
             if (typeof window.craftingUI !== 'undefined' && typeof window.craftingUI.updateCraftingDisplay === 'function') {
                 window.craftingUI.updateCraftingDisplay();
             }
@@ -709,10 +761,8 @@ var uiUpdates = {
                 typeof window.explorationUI.updateActiveTileExplorationView === 'function' &&
                 window.explorationUI.activeTileUiElements && window.explorationUI.activeTileUiElements.container && 
                 !window.explorationUI.activeTileUiElements.container.classList.contains('hidden')) {
-                // Si en mode exploration active, mettre à jour cette vue
                 window.explorationUI.updateActiveTileExplorationView(gameState.map.activeExplorationTileCoords.x, gameState.map.activeExplorationTileCoords.y);
             } else {
-                // Sinon, mettre à jour la carte du monde et le panneau d'aperçu
                 const activeSubTabButton = document.querySelector('#world-section .sub-nav-button.active');
                 if (activeSubTabButton) {
                     const activeSubTabId = activeSubTabButton.dataset.subtab;
@@ -728,11 +778,9 @@ var uiUpdates = {
         }
     }
 };
-window.uiUpdates = uiUpdates; // Rendre global
+window.uiUpdates = uiUpdates; 
 
-// handleDefenseAction est déjà globalement défini à la fin de ce fichier.
 
-// S'assurer que handleDefenseAction est global si appelé depuis un onclick dans l'HTML injecté
 if (typeof window.handleDefenseAction === 'undefined') {
     window.handleDefenseAction = function(instanceId, action, row, col) {
         if (action === 'upgrade') {
@@ -747,4 +795,4 @@ if (typeof window.handleDefenseAction === 'undefined') {
 }
 
 
-console.log("uiUpdates.js - Objet uiUpdates défini.");
+console.log("uiUpdates.js - Objet uiUpdates défini.")

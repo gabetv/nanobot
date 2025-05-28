@@ -38,24 +38,84 @@ const NANOBOT_SKILLS_CONFIG = {
         id: "power_strike",
         name: "Frappe Puissante",
         description: "Une attaque concentrée qui inflige des dégâts modérés.",
-        type: "active_damage", // 'active_damage', 'active_heal', 'buff', 'debuff'
-        target: "enemy", // 'self', 'enemy'
-        cost: { rage: 25 }, 
+        icon: "ti-bolt",
+        type: "active_damage", 
+        target: "enemy", 
+        cost: { rage: 20 }, 
         cooldown: 2, // En tours 
-        baseDamage: 15, 
+        baseDamage: 12, // Dégâts de base fixes
+        damageMultiplier: 1.2, // Multiplie l'attaque du Nanobot
         damageType: (typeof window !== 'undefined' && window.DAMAGE_TYPES) ? window.DAMAGE_TYPES.KINETIC : 'kinetic',
-        unlock: { level: 2 } 
+        unlock: { level: 1 } // Débloqué dès le début
     },
-    "repair_wave": {
-        id: "repair_wave",
-        name: "Onde Réparatrice",
-        description: "Émet une onde qui répare légèrement le Nanobot.",
+    "repair_wave": { // Renommé en Emergency_Repairs, et devient un soin instantané plus conséquent
+        id: "repair_wave", // Garder l'ID pour compatibilité si sauvegardes existent
+        name: "Réparations d'Urgence",
+        description: "Active des protocoles de réparation d'urgence pour restaurer une quantité modérée de PV.",
+        icon: "ti-ambulance",
         type: "active_heal",
         target: "self",
-        cost: { energy: 10 }, // Utilise l'énergie globale du Nanobot
-        cooldown: 3,
-        healAmount: 20,
+        cost: { energy: 15 }, 
+        cooldown: 4,
+        healAmount: 35,
+        unlock: { level: 2 } // Changé pour déblocage plus tardif
+    },
+    "tactical_shield": {
+        id: "tactical_shield",
+        name: "Bouclier Tactique",
+        description: "Déploie un bouclier énergétique temporaire qui absorbe les dégâts entrants.",
+        icon: "ti-shield-half-filled",
+        type: "shield",
+        target: "self",
+        cost: { energy: 20 },
+        cooldown: 5,
+        shieldAmount: 40, // Le bouclier absorbe 40 dégâts
+        duration: 3, // Dure 3 tours ou jusqu'à destruction
+        effectKey: "tactical_shield_effect", // Pour le suivi dans le tableau d'effets
         unlock: { level: 3 }
+    },
+    "focused_blast": {
+        id: "focused_blast",
+        name: "Explosion Focalisée",
+        description: "Une décharge d'énergie concentrée qui ignore une partie de la défense ennemie.",
+        icon: "ti-target-arrow",
+        type: "active_damage",
+        target: "enemy",
+        cost: { rage: 35 },
+        cooldown: 4,
+        baseDamage: 10,
+        damageMultiplier: 1.5,
+        defensePiercing: 0.4, // Ignore 40% de la défense ennemie
+        damageType: (typeof window !== 'undefined' && window.DAMAGE_TYPES) ? window.DAMAGE_TYPES.ENERGY : 'energy',
+        unlock: { level: 4 }
+    },
+    "nano_repair_field": {
+        id: "nano_repair_field",
+        name: "Champ de Nano-Réparation",
+        description: "Génère un champ de nanites réparateurs qui restaurent des PV sur la durée.",
+        icon: "ti-progress-check",
+        type: "hot", // Heal Over Time
+        target: "self",
+        cost: { energy: 25 },
+        cooldown: 6,
+        healPerTurn: 10,
+        duration: 4, // Soigne pendant 4 tours
+        effectKey: "nano_repair_hot",
+        unlock: { level: 5 }
+    },
+    "rage_fueled_strike": {
+        id: "rage_fueled_strike",
+        name: "Frappe de Rage",
+        description: "Convertit toute la rage accumulée en une frappe dévastatrice. Dégâts augmentés par la rage consommée.",
+        icon: "ti-flame",
+        type: "active_damage",
+        target: "enemy",
+        cost: { rage: "all" }, // Coût spécial: consomme toute la rage
+        cooldown: 3, // Cooldown relativement court car situationnel
+        baseDamage: 5, // Dégâts minimaux
+        damagePerRagePoint: 0.3, // 0.3 dégât supplémentaire par point de rage
+        damageType: (typeof window !== 'undefined' && window.DAMAGE_TYPES) ? window.DAMAGE_TYPES.KINETIC : 'kinetic',
+        unlock: { level: 6 }
     }
 };
 window.NANOBOT_SKILLS_CONFIG = NANOBOT_SKILLS_CONFIG;

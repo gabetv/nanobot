@@ -9,7 +9,7 @@ let eventLogEl, biomassEl, nanitesEl, mobilityEl, energyEl, crystalShardsEl, cry
     equippedModulesDisplayEl, nanobotVisualBody, equippedItemsDisplayBriefEl, nanobotEquipmentSlotsEl,
     buildingsContainerEl, researchContainerEl, inventoryListEl, shopItemsListEl,
     baseHealthValueEl, baseMaxHealthValueEl, overviewBaseHealthEl, baseHealthBarEl, baseDefensePowerEl,
-    repairBaseBtn, repairDefensesBtn, forceCycleChangeBtn, baseHealthDisplayEl,
+    repairBaseBtn, repairBaseFullBtn, repairDefensesBtn, forceCycleChangeBtn, baseHealthDisplayEl, 
     basePreviewContainerEl, placementInfoEl, selectedDefenseForPlacementEl, cancelPlacementBtnEl,
     nightAssaultEnemiesDisplayEl, nightAssaultLogEl,
     mapGridEl, mapScrollContainerEl, nanobotMapPosEl, tileInfoDisplayEl, centerMapBtnEl,
@@ -32,14 +32,14 @@ let eventLogEl, biomassEl, nanitesEl, mobilityEl, energyEl, crystalShardsEl, cry
     tutorialModalEl, tooltipEl,
     toggleNanobotDefendBaseBtn,
     questsContentEl, activeQuestsListEl, completedQuestsListEl,
-    shopContentEl;
+    shopContentEl, craftingContentEl; 
 
 var gameState;
 
 let gameLoopInterval = null;
 let lastTickTime = 0;
 let isGamePaused = false;
-const currentVersion = "1.1.4"; // Doit correspondre à GAME_VERSION_CONFIG_CHECK
+const currentVersion = "1.1.4"; 
 
 function initDOMReferences() {
     console.log("main.js: initDOMReferences - Début");
@@ -69,6 +69,8 @@ function initDOMReferences() {
     researchContainerEl = document.getElementById('research-content'); window.researchContainerEl = researchContainerEl;
     inventoryListEl = document.getElementById('inventory-list'); window.inventoryListEl = inventoryListEl;
     shopItemsListEl = document.getElementById('shop-items-list'); window.shopItemsListEl = shopItemsListEl;
+    craftingContentEl = document.getElementById('crafting-content'); window.craftingContentEl = craftingContentEl;
+
 
     baseHealthValueEl = document.getElementById('base-health-value'); window.baseHealthValueEl = baseHealthValueEl;
     baseMaxHealthValueEl = document.getElementById('base-max-health-value'); window.baseMaxHealthValueEl = baseMaxHealthValueEl;
@@ -76,6 +78,7 @@ function initDOMReferences() {
     baseHealthBarEl = document.getElementById('base-health-bar'); window.baseHealthBarEl = baseHealthBarEl;
     baseDefensePowerEl = document.getElementById('base-defense-power'); window.baseDefensePowerEl = baseDefensePowerEl;
     repairBaseBtn = document.getElementById('repair-base-btn'); window.repairBaseBtn = repairBaseBtn;
+    repairBaseFullBtn = document.getElementById('repair-base-full-btn'); window.repairBaseFullBtn = repairBaseFullBtn;
     repairDefensesBtn = document.getElementById('repair-defenses-btn'); window.repairDefensesBtn = repairDefensesBtn;
     forceCycleChangeBtn = document.getElementById('force-cycle-change-btn'); window.forceCycleChangeBtn = forceCycleChangeBtn;
     baseHealthDisplayEl = document.getElementById('base-health-display'); window.baseHealthDisplayEl = baseHealthDisplayEl;
@@ -175,6 +178,7 @@ function setupEventListeners() {
     console.log("main.js: setupEventListeners - Début");
 
     if(window.repairBaseBtn) window.repairBaseBtn.addEventListener('click', () => { if(typeof repairBase === 'function') repairBase(); });
+    if(window.repairBaseFullBtn) window.repairBaseFullBtn.addEventListener('click', () => { if(typeof repairBaseFull === 'function') repairBaseFull(); });
     if(window.repairDefensesBtn) window.repairDefensesBtn.addEventListener('click', () => { if(typeof repairAllDefenses === 'function') repairAllDefenses(); });
     if(window.forceCycleChangeBtn) window.forceCycleChangeBtn.addEventListener('click', () => { if(typeof forceCycleChange === 'function') forceCycleChange(); });
     if(window.cancelPlacementBtnEl) window.cancelPlacementBtnEl.addEventListener('click', () => { if(typeof cancelPlacementMode === 'function') cancelPlacementMode(); });
@@ -248,9 +252,10 @@ function checkAllConfigLoaded() {
         { name: "zoneBiomesData", data: typeof window.zoneBiomesData !== 'undefined' ? window.zoneBiomesData : undefined, canBeEmpty: false },
         { name: "biomeColorMapping", data: typeof window.biomeColorMapping !== 'undefined' ? window.biomeColorMapping : undefined, canBeEmpty: false },
         { name: "storyEvents", data: typeof window.storyEvents !== 'undefined' ? window.storyEvents : undefined, canBeEmpty: true },
-        { name: "QUEST_DATA", data: typeof window.QUEST_DATA !== 'undefined' ? window.QUEST_DATA : undefined, canBeEmpty: false }, // Standardisé en QUEST_DATA
-        { name: "shopInventoryData", data: typeof window.shopInventoryData !== 'undefined' ? window.shopInventoryData : undefined, canBeEmpty: false }, // Can't be empty if shop is a feature
+        { name: "QUEST_DATA", data: typeof window.QUEST_DATA !== 'undefined' ? window.QUEST_DATA : undefined, canBeEmpty: false }, 
+        { name: "shopInventoryData", data: typeof window.shopInventoryData !== 'undefined' ? window.shopInventoryData : undefined, canBeEmpty: false }, 
         { name: "tutorialSteps", data: typeof window.tutorialSteps !== 'undefined' ? window.tutorialSteps : undefined, canBeEmpty: true },
+        { name: "craftingRecipesData", data: typeof window.craftingRecipesData !== 'undefined' ? window.craftingRecipesData : undefined, canBeEmpty: true }, 
         { name: "EQUIPMENT_SLOTS", data: typeof window.EQUIPMENT_SLOTS !== 'undefined' ? window.EQUIPMENT_SLOTS : undefined, canBeEmpty: false },
         { name: "DAMAGE_TYPES", data: typeof window.DAMAGE_TYPES !== 'undefined' ? window.DAMAGE_TYPES : undefined, canBeEmpty: false },
         { name: "RESOURCE_TYPES", data: typeof window.RESOURCE_TYPES !== 'undefined' ? window.RESOURCE_TYPES : undefined, canBeEmpty: false },
@@ -269,9 +274,10 @@ function checkAllConfigLoaded() {
         { name: "NIGHT_ASSAULT_CONFIG", data: typeof window.NIGHT_ASSAULT_CONFIG !== 'undefined' ? window.NIGHT_ASSAULT_CONFIG : undefined, canBeEmpty: false },
         { name: "BASE_GRID_SIZE", data: typeof window.BASE_GRID_SIZE !== 'undefined' ? window.BASE_GRID_SIZE : undefined, canBeEmpty: false },
         { name: "NANOBOT_INITIAL_STATS", data: typeof window.NANOBOT_INITIAL_STATS !== 'undefined' ? window.NANOBOT_INITIAL_STATS : undefined, canBeEmpty: false },
+        { name: "NANOBOT_SKILLS_CONFIG", data: typeof window.NANOBOT_SKILLS_CONFIG !== 'undefined' ? window.NANOBOT_SKILLS_CONFIG : undefined, canBeEmpty: true }, 
         { name: "LEVEL_XP_THRESHOLDS", data: typeof window.LEVEL_XP_THRESHOLDS !== 'undefined' ? window.LEVEL_XP_THRESHOLDS : undefined, isArray: true, canBeEmpty: false },
         { name: "EXPLORATION_SETTINGS", data: typeof window.EXPLORATION_SETTINGS !== 'undefined' ? window.EXPLORATION_SETTINGS : undefined, canBeEmpty: false },
-        { name: "WORLD_ZONES", data: typeof window.WORLD_ZONES !== 'undefined' ? window.WORLD_ZONES : undefined, canBeEmpty: false }, // Vérifie WORLD_ZONES
+        { name: "WORLD_ZONES", data: typeof window.WORLD_ZONES !== 'undefined' ? window.WORLD_ZONES : undefined, canBeEmpty: false }, 
         { name: "EVENT_TRIGGERS", data: typeof window.EVENT_TRIGGERS !== 'undefined' ? window.EVENT_TRIGGERS : undefined, canBeEmpty: false },
         { name: "GAME_VERSION_CONFIG_CHECK", data: typeof window.GAME_VERSION_CONFIG_CHECK !== 'undefined' ? window.GAME_VERSION_CONFIG_CHECK : undefined, canBeEmpty: false },
         { name: "TICK_SPEED", data: typeof window.TICK_SPEED !== 'undefined' ? window.TICK_SPEED : undefined, canBeEmpty: false },
@@ -282,6 +288,7 @@ function checkAllConfigLoaded() {
         { name: "BASE_COORDINATES", data: typeof window.BASE_COORDINATES !== 'undefined' ? window.BASE_COORDINATES : undefined, canBeEmpty: false },
         { name: "DEFAULT_MAP_SIZE", data: typeof window.DEFAULT_MAP_SIZE !== 'undefined' ? window.DEFAULT_MAP_SIZE : undefined, canBeEmpty: false },
         { name: "TILE_TYPES_TO_RESOURCE_KEY", data: typeof window.TILE_TYPES_TO_RESOURCE_KEY !== 'undefined' ? window.TILE_TYPES_TO_RESOURCE_KEY : undefined, canBeEmpty: true },
+        { name: "NANOBOT_BASE_PATROL_POINTS", data: typeof window.NANOBOT_BASE_PATROL_POINTS !== 'undefined' ? window.NANOBOT_BASE_PATROL_POINTS : undefined, isArray: true, canBeEmpty: true }, // Ajouté
     ];
     let allLoaded = true;
     let missingConfigsMessages = [];
@@ -361,7 +368,6 @@ function init() {
     loadGame();
     console.log("main.js: init() - gameState après loadGame().");
 
-    // --- Population initiale du stock du magasin ---
     if (gameState.shopStock.length === 0 && typeof window.shopInventoryData !== 'undefined' && Object.keys(window.shopInventoryData).length > 0) {
         console.log("Populating initial shop stock from shopInventoryData.");
         for (const key in window.shopInventoryData) {
@@ -369,7 +375,7 @@ function init() {
             gameState.shopStock.push({
                 itemId: shopEntryConfig.itemId,
                 quantity: shopEntryConfig.quantity,
-                cost: { ...shopEntryConfig.cost }, // Copier l'objet coût
+                cost: { ...shopEntryConfig.cost }, 
                 isUnique: shopEntryConfig.isUnique || false,
                 restockTime: shopEntryConfig.restockTime
             });
@@ -377,7 +383,6 @@ function init() {
     } else if (gameState.shopStock.length > 0) {
         console.log("Shop stock déjà peuplé ou shopInventoryData vide.");
     }
-    // --- Fin population stock magasin ---
 
 
     if(typeof window.questController !== 'undefined' && typeof window.questController.initializeQuests === 'function') {
@@ -399,12 +404,12 @@ function init() {
 
     if (!gameState.baseGrid || gameState.baseGrid.length === 0) {
         console.log("main.js: init() - Grille de base non chargée. Initialisation...");
-        if(typeof initializeBaseGrid === 'function') initializeBaseGrid(); // gameState.js
+        if(typeof initializeBaseGrid === 'function') initializeBaseGrid(); 
         else console.error("initializeBaseGrid function is not defined!");
     }
     
     console.log("main.js: init() - Calculs initiaux (si besoin) après chargement/initialisation...");
-    if(typeof calculateInitialGameState === 'function') calculateInitialGameState(); // gameState.js
+    if(typeof calculateInitialGameState === 'function') calculateInitialGameState(); 
     
     console.log("main.js: init() - gameState.resources après calculs initiaux:", JSON.parse(JSON.stringify(gameState.resources)));
 
@@ -453,18 +458,26 @@ function gameLoop(manualTriggerTime) {
 
     if (isGamePaused) return;
 
-    // if (typeof window.WORLD_ZONES === 'undefined') { // Décommenter pour un debug intensif
-    //     console.warn(`GAME LOOP WARNING: window.WORLD_ZONES is UNDEFINED at gameTime ${gameState.gameTime}`);
-    // }
-
     const tickDelta = window.TICK_SPEED / 1000;
     gameState.gameTime += tickDelta;
 
     if(typeof updateResources === 'function') updateResources(tickDelta);
     if(typeof updateResearch === 'function') updateResearch(tickDelta);
     if(typeof updateDayNightCycle === 'function') updateDayNightCycle(tickDelta);
-    if(typeof window.processNightAssaultTick === 'function') window.processNightAssaultTick();
-    else console.warn("processNightAssaultTick non défini");
+    
+    if (!gameState.isDay) { 
+        if(typeof window.processNightAssaultTick === 'function') window.processNightAssaultTick();
+        else console.warn("processNightAssaultTick non défini");
+        
+        if(typeof window.processNanobotBaseDefenseAction === 'function' && gameState.nanobotStats.isDefendingBase) { 
+            window.processNanobotBaseDefenseAction();
+        }
+    } else { 
+        if(typeof window.processNanobotBaseDefenseAction === 'function' && gameState.nanobotStats.isDefendingBase && window.NANOBOT_BASE_PATROL_POINTS && window.NANOBOT_BASE_PATROL_POINTS.length > 0) {
+            window.processNanobotBaseDefenseAction();
+        }
+    }
+
     if(typeof regenerateMobility === 'function') regenerateMobility(tickDelta);
 
     if(typeof window.uiUpdates !== 'undefined') {
@@ -527,8 +540,9 @@ function loadGame() {
             if (gameState.nightAssault && !Array.isArray(gameState.nightAssault.log)) gameState.nightAssault.log = [];
             if (!Array.isArray(gameState.explorationLog)) gameState.explorationLog = [];
             if (!Array.isArray(gameState.eventLog)) gameState.eventLog = [];
-            if (!Array.isArray(gameState.shopStock)) gameState.shopStock = []; // Assurer que shopStock est un tableau
+            if (!Array.isArray(gameState.shopStock)) gameState.shopStock = []; 
             if (!Array.isArray(gameState.purchasedShopItems)) gameState.purchasedShopItems = [];
+            if (typeof gameState.nanobotSkills !== 'object' || gameState.nanobotSkills === null) gameState.nanobotSkills = {};
 
 
             if(typeof addLogEntry === 'function') addLogEntry("Partie chargée.", "success");

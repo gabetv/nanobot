@@ -126,17 +126,17 @@ const buildingsData = {
         description_long: "Ce générateur compact utilise une réaction de fusion à froid pour produire une quantité stable d'énergie, essentielle au fonctionnement de tous les autres modules de la base.",
         type: "energy", icon: "images/buildings/energy_generator.png",
         levels: [
-            { level: 1, costToUnlockOrUpgrade: { nanites: 100 }, capacity: { energy: 50 } }, // Ne consomme pas, fournit de la capacité
+            { level: 1, costToUnlockOrUpgrade: { nanites: 100 }, capacity: { energy: 50 } }, 
             { level: 2, costToUpgrade: { nanites: 250, biomass: 50 }, capacity: { energy: 100 } },
         ]
     },
-    "fabricationStation": { // Nouveau bâtiment pour le craft
+    "fabricationStation": { 
         id: "fabricationStation", name: "Station de Fabrication", description: "Permet de fabriquer des objets et composants.",
         description_long: "Une station d'assemblage polyvalente équipée de manipulateurs de précision et d'imprimantes moléculaires pour créer une variété d'objets à partir de ressources de base et de composants.",
-        type: "crafting", // Nouveau type
-        icon: "images/buildings/fabrication_station.png", // Image à créer
+        type: "crafting", 
+        icon: "images/buildings/fabrication_station.png", 
         levels: [
-            { level: 1, costToUnlockOrUpgrade: { nanites: 200, alloy_plates: 10 }, energyConsumption: 5, craftSpeedFactor: 1.0, unlockedCategories: ['basic_consumables', 'basic_components'] },
+            { level: 1, costToUnlockOrUpgrade: { researchId: "basic_fabrication" }, energyConsumption: 5, craftSpeedFactor: 1.0, unlockedCategories: ['basic_consumables', 'basic_components'] }, // Déblocage par recherche
             { level: 2, costToUpgrade: { nanites: 400, crystal_shard_raw: 20, alloy_plates: 20 }, energyConsumption: 8, craftSpeedFactor: 1.5, unlockedCategories: ['advanced_consumables', 'weapon_parts'] }
         ]
     },
@@ -144,17 +144,21 @@ const buildingsData = {
         id: "laserTurret", name: "Tourelle Laser", type: "defense",
         description: "Une tourelle défensive à courte portée.",
         description_long: "La Tourelle Laser standard offre une protection de base contre les menaces terrestres et aériennes de bas niveau. Efficace contre les cibles peu blindées.",
-        placementCost: { nanites: 75 },
+        placementCost: { nanites: 75 }, // Coût pour placer une instance sur la grille
         baseEnergyConsumption: 3,
         icon: "images/defenses/laser_turret.png", gridVisual: { char: "L", class: "laserTurret" },
-        levels: [
-            { level: 1, costToUnlockOrUpgrade: { researchId: "basic_turrets" },
-              stats: { health: 100, attack: 15, range: 3, fireRate: 1.0, damageType: window.DAMAGE_TYPES?.ENERGY || 'energy' },
-              costToUpgradeInstance: { nanites: 20, crystal_shard_raw: 2}
+        levels: [ // Niveaux technologiques de la tourelle (affecte toutes les instances)
+            { 
+                level: 1, 
+                costToUnlockOrUpgrade: { researchId: "basic_turrets" }, // Condition pour débloquer la tech de ce bâtiment (Niv 0 -> Niv 1)
+                stats: { health: 100, attack: 15, range: 3, fireRate: 1.0, damageType: window.DAMAGE_TYPES?.ENERGY || 'energy' },
+                costToUpgradeInstance: { nanites: 20, crystal_shard_raw: 2} // Coût pour améliorer une instance existante de Niv 1 vers Niv 2 (si la tech le permet)
             },
-            { level: 2, costToUpgrade: { researchId: "improved_lasers" },
-              stats: { health: 150, attack: 22, range: 3.5, fireRate: 1.2, damageType: window.DAMAGE_TYPES?.ENERGY || 'energy' },
-              costToUpgradeInstance: { nanites: 30, crystal_shard_raw: 4}
+            { 
+                level: 2, 
+                costToUpgrade: { researchId: "improved_lasers" }, // Condition pour améliorer la tech du bâtiment de Niv 1 -> Niv 2
+                stats: { health: 150, attack: 22, range: 3.5, fireRate: 1.2, damageType: window.DAMAGE_TYPES?.ENERGY || 'energy' },
+                costToUpgradeInstance: { nanites: 30, crystal_shard_raw: 4} // Coût pour améliorer une instance de Niv 2 vers Niv 3
             }
         ]
     },
@@ -166,13 +170,17 @@ const buildingsData = {
         baseEnergyConsumption: 0,
         icon: "images/defenses/wall.png", gridVisual: { char: "W", class: "reinforcedWall" },
         levels: [
-            { level: 1, costToUnlockOrUpgrade: { nanites: 100 },
-              stats: { health: 300 }, baseHealthBonus: 50,
-              costToUpgradeInstance: { nanites: 25 }
+            { 
+                level: 1, 
+                costToUnlockOrUpgrade: { nanites: 100 }, // Coût pour débloquer la tech Mur Niv 1
+                stats: { health: 300 }, baseHealthBonus: 50,
+                costToUpgradeInstance: { nanites: 25 }
             },
-            { level: 2, costToUpgrade: { nanites: 150, alloy_plates: 5 },
-              stats: { health: 500 }, baseHealthBonus: 80,
-              costToUpgradeInstance: { nanites: 40, alloy_plates: 2 }
+            { 
+                level: 2, 
+                costToUpgrade: { nanites: 150, alloy_plates: 5 }, // Coût pour améliorer la tech Mur Niv 1 -> Niv 2
+                stats: { health: 500 }, baseHealthBonus: 80,
+                costToUpgradeInstance: { nanites: 40, alloy_plates: 2 }
             }
         ]
     }
@@ -202,27 +210,26 @@ const researchData = {
         requirements: { research: ["basic_construction"] },
         unlocksBuilding: "energyGenerator"
     },
-    "basic_fabrication": { // Nouvelle recherche pour débloquer la station de fabrication
+    "basic_fabrication": { 
         id: "basic_fabrication", name: "Fabrication de Base", description: "Débloque la Station de Fabrication.",
         description_long: "Permet la construction d'une station d'assemblage pour fabriquer des objets et composants plus complexes.",
         time: 150, cost: { nanites: 120, biomass: 70 },
         requirements: { research: ["nanite_engineering"], buildings: { researchLab: 1 } },
-        unlocksBuilding: "fabricationStation",
-        grantsFeature: "crafting_panel_access" // Flag pour débloquer l'onglet
+        // unlockBuilding: "fabricationStation", // Le déblocage se fait via costToUnlockOrUpgrade dans buildingsData
+        grantsFeature: "crafting_panel_access" 
     },
-    "advanced_repair_systems": { // Nouvelle recherche pour débloquer la recette
+    "advanced_repair_systems": { 
         id: "advanced_repair_systems", name: "Systèmes de Réparation Avancés", description: "Débloque la recette du Kit de Réparation Avancé.",
         description_long: "Recherche sur des nanites de réparation plus efficaces et des matériaux composites pour améliorer les kits de réparation.",
         time: 200, cost: { nanites: 180, crystal_shard_raw: 15 },
         requirements: { research: ["basic_fabrication"], buildings: { researchLab: 1 } },
-        // grantsRecipe: "craft_repair_kit_advanced" // La recette sera débloquée par sa propre condition `unlockCondition`
     },
     "basic_turrets": {
         id: "basic_turrets", name: "Tourelles Basiques", description: "Débloque la construction de Tourelles Laser.",
         description_long: "Permet la fabrication et le déploiement de systèmes défensifs automatisés de base, les Tourelles Laser.",
         time: 180, cost: { nanites: 100, biomass: 50 },
         requirements: { buildings: { researchLab: 1 } },
-        unlocksBuildingTechnology: "laserTurret"
+        // unlocksBuildingTechnology: "laserTurret" // Géré par costToUnlockOrUpgrade dans buildingsData
     },
     "improved_lasers": {
         id: "improved_lasers", name: "Lasers Améliorés", description: "Améliore l'efficacité des tourelles laser.",
@@ -277,7 +284,7 @@ const nanobotModulesData = {
         visualClass: "module-arm-cutter",
         abilities: { canTraverse: [window.TILE_TYPES?.THICK_VINES] },
         levels: [
-            { level: 1, costToUnlockOrUpgrade: { nanites: 120, crystal_shard_raw: 8 }, statBoost: { /* miningSpeed: 0.1, attack: 2 */ } } // Exemple de stats
+            { level: 1, costToUnlockOrUpgrade: { nanites: 120, crystal_shard_raw: 8 }, statBoost: { /* miningSpeed: 0.1, attack: 2 */ } } 
         ]
     }
 };
@@ -355,7 +362,7 @@ const craftingRecipesData = {
             { type: "item", id: "nanite_cluster_small", quantity: 3 },
             { type: "resource", id: "crystal_shards", quantity: 5 }
         ],
-        craftTime: 10, // secondes, pour l'instant instantané
+        craftTime: 10, 
         requiredBuilding: "fabricationStation", 
         requiredBuildingLevel: 1,
         unlockCondition: { research: "advanced_repair_systems" } 
@@ -367,7 +374,7 @@ const craftingRecipesData = {
         output: { itemId: "alloy_plates", quantity: 2 },
         ingredients: [
             { type: "resource", id: "nanites", quantity: 50 },
-            { type: "resource", id: "biomass", quantity: 20 } // Exemple, peut être un minerai plus tard
+            { type: "resource", id: "biomass", quantity: 20 } 
         ],
         craftTime: 15,
         requiredBuilding: "fabricationStation",
@@ -386,8 +393,8 @@ const craftingRecipesData = {
         ],
         craftTime: 120,
         requiredBuilding: "fabricationStation",
-        requiredBuildingLevel: 2, // Nécessite une station améliorée par exemple
-        unlockCondition: { research: "improved_lasers" } // Supposons que la recherche des lasers améliorés débloque aussi le craft
+        requiredBuildingLevel: 2, 
+        unlockCondition: { research: "improved_lasers" } 
     },
 };
 window.craftingRecipesData = craftingRecipesData;

@@ -23,7 +23,12 @@ function getInitialGameState() {
         baseHealth: 100, baseAttack: 10, baseDefense: 5, baseSpeed: 10, // Ajout des stats de base
         critChance: 0.05, critDamage: 1.5, energyRegen: 0.5, rageMax: 100,
         resistances: {}, // Initialiser les résistances
-        lastMapScanTime: 0 // Pour le cooldown du scan de carte
+        lastMapScanTime: 0, // Pour le cooldown du scan de carte
+        isDefendingBase: false,
+        baseDefensePosition: null, // { row, col }
+        baseDefenseTargetEnemyId: null,
+        baseDefensePatrolIndex: 0,
+        baseDefenseLastActionTime: 0
     };
 
     const initialBaseStats = typeof window.BASE_STATS_CONFIG !== 'undefined' ? { ...window.BASE_STATS_CONFIG.initial } : {
@@ -103,7 +108,7 @@ function getInitialGameState() {
             deficitWarningLogged: 0, // Pour éviter spam de log de déficit énergétique
             lastAttackTime: 0 // Pour NIGHT_ASSAULT_TICK_INTERVAL
         },
-        nanobotAssistingBase: false,
+        // nanobotAssistingBase: false, // Remplacé par nanobotStats.isDefendingBase
 
         quests: {},
         activeStoryEvents: [],
@@ -190,6 +195,11 @@ function calculateInitialGameState() {
                 }
             }
         }
+        // S'assurer que les nouvelles propriétés de défense de base du nanobot sont là
+        if (typeof gameState.nanobotStats.baseDefensePosition === 'undefined') gameState.nanobotStats.baseDefensePosition = null;
+        if (typeof gameState.nanobotStats.baseDefenseTargetEnemyId === 'undefined') gameState.nanobotStats.baseDefenseTargetEnemyId = null;
+        if (typeof gameState.nanobotStats.baseDefensePatrolIndex === 'undefined') gameState.nanobotStats.baseDefensePatrolIndex = 0;
+        if (typeof gameState.nanobotStats.baseDefenseLastActionTime === 'undefined') gameState.nanobotStats.baseDefenseLastActionTime = 0;
 
     }
     if (gameState.baseStats) {
