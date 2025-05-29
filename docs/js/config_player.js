@@ -19,13 +19,13 @@ const NANOBOT_INITIAL_STATS = {
     defense: 5,             // Défense actuelle (incluant bonus)
     speed: 10,              // Vitesse actuelle (incluant bonus)
 
-    critChance: 0.05,       // 5% de chance de coup critique de base
+    critChance: 0.05,       // 5% de chance de coup critique de base (peut être augmenté à 0.10 ou plus pour tester)
     critDamage: 1.5,        // Multiplicateur de dégâts pour un coup critique (150%)
-    
+
     energyRegen: 0.5,       // Régénération d'énergie par seconde (si applicable en combat ou exploration)
     rageMax: 100,           // Rage maximale pour les compétences (si applicable)
     resistances: {},        // Initialiser les résistances { DAMAGE_TYPE: 0.1 (10% resistance), etc. }
-    
+
     lastMapScanTime: 0,     // Timestamp du dernier scan de carte pour le cooldown
     isDefendingBase: false  // Si le nanobot participe activement à la défense de la base
 };
@@ -39,10 +39,10 @@ const NANOBOT_SKILLS_CONFIG = {
         name: "Frappe Puissante",
         description: "Une attaque concentrée qui inflige des dégâts modérés.",
         icon: "ti-bolt",
-        type: "active_damage", 
-        target: "enemy", 
-        cost: { rage: 20 }, 
-        cooldown: 2, // En tours 
+        type: "active_damage",
+        target: "enemy",
+        cost: { rage: 20 },
+        cooldown: 2, // En tours
         baseDamage: 12, // Dégâts de base fixes
         damageMultiplier: 1.2, // Multiplie l'attaque du Nanobot
         damageType: (typeof window !== 'undefined' && window.DAMAGE_TYPES) ? window.DAMAGE_TYPES.KINETIC : 'kinetic',
@@ -55,7 +55,7 @@ const NANOBOT_SKILLS_CONFIG = {
         icon: "ti-ambulance",
         type: "active_heal",
         target: "self",
-        cost: { energy: 15 }, 
+        cost: { energy: 15 },
         cooldown: 4,
         healAmount: 35,
         unlock: { level: 2 } // Changé pour déblocage plus tardif

@@ -20,7 +20,7 @@
             --accent-red: #e53e3e;   /* colors.red[600] */
             --accent-yellow: #ecc94b; /* colors.yellow[400] */
             --map-tile-effective-size: 22px;
-            
+
             /* RGB versions for RGBA usage (Tailwind colors for reference) */
             --bg-primary-rgb: 26, 32, 44;    /* #1a202c */
             --bg-secondary-rgb: 45, 55, 72;  /* #2d3748 */
@@ -33,57 +33,159 @@
 
         #game-container { display: flex; flex-direction: column; height: 100vh; max-height: 100vh; overflow: hidden; }
 
-        /* Header Styles */
-        #persistent-header { position: sticky; top: 0; z-index: 50; background-color: var(--bg-secondary); border-bottom: 1px solid var(--border-color); padding: 0.5rem 0.75rem; display: flex; flex-direction: column; align-items: center; }
-        #persistent-header h1 { font-family: 'Orbitron', sans-serif; font-size: 1.25rem; /* text-xl */ margin-bottom: 0.5rem; width: 100%; text-align: center; }
-        #header-info-container { width: 100%; display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.75rem; /* text-xs */ }
-        .resource-group { display: flex; justify-content: space-around; align-items: center; gap: 0.5rem; }
+        /* Header Styles - Adjusted for responsiveness */
+        #persistent-header {
+            position: sticky; top: 0; z-index: 50;
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.5rem 0.75rem;
+            display: flex;
+            flex-direction: column; /* Mobile: stacked */
+            align-items: center;
+        }
+        #persistent-header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.25rem; /* text-xl */
+            margin-bottom: 0.5rem;
+            width: 100%;
+            text-align: center;
+        }
+        #header-info-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column; /* Mobile: stacked resource groups */
+            gap: 0.25rem;
+            font-size: 0.75rem; /* text-xs */
+        }
+        .resource-group {
+            display: flex;
+            justify-content: space-around; /* Mobile: spread out */
+            align-items: center;
+            gap: 0.5rem; /* sm:gap-x-4 */
+        }
         .resource-item { display: flex; align-items: center; gap: 0.3rem; color: var(--text-primary); white-space: nowrap; cursor: default; }
-        .resource-item i { font-size: 1rem; }
+        .resource-item i { font-size: 1rem; } /* text-base */
         .resource-item .rate-text, #mobility span:not(:first-child), .btn .text-xs { font-size: 0.65rem; color: var(--text-secondary); margin-left: 0.1rem; }
         .btn .text-xs i { font-size: 0.7rem !important; vertical-align: middle;}
         #mobility { display: contents; } #mobility span:first-child { margin-right: 0.2rem; }
-        @media (min-width: 640px) { /* sm */
-            #persistent-header h1 { font-size: 1.5rem; /* text-2xl */ } 
-            #header-info-container { font-size: 0.875rem; /* text-sm */ } 
-            .resource-item i { font-size: 1.1rem; } 
-            .resource-item .rate-text, #mobility span:not(:first-child), .btn .text-xs { font-size: 0.75rem; /* text-xs */ } 
-            .btn .text-xs i { font-size: 0.8rem !important; } 
-        }
-        @media (min-width: 768px) { /* md */
-            #persistent-header { flex-direction: row; justify-content: space-between; padding: 0.5rem 1rem; } 
-            #persistent-header h1 { width: auto; text-align: left; margin-bottom: 0; } 
-            #header-info-container { flex-direction: row; align-items: center; justify-content: flex-end; gap: 1rem; } 
-            .resource-group { justify-content: flex-start; gap: 0.75rem; } 
+
+        /* Header - Desktop adjustments */
+        @media (min-width: 768px) { /* md breakpoint */
+            #persistent-header {
+                flex-direction: row; /* Desktop: side by side */
+                justify-content: space-between;
+                padding: 0.5rem 1rem;
+            }
+            #persistent-header h1 {
+                width: auto;
+                text-align: left;
+                margin-bottom: 0;
+                font-size: 1.5rem; /* text-2xl */
+            }
+            #header-info-container {
+                flex-direction: row; /* Desktop: resource groups in a row */
+                align-items: center;
+                justify-content: flex-end;
+                gap: 1rem; /* Increased gap */
+                font-size: 0.875rem; /* text-sm */
+            }
+            .resource-group {
+                justify-content: flex-start;
+                gap: 0.75rem; /* md:gap-x-3 */
+            }
+            .resource-item i { font-size: 1.1rem; } /* text-lg */
+            .resource-item .rate-text, #mobility span:not(:first-child), .btn .text-xs { font-size: 0.75rem; /* text-xs */ }
+             .btn .text-xs i { font-size: 0.8rem !important; }
         }
 
+        /* Main Layout: Nav + Content Area - Adjusted for responsiveness */
         #main-layout-container { display: flex; flex-grow: 1; overflow: hidden; }
-        #main-navigation { position: fixed; bottom: 0; left: 0; right: 0; background-color: var(--bg-secondary); border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 0.3rem 0; z-index: 40; }
-        .nav-button { display: flex; flex-direction: column; align-items: center; color: var(--text-secondary); font-size: 0.65rem; padding: 0.2rem 0.4rem; border-radius: 0.25rem; transition: background-color 0.2s, color 0.2s; flex-grow: 1; text-align:center; cursor:pointer; }
+
+        #main-navigation {
+            /* Mobile: Fixed bottom bar */
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-around;
+            padding: 0.3rem 0;
+            z-index: 40;
+        }
+        .nav-button {
+            display: flex; flex-direction: column; align-items: center;
+            color: var(--text-secondary);
+            font-size: 0.65rem; /* Smaller text for mobile */
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            transition: background-color 0.2s, color 0.2s;
+            flex-grow: 1; text-align:center; cursor:pointer;
+        }
         .nav-button i { font-size: 1.1rem; margin-bottom: 0.05rem; }
         .nav-button.active, .nav-button:hover { color: var(--accent-blue); background-color: rgba(var(--accent-blue-rgb), 0.1); }
-        #main-content-area { flex-grow: 1; overflow-y: auto; padding: 0.75rem; padding-bottom: 60px; /* Espace pour la nav mobile */ display: flex; flex-direction: column; }
-        @media (min-width: 768px) { /* md */
-            #main-navigation { position: static; flex-direction: column; justify-content: flex-start; width: 180px; min-width: 180px; height: 100%; padding: 0.75rem 0.5rem; border-top: none; border-right: 1px solid var(--border-color); overflow-y: auto; z-index: initial; } 
-            .nav-button { flex-direction: row; justify-content: flex-start; gap: 0.5rem; width: 100%; font-size: 0.875rem; padding: 0.6rem; margin-bottom: 0.3rem; } 
-            .nav-button i { font-size: 1.1rem; margin-bottom: 0; } 
-            #main-content-area { padding-bottom: 0.75rem; } 
+        .nav-button .nav-text { display: block; } /* Show text on mobile by default */
+
+        #main-content-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 0.75rem;
+            padding-bottom: 70px; /* Space for mobile bottom nav, adjust if nav height changes */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Main Navigation & Content Area - Desktop adjustments */
+        @media (min-width: 768px) { /* md breakpoint */
+            #main-navigation {
+                /* Desktop: Static sidebar */
+                position: static;
+                flex-direction: column;
+                justify-content: flex-start;
+                width: 180px; /* Fixed width for sidebar */
+                min-width: 180px;
+                height: 100%;
+                padding: 0.75rem 0.5rem;
+                border-top: none;
+                border-right: 1px solid var(--border-color);
+                overflow-y: auto;
+                z-index: initial;
+            }
+            .nav-button {
+                flex-direction: row; /* Icon and text side-by-side */
+                justify-content: flex-start;
+                gap: 0.5rem;
+                width: 100%;
+                font-size: 0.875rem; /* text-sm */
+                padding: 0.6rem;
+                margin-bottom: 0.3rem;
+            }
+            .nav-button i { font-size: 1.1rem; margin-bottom: 0; }
+            .nav-button .nav-text { display: inline; } /* Ensure text is visible */
+
+            #main-content-area {
+                padding-bottom: 0.75rem; /* Reset mobile padding */
+            }
         }
 
         .content-section { display: none; flex-grow: 1; flex-direction: column; } .content-section.active { display: flex; }
         .content-section > .panel { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         .panel { background-color: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 0.375rem; padding: 0.75rem; margin-bottom: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.2); position: relative; }
-        .sub-nav-bar { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 0.75rem; flex-shrink: 0; }
-        .sub-nav-button { padding: 0.5rem 0.75rem; font-size: 0.8rem; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; }
+        .sub-nav-bar { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 0.75rem; flex-shrink: 0; flex-wrap: wrap; /* Allow wrapping on small screens */ }
+        .sub-nav-button { padding: 0.5rem 0.75rem; font-size: 0.8rem; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; white-space: nowrap; }
         .sub-nav-button.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); font-weight: 600; } .sub-nav-button:hover { color: var(--accent-blue); }
         .sub-content { display: none; flex-grow: 1; flex-direction: column; overflow: hidden; } .sub-content.active { display: flex; }
 
-        /* Styles Exploration (Monde) */
+        /* Styles Exploration (Monde) - Adjusted for responsiveness */
         #world-section-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; transition: filter 0.3s ease-in-out; }
         #world-section-content.blurred-background { filter: blur(3px) brightness(0.7); pointer-events: none; }
         #exploration-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         #exploration-layout { display: flex; flex-direction: column; gap: 0.75rem; flex-grow: 1; overflow: hidden; }
-        #exploration-map-container { flex-grow: 1; display: flex; flex-direction: column; background-color: var(--bg-tertiary); padding:0.5rem; border-radius: 0.25rem; overflow: hidden; position: relative; }
+        #exploration-map-container {
+            /* Mobile: Takes more vertical space */
+            flex-grow: 1; display: flex; flex-direction: column;
+            background-color: var(--bg-tertiary); padding:0.5rem; border-radius: 0.25rem;
+            overflow: hidden; position: relative;
+            min-height: 250px; /* Ensure map has some height on mobile */
+        }
         #exploration-actions-bar { padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         #exploration-actions-bar h3 { font-size: 0.875rem; }
         #map-scroll-container { flex-grow: 1; overflow: auto; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 0.25rem; position:relative; }
@@ -92,7 +194,7 @@
         .map-tile:hover { background-color: #4a5568 !important; }
         .map-tile.unexplored { background-color: var(--bg-tertiary); filter: brightness(0.6); } .map-tile.explored { background-color: var(--bg-secondary); }
         .map-tile.nanobot { background-color: var(--accent-blue) !important; box-shadow: 0 0 6px var(--accent-blue); z-index:10; animation: idle-breath 3s infinite ease-in-out; }
-        
+
         .map-tile.grassland { background-color: #38a169; } .map-tile.grassland::before {content:"🌾"; color: #a7f3d0;}
         .map-tile.desert { background-color: #c19731; } .map-tile.desert::before {content:"🏜️"; color: #f6e05e;}
         .map-tile.water { background-color: #3b82f6; } .map-tile.water::before {content:"💧"; color: #bfdbfe;}
@@ -101,8 +203,8 @@
         .map-tile.ruins { background-color: #4b5563; } .map-tile.ruins::before {content:"🏛️"; color:#9ca3af;}
         .map-tile.debris-field { background-color: #52525b; } .map-tile.debris-field::before {content:"🔩"; color:#a1a1aa;}
         .map-tile.thick-vines { background-color: #15803d; } .map-tile.thick-vines::before {content:"🌿"; font-size: 1.1em; color:#4ade80;}
-        
-        .map-tile.unexplored-impassable { background-color: var(--border-color); } 
+
+        .map-tile.unexplored-impassable { background-color: var(--border-color); }
         .map-tile.unexplored-flat { background-color: #222938; }
         .map-tile.unexplored-water { background-color: #1c3d52; }
         .map-tile.unexplored-rough { background-color: #373c48; }
@@ -110,19 +212,21 @@
         .map-tile.unexplored-vines { background-color: #1c4a2e; }
 
         .map-tile.unexplored-ruin-outline::before { content: "🏛️"; opacity: 0.5;}
-        .map-tile.unexplored-large-crystal::before { content: "💠"; opacity: 0.5;}
+        /* .map-tile.unexplored-large-crystal::before { content: "💠"; opacity: 0.5;} Removed as there's no TILE_TYPE.PRE_LARGE_CRYSTAL */
         .map-tile.unexplored-enemy-base-outline::before { content: "💢"; opacity: 0.6; color: var(--accent-red); }
-        .map-tile.unexplored-distress-signal::before { content: "📡"; opacity: 0.6; color: var(--accent-yellow); animation: pulse-signal 2s infinite; }
+        /* .map-tile.unexplored-distress-signal::before { content: "📡"; opacity: 0.6; color: var(--accent-yellow); animation: pulse-signal 2s infinite; } Removed as there's no TILE_TYPE.PRE_DISTRESS_SIGNAL */
+
 
         .map-tile.impassable-water.explored-impassable::before { content: "🌊"; opacity: 0.8; font-size: 1rem; color: #1e3a8a; }
         .map-tile.impassable-mountain.explored-impassable::before { content: "⛰️"; opacity: 0.8; font-size: 1rem; color: var(--border-color);}
 
-        .map-tile.poi-structure::before { content:"🌟"; color:var(--accent-yellow);}
-        .map-tile.poi-wreckage::before { content:"⚓"; color:var(--text-secondary);}
-        
+        .map-tile.poi-poi_ancient_structure::before { content:"🌟"; color:var(--accent-yellow);} /* Example for a POI type */
+        .map-tile.poi-merchant_wreckage::before { content:"⚓"; color:var(--text-secondary);} /* Example for a POI type */
+
+
         .map-tile.scanned-on-map { outline: 1px dashed var(--accent-yellow); outline-offset: -1px; animation: pulse-scan-border 1.5s infinite alternate; }
         .map-tile.scanned-on-map::after { position: absolute; opacity: 0.7; font-size:0.8em; left:50%; top:50%; transform: translate(-50%, -50%); z-index:1; pointer-events: none; color: var(--accent-yellow); }
-        .map-tile.scanned-map-actual-biomass::after { content: "🌿"; } 
+        .map-tile.scanned-map-actual-biomass::after { content: "🌿"; }
         .map-tile.scanned-map-actual-nanites::after { content: "⚙️"; }
         .map-tile.scanned-map-actual-crystal::after { content: "💎"; }
         .map-tile.scanned-map-actual-enemy::after { content: "💀"; }
@@ -134,90 +238,65 @@
 
         .map-tile.enemy-base::before { content: "🏰"; color: var(--accent-red); font-size: 1.1rem; }
         .map-tile.has-active-resource { animation: pulse-resource-highlight 1.5s infinite alternate; z-index: 2; }
-        .map-tile.resource-biomass::before, .map-tile.resource-nanites::before, .map-tile.resource-crystal::before { z-index: 3; position: relative; }
+        .map-tile.resource-biomass::before, .map-tile.resource-nanites::before, .map-tile.resource-crystal_shards::before { z-index: 3; position: relative; } /* Changed resource-crystal to resource-crystal_shards */
         .map-tile.fully-explored-overlay { filter: grayscale(70%) brightness(0.8); }
 
         #map-info { text-align: center; font-size: 0.7rem; margin-top: 0.25rem; color: var(--text-secondary); flex-shrink:0; }
         #exploration-details-panels { display: flex; flex-direction: column; gap: 0.75rem; flex-shrink: 0; }
+        /* Mobile: Details panels take available space after map */
+        /* Desktop: Details panels have fixed width */
+        @media (min-width: 1024px) { /* lg breakpoint */
+             #exploration-layout { flex-direction: row; }
+             #exploration-map-container { width: 65%; min-height: auto; /* Reset mobile min-height */ }
+             #exploration-details-panels { width: 35%; }
+        }
         #exploration-details-panels > .panel { display: flex; flex-direction: column; min-height: 0; }
         #exploration-log, #zone-list, #tile-interaction-panel { background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 0.25rem; padding: 0.5rem; font-size: 0.75rem; color: var(--text-primary); overflow-y: auto; }
         #exploration-log { height: 120px; flex-shrink:0; } #zone-list { max-height: 100px; flex-shrink:0; }
         #tile-interaction-panel { flex-grow: 1; display: flex; flex-direction: column; } #tile-interaction-panel h4 {font-size: 0.875rem;}
         #tile-interaction-details { margin-bottom: 0.5rem; word-break: break-word; overflow-wrap: break-word; min-height: 0; flex-shrink: 1; overflow-y: auto; }
         #tile-interaction-details p { margin-bottom: 0.2rem; line-height: 1.3; } #tile-interaction-actions { margin-top: auto; flex-shrink: 0; }
-        @media (min-width: 1024px) { /* lg */
-             #exploration-layout { flex-direction: row; } 
-             #exploration-map-container { width: 65%; } 
-             #exploration-details-panels { width: 35%; } 
-        }
+
         #center-map-btn { position: absolute; bottom: 8px; right: 8px; z-index: 20; }
 
-        /* Styles UI Exploration Active - Refonte */
-        #active-tile-exploration-ui { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background-color: rgba(var(--bg-primary-rgb), 0.98); 
-            z-index: 100; 
-            display: flex; flex-direction: column; 
-            padding: 0.5rem; box-sizing: border-box; overflow: hidden; 
+        /* Styles UI Exploration Active - Responsive Adjustments */
+        #active-tile-exploration-ui {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(var(--bg-primary-rgb), 0.98);
+            z-index: 100;
+            display: flex; flex-direction: column;
+            padding: 0.5rem; box-sizing: border-box; overflow: hidden;
         }
         #active-tile-exploration-ui.hidden { display: none !important; }
-        #active-exploration-header { 
-            display: flex; justify-content: space-between; align-items: center; 
-            margin-bottom: 0.5rem; flex-shrink: 0; 
+        #active-exploration-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 0.5rem; flex-shrink: 0;
         }
-        #active-exploration-header h2 { 
-            font-family: 'Orbitron'; font-size: 1.1rem; color: var(--accent-blue); 
+        #active-exploration-header h2 {
+            font-family: 'Orbitron'; font-size: 1.1rem; color: var(--accent-blue);
         }
-        
-        #active-exploration-content-wrapper { 
-            flex-grow: 1; display: flex; flex-direction: column; 
-            gap: 0.5rem; overflow: hidden; 
+        #active-exploration-content-wrapper {
+            flex-grow: 1; display: flex; flex-direction: column;
+            gap: 0.5rem; overflow: hidden;
         }
-
-        #active-exploration-main-grid-view { 
-            flex-shrink: 0; 
-            display: grid; 
-            grid-template-columns: repeat(3, 1fr); 
-            grid-template-rows: repeat(3, 1fr); 
-            gap: 0.25rem; 
-            aspect-ratio: 1 / 1; 
-            width: clamp(150px, 70vw, 200px); 
-            max-height: 35vh; 
-            margin: 0 auto; 
-            align-self: center; 
+        #active-exploration-main-grid-view {
+            flex-shrink: 0; display: grid;
+            grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+            gap: 0.25rem; aspect-ratio: 1 / 1;
+            width: clamp(180px, 60vw, 220px); /* Slightly larger base, more flexible */
+            max-height: 40vh; /* Limit height on mobile */
+            margin: 0 auto; align-self: center;
         }
-        
         .active-explore-grid-cell {
-            background-color: rgba(var(--bg-secondary-rgb), 0.7);
-            border: 1px solid var(--border-color);
-            border-radius: 0.25rem;
-            padding: 0.2rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            transition: background-color 0.2s, transform 0.1s;
-            overflow: hidden;
-            position: relative;
+            background-color: rgba(var(--bg-secondary-rgb), 0.7); border: 1px solid var(--border-color);
+            border-radius: 0.25rem; padding: 0.2rem;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+            transition: background-color 0.2s, transform 0.1s; overflow: hidden; position: relative;
         }
-        .active-explore-grid-cell.current-nanobot-pos {
-            border: 2px solid var(--accent-blue);
-            box-shadow: 0 0 8px rgba(var(--accent-blue-rgb), 0.5);
-            transform: scale(1.05);
-            z-index: 10;
-        }
-        .active-explore-grid-cell.can-move:hover {
-            background-color: var(--bg-tertiary);
-            transform: scale(1.03);
-        }
-        .active-explore-grid-cell.blocked-preview {
-            opacity: 0.6; cursor: not-allowed; border-style: dashed;
-        }
-        .active-explore-grid-cell.blocked-preview:hover {
-            background-color: rgba(var(--bg-secondary-rgb), 0.7); transform: scale(1);
-        }
-
+        .active-explore-grid-cell.current-nanobot-pos { border: 2px solid var(--accent-blue); box-shadow: 0 0 8px rgba(var(--accent-blue-rgb), 0.5); transform: scale(1.05); z-index: 10; }
+        .active-explore-grid-cell.can-move:hover { background-color: var(--bg-tertiary); transform: scale(1.03); }
+        .active-explore-grid-cell.blocked-preview { opacity: 0.6; cursor: not-allowed; border-style: dashed; }
+        .active-explore-grid-cell.blocked-preview:hover { background-color: rgba(var(--bg-secondary-rgb), 0.7); transform: scale(1); }
         .active-explore-grid-cell i { font-size: 1.2rem; color: var(--text-primary); margin-bottom: 0.1rem; }
         .active-explore-grid-cell .terrain-name-preview { font-size: 0.5rem; color: var(--text-secondary); line-height: 1; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
         .active-explore-grid-cell .content-preview { font-size: 0.45rem; font-style: italic; line-height: 1; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;}
@@ -225,77 +304,44 @@
         .active-explore-grid-cell .content-preview.resource { color: var(--accent-green); }
         .nanobot-grid-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5rem; color: var(--accent-blue); z-index: 5; animation: idle-breath 3s infinite ease-in-out; }
 
-        /* Styles pour la Mini-Carte en Exploration Active */
         #active-exploration-minimap-container {
-            background-color: rgba(var(--bg-secondary-rgb), 0.5);
-            border: 1px solid var(--border-color);
-            border-radius: 0.25rem;
-            padding: 0.3rem;
-            flex-shrink: 0; 
-            align-self: center; 
-            margin-bottom: 0.5rem; 
+            background-color: rgba(var(--bg-secondary-rgb), 0.5); border: 1px solid var(--border-color);
+            border-radius: 0.25rem; padding: 0.3rem; flex-shrink: 0;
+            align-self: center; margin-bottom: 0.5rem;
         }
-
         #active-exploration-minimap-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            gap: 2px; 
-            width: 75px;  
-            height: 75px; 
+            display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+            gap: 2px; width: 60px; height: 60px; /* Smaller on mobile */
             background-color: var(--bg-primary);
         }
-
         .minimap-cell {
-            background-color: var(--bg-tertiary); 
-            border: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7rem; 
-            transition: background-color 0.2s;
+            background-color: var(--bg-tertiary); border: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.6rem; transition: background-color 0.2s;
         }
-        .minimap-cell i {
-            font-size: 0.8rem; 
-            line-height: 1;
-        }
+        .minimap-cell i { font-size: 0.7rem; line-height: 1; }
         .minimap-cell.nanobot-pos-minimap { background-color: var(--accent-blue) !important; color: white; box-shadow: 0 0 3px var(--accent-blue); z-index: 2; }
-        .minimap-cell.grassland-minimap { background-color: #2f855a; }
-        .minimap-cell.desert-minimap { background-color: #b7791f; }
-        .minimap-cell.water-minimap { background-color: #2c5282; }
-        .minimap-cell.forest-minimap { background-color: #276749; }
-        .minimap-cell.mountain-minimap { background-color: #4a5568; }
-        .minimap-cell.ruins-minimap { background-color: #2d3748; }
-        .minimap-cell.debris-minimap { background-color: #374151; }
-        .minimap-cell.vines-minimap { background-color: #166534; }
-        .minimap-cell.impassable-minimap { background-color: #1a202c; }
-        .minimap-cell.resource-minimap i { color: var(--accent-green); }
-        .minimap-cell.enemy-minimap i { color: var(--accent-red); }
-        .minimap-cell.poi-minimap i { color: var(--accent-yellow); }
-        .minimap-cell.base-minimap i { color: var(--accent-blue); }
-        .minimap-cell.unexplored-minimap { background-color: #383838; opacity: 0.7; }
-
+        .minimap-cell.grassland-minimap { background-color: #2f855a; } .minimap-cell.desert-minimap { background-color: #b7791f; }
+        .minimap-cell.water-minimap { background-color: #2c5282; } .minimap-cell.forest-minimap { background-color: #276749; }
+        .minimap-cell.mountain-minimap { background-color: #4a5568; } .minimap-cell.ruins-minimap { background-color: #2d3748; }
+        .minimap-cell.debris-minimap { background-color: #374151; } .minimap-cell.vines-minimap { background-color: #166534; }
+        .minimap-cell.impassable-minimap { background-color: #1a202c; } .minimap-cell.resource-minimap i { color: var(--accent-green); }
+        .minimap-cell.enemy-minimap i { color: var(--accent-red); } .minimap-cell.poi-minimap i { color: var(--accent-yellow); }
+        .minimap-cell.base-minimap i { color: var(--accent-blue); } .minimap-cell.unexplored-minimap { background-color: #383838; opacity: 0.7; }
 
         #active-exploration-detail-panel {
-            background-color: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            border-radius: 0.375rem;
-            padding: 0.5rem;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden; 
-            margin-top: 0.5rem; /* Modifié de 0.5rem au lieu de 0 pour espacer de la minimap sur mobile */
-            flex-grow: 1; 
-            min-height: 0; 
+            background-color: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 0.375rem;
+            padding: 0.5rem; display: flex; flex-direction: column; overflow: hidden;
+            margin-top: 0; /* Mobile: directly under grid/minimap */
+            flex-grow: 1; min-height: 0;
         }
-        
-        #current-tile-view-details { flex-grow: 1; overflow-y: auto; }
+        #current-tile-view-details { flex-grow: 1; overflow-y: auto; } /* Added for scrolling of entire details area if needed */
         #current-tile-image { width: 100%; height: 100px; background-color: var(--bg-primary); background-size: cover; background-position: center; border-radius: 0.25rem; margin-bottom: 0.5rem; border: 1px solid var(--border-color); flex-shrink: 0; }
-        #current-tile-description { font-size: 0.75rem; margin-bottom: 0.5rem; color: var(--text-secondary); max-height:50px; overflow-y:auto; flex-shrink:0;}
+        #current-tile-description { font-size: 0.75rem; margin-bottom: 0.5rem; color: var(--text-secondary); max-height:60px; overflow-y:auto; flex-shrink:0;}
         #current-tile-description strong { color: var(--text-primary); }
-        #current-tile-actions-grid { 
-            overflow-y: auto; display: flex; flex-direction: column; gap: 0.3rem; 
-            padding-right:0.2rem; flex-grow: 1; 
+        #current-tile-actions-grid {
+            overflow-y: auto; display: flex; flex-direction: column; gap: 0.3rem;
+            padding-right:0.2rem; flex-grow: 1;
         }
         #current-tile-actions-grid .btn { justify-content: flex-start; background-color: var(--bg-secondary); border: 1px solid var(--border-color); transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out; padding: 0.4rem; align-items: flex-start; }
         #current-tile-actions-grid .btn:not(.btn-disabled):hover { background-color: var(--border-color); border-color: var(--text-secondary); }
@@ -304,58 +350,47 @@
         #current-tile-actions-grid .btn div p { font-size: 0.65rem; color: var(--text-secondary); line-height: 1.2; }
         #current-tile-actions-grid .btn.btn-disabled div strong, #current-tile-actions-grid .btn.btn-disabled div p, #current-tile-actions-grid .btn.btn-disabled i { color: var(--text-secondary) !important; opacity: 0.6; }
         #current-tile-actions-grid .btn div p .cost-part.insufficient { color: var(--accent-red) !important; font-weight: bold; }
-        
+
         #active-tile-log-container { background-color: rgba(var(--bg-secondary-rgb),0.7); border: 1px solid var(--border-color); padding: 0.3rem; border-radius: 0.25rem; height: 60px; overflow-y: auto; font-size: 0.65rem; margin-top: 0.5rem; flex-shrink:0; }
         #active-tile-log p { margin-bottom: 0.1rem; }
-
         #active-exploration-footer { margin-top: auto; padding-top: 0.3rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; font-size: 0.7rem; color: var(--text-secondary); }
+        #active-exploration-nanobot-status { flex-grow: 1; text-align: center;} /* To contain the nanobot status */
 
-        /* Responsive pour la nouvelle UI d'exploration active */
-        @media (min-width: 768px) { /* md et plus */
-            #active-exploration-content-wrapper { 
-                flex-direction: row; 
-                align-items: flex-start; /* Aligner les enfants en haut */
-            }
-            #active-exploration-main-grid-view { 
-                width: 200px; 
-                height: 200px; 
-                align-self: flex-start; 
-                margin: 0;
-                max-height: none; 
-            }
-            .active-explore-grid-cell i { font-size: 1.5rem; }
-            .active-explore-grid-cell .terrain-name-preview { font-size: 0.6rem; }
-            .active-explore-grid-cell .content-preview { font-size: 0.55rem; }
-            .nanobot-grid-icon { font-size: 2rem; }
-            
-            #active-exploration-minimap-container {
-                align-self: flex-start;
-                margin-bottom: 0; 
-                margin-left: 0.5rem; /* Espace entre grille et minimap */
-            }
 
-            #active-exploration-detail-panel { 
-                flex-grow: 1; margin-top: 0; 
-                margin-left: 0.5rem; /* Espace entre minimap et panneau détails */
-                height: auto; /* Hauteur automatique pour s'adapter au contenu */
-                max-height: calc(100vh - 80px); /* Ex: 100vh moins hauteur header/footer */
-            }
-            #current-tile-image { height: 150px; }
-            #active-tile-log-container { height: 80px; }
+        /* Responsive for Active Tile UI - Desktop */
+        @media (min-width: 768px) { /* md and up */
+            #active-exploration-content-wrapper { flex-direction: row; align-items: flex-start; }
+            #active-exploration-main-grid-view { width: 220px; height: 220px; align-self: flex-start; margin: 0; max-height: none; }
+            .active-explore-grid-cell i { font-size: 1.5rem; } .active-explore-grid-cell .terrain-name-preview { font-size: 0.6rem; }
+            .active-explore-grid-cell .content-preview { font-size: 0.55rem; } .nanobot-grid-icon { font-size: 2rem; }
+            #active-exploration-minimap-container { align-self: flex-start; margin-bottom: 0; margin-left: 0.5rem; }
+            #active-exploration-minimap-grid { width: 75px; height: 75px; }
+            .minimap-cell i { font-size: 0.8rem; }
+            #active-exploration-detail-panel { flex-grow: 1; margin-top: 0; margin-left: 0.5rem; height: auto; max-height: calc(100vh - 90px); }
+            #current-tile-image { height: 150px; } #active-tile-log-container { height: 80px; }
         }
-        @media (min-width: 1024px) { /* lg */
+        @media (min-width: 1024px) { /* lg and up */
             #active-exploration-main-grid-view { width: 250px; height: 250px; }
-            .active-explore-grid-cell i { font-size: 1.75rem; }
-            .nanobot-grid-icon { font-size: 2.5rem; }
-            
-            #active-exploration-minimap-grid {
-                width: 90px; 
-                height: 90px;
-            }
+            .active-explore-grid-cell i { font-size: 1.75rem; } .nanobot-grid-icon { font-size: 2.5rem; }
+            #active-exploration-minimap-grid { width: 90px; height: 90px; }
             .minimap-cell i { font-size: 1rem; }
-
             #current-tile-image { height: 180px; }
         }
+
+        /* Styles pour la section des prochaines compétences */
+        .next-skill-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.3rem 0.1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .next-skill-item:last-child {
+            border-bottom: none;
+        }
+        .next-skill-name { font-weight: 500; color: var(--text-primary); font-size: 0.75rem; }
+        .next-skill-level-req { font-size: 0.7rem; color: var(--accent-yellow); }
+        .next-skill-icon { font-size: 1rem; margin-right: 0.3rem; color: var(--accent-cyan); }
 
 
         /* Styles Communs (Boutons, Modales, Scrollbar, Animations) */
@@ -381,6 +416,9 @@
 
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 0.5rem; }
         .modal-content { background-color: var(--bg-secondary); padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); min-width: 280px; max-width: 95%; width: auto; max-height: 90vh; overflow-y: auto; }
+        @media (min-width: 640px) { .modal-content { min-width: 350px; max-width: 80%; } }
+        @media (min-width: 768px) { .modal-content { min-width: 400px; max-width: 600px; } }
+
 
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-secondary); border-radius: 10px; }
@@ -398,20 +436,16 @@
         .module-arm-blade { width: 70%; height: 70%; top: 50%; left: 5%; transform: translate(-30%, -50%) rotate(-15deg); transform-origin: 30% 50%; z-index: 10; }
         .module-arm-drill { width: 65%; height: 65%; top: 55%; left: 10%; transform: translate(-35%, -50%) rotate(-25deg); z-index: 9; }
         .module-arm-cutter { width: 60%; height: 30%; top: 40%; right: -10%; transform: rotate(30deg) translateY(-50%); z-index: 9; }
-        .module-legs-antigrav { width: 35%; height: 45%; bottom: -8%; z-index: 5; }
-        .module-legs-antigrav.left { left: 10%; transform: rotate(-10deg) translateX(-5%); }
-        .module-legs-antigrav.right { right: 10%; transform: rotate(10deg) translateX(5%); }
+        /* .module-legs-antigrav removed as no such module exists */
         .module-shield { width: 110%; height: 110%; top: -5%; left: -5%; border: 2px dashed var(--accent-blue); border-radius: 50%; animation: pulse-shield 2s infinite; z-index: 1; }
         .item-weapon-laser { width: 45%; height: 25%; top: 35%; right: -15%; transform: rotate(20deg) translateY(-50%); transform-origin: 0% 50%; z-index: 10;}
         .item-armor-plating { width: 105%; height: 105%; border-radius: 10%; top: -2.5%; left: -2.5%; box-sizing: border-box; z-index: 0; }
 
-        #combat-modal-content { min-width: 90vw; min-height: 50vh; }
-        @media (min-width: 768px) { /* md */
-            #combat-modal-content { min-width: 500px; } 
-        }
+        #combat-modal-content { width: 95vw; min-height: 80vh; max-width: 700px; } /* Limiter la largeur max sur desktop */
+        @media (min-width: 768px) { #combat-modal-content { width: 80vw; } }
 
         .combat-arena { display: flex; justify-content: space-around; align-items: flex-end; height: 180px; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 0.25rem; padding: 8px; margin-bottom: 0.5rem; position: relative; overflow: hidden; background-size: cover; background-position: center; transition: background-image 0.5s ease-in-out, background-color 0.5s ease-in-out; }
-        .combat-arena-verdant { background-image: url('images/bg_verdant_combat.png'); background-color: #284c37; }
+        .combat-arena-verdant_archipelago { background-image: url('images/bg_verdant_combat.png'); background-color: #284c37; } /* Adjusted to match zone ID */
         .combat-arena-caves { background-image: url('images/bg_caves_combat.png'); background-color: #3a3a52; }
         .combat-arena-default { background-color: var(--bg-primary); }
         .combatant { position: relative; text-align: center; transition: transform 0.3s ease-out; width: 80px; }
@@ -422,23 +456,42 @@
         .health-bar-container { width: 60px; height: 7px; background-color: #718096; border-radius: 3px; margin: 3px auto 0; overflow: hidden; border: 1px solid var(--border-color);}
         .health-bar { height: 100%; background-color: var(--accent-green); width: 100%; transition: width 0.5s ease; }
         .health-bar.low { background-color: #f56565; } .health-bar.medium { background-color: #faf089; }
-        .health-bar.shielded { background-color: var(--accent-blue) !important; } 
-        
+        /* .health-bar.shielded { background-color: var(--accent-blue) !important; } Removed, bg-blue-400 is directly applied in JS if shielded */
+
+
         .combatant-effects-display { display: flex; gap: 0.25rem; margin-top: 0.25rem; justify-content: center; flex-wrap: wrap; min-height: 18px; }
         .effect-badge { font-size: 0.6rem; padding: 0.1rem 0.3rem; border-radius: 0.75rem; border-width: 1px; white-space: nowrap; }
         .effect-badge i { font-size: 0.7rem; vertical-align: middle; }
 
-        .damage-float { position: absolute; top: -15px; left: 50%; font-size: 1rem; font-weight: bold; color: var(--accent-red); animation: floatUpBase 1s ease-out forwards; opacity: 0; white-space: nowrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.7); z-index: 20; }
-        .damage-float.critical { color: var(--accent-yellow) !important; font-size: 1.3rem; animation: floatUpCritical 1.5s ease-out forwards;}
-        .damage-float[style*="color: rgb(72, 187, 120)"] { animation: floatUpHeal 1.2s ease-out forwards; } 
-        .damage-float[style*="color: rgb(160, 174, 192)"] { animation: floatMiss 0.8s ease-in forwards; } 
-        .damage-float[style*="color: var(--accent-blue)"] { color: var(--accent-blue) !important; animation: floatUpShieldHit 1s ease-out forwards; } 
+        .damage-float {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            font-size: 1rem;
+            font-weight: bold;
+            color: var(--accent-red); /* Default non-critical damage */
+            animation: floatUpBase 1s ease-out forwards;
+            opacity: 0;
+            white-space: nowrap;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+            z-index: 20;
+        }
+        .damage-float.critical {
+            color: var(--accent-yellow) !important; /* Critical hit color */
+            font-size: 1.3rem; /* Larger for criticals */
+            animation: floatUpCritical 1.5s ease-out forwards; /* Optional: different animation */
+        }
+        /* .damage-float[style*="color: rgb(72, 187, 120)"] is handled by isHeal in JS logic now */
+        /* .damage-float[style*="color: rgb(160, 174, 192)"] is handled by isMiss in JS logic now */
+        /* .damage-float[style*="color: var(--accent-blue)"] is handled by isShieldHit in JS logic now */
+
 
         #combat-actions-container { margin-top: 0.5rem; display:flex; flex-wrap:wrap; gap:0.5rem; justify-content: center; align-items: stretch;}
-        #combat-actions-container button { min-width: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0.4rem 0.6rem; height: auto; }
+        #combat-actions-container button { min-width: 80px; /* Smaller base for mobile */ display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0.4rem 0.6rem; height: auto; }
+        @media (min-width: 640px) { #combat-actions-container button { min-width: 100px; } }
         #combat-actions-container button i { font-size: 1.1rem; margin-bottom: 0.1rem; }
-        #combat-actions-container button .skill-name { font-size: 0.75rem; line-height: 1.1; display: block; } 
-        #combat-actions-container button .skill-details { font-size: 0.6rem; color: var(--text-secondary); line-height: 1; display: block; margin-top: 0.1rem; } 
+        #combat-actions-container button .skill-name { font-size: 0.75rem; line-height: 1.1; display: block; }
+        #combat-actions-container button .skill-details { font-size: 0.6rem; color: var(--text-secondary); line-height: 1; display: block; margin-top: 0.1rem; }
         #combat-actions-container button.skill-button.on-cooldown { background-color: var(--border-color) !important; color: var(--text-secondary) !important; cursor: not-allowed; opacity: 0.6; }
         #combat-actions-container button.skill-button.insufficient-resources { background-color: rgba(var(--accent-red-rgb),0.7) !important; color: white !important; opacity: 0.8; cursor: not-allowed; border: 1px solid var(--accent-red); }
         #combat-actions-container button.skill-button.insufficient-resources .skill-details { color: #fed7d7 !important; }
@@ -484,20 +537,22 @@
         .base-preview-cell.placement-active:hover { background-color: rgba(var(--accent-green-rgb),0.6) !important; }
         .defense-visual-on-grid { text-align: center; font-weight: bold; transition: background-color 0.3s ease, border-color 0.3s ease; z-index: 2; box-sizing: border-box; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding: 1px; display:flex; align-items:center; justify-content:center; width:100%; height:100%;}
         .defense-visual-on-grid.laserTurret { background-color: rgba(230, 160, 40, 0.7); border: 1px solid #F6E05E; color: black; }
-        .defense-visual-on-grid.gatlingTurret { background-color: rgba(160, 174, 192, 0.7); border: 1px solid #A0AEC0; color: black; }
+        /* .defense-visual-on-grid.gatlingTurret { background-color: rgba(160, 174, 192, 0.7); border: 1px solid #A0AEC0; color: black; } Removed, no gatlingTurret building */
         .defense-visual-on-grid.reinforcedWall { background-color: rgba(113, 128, 150, 0.7); border: 1px solid  #718096; font-size: 0.5rem !important; writing-mode: vertical-rl; text-orientation: mixed; color: white; }
-        
+
         .base-nanobot-visual { display: flex; align-items: center; justify-content: center; font-size: 1rem; width: 100%; height: 100%; }
         .base-nanobot-visual i { animation: idle-breath 2.5s infinite ease-in-out; }
 
         .base-enemy-visual { width: 10px; height: 10px; background-color: var(--accent-red); border: 1px solid white; border-radius: 50%; position: absolute; transition: transform 0.5s ease-out, left 0.5s linear, top 0.5s linear; box-shadow: 0 0 4px var(--accent-red); z-index: 15; background-size: contain; background-repeat: no-repeat; background-position: center; }
-        .base-enemy-visual.drone { background-color: #e53e3e; } .base-enemy-visual.bot { background-color: #dd6b20; } .base-enemy-visual.crawler { background-color: #d69e2e; }
+        .base-enemy-visual.swarm_drone { background-color: #e53e3e; } /* Example for nightAssaultEnemies */
+        .base-enemy-visual.assault_bot { background-color: #dd6b20; } /* Example for nightAssaultEnemies */
+        .base-enemy-visual.heavy_crawler { background-color: #d69e2e; } /* Example for nightAssaultEnemies */
         .boss-visual-dynamic { width: 26px; height: 26px; background-color: #7f1d1d; border: 2px solid gold; border-radius: 3px; box-shadow: 0 0 8px gold; z-index: 15; background-size: contain; background-repeat: no-repeat; background-position: center; }
         .projectile-visual { position: absolute; transform-origin: 0 50%; z-index: 10; pointer-events: none; }
         .enemy-health-bar-on-grid-container { background-color: #555; border: 1px solid #333; border-radius: 1px; overflow: hidden; box-sizing: border-box; z-index: 16; position: absolute; }
         .enemy-health-bar-on-grid-fill { background-color: var(--accent-red); height: 100%; transition: width 0.3s ease-out; }
         #tutorial-modal .modal-content { box-shadow: 0 0 15px var(--accent-yellow); border: 2px solid var(--accent-yellow); }
-        #tooltip { transition: opacity 0.1s ease-out, visibility 0.1s ease-out; pointer-events: none; } 
+        #tooltip { transition: opacity 0.1s ease-out, visibility 0.1s ease-out; pointer-events: none; }
         #tooltip.hidden { opacity: 0; visibility: hidden; }
         #tooltip strong { color: var(--accent-yellow); }
         #tooltip .resource-cost { color: var(--accent-yellow); }
@@ -507,7 +562,31 @@
         .info-icon-container { position: absolute; top: 2px; right: 2px; z-index: 5; }
         .info-icon { font-size: 1rem; color: var(--accent-blue); cursor: pointer; padding: 2px; background-color: rgba(var(--bg-primary-rgb), 0.6); border-radius: 50%; line-height: 1; }
         .info-icon:hover { color: #63b3ed; background-color: rgba(var(--bg-secondary-rgb), 0.8); }
-        .module-card, .panel[data-tooltip-type="building-card"], .panel[data-tooltip-type="research-card"] { position: relative; } 
+        .module-card, .panel[data-tooltip-type="building-card"], .panel[data-tooltip-type="research-card"] { position: relative; }
+
+        @keyframes floatUpBase {
+            0% { opacity: 1; transform: translate(-50%, 0px); }
+            100% { opacity: 0; transform: translate(-50%, -40px); }
+        }
+        @keyframes floatUpCritical { /* Animation for criticals */
+            0% { opacity: 1; transform: translate(-50%, 0px) scale(1); }
+            15% { transform: translate(-50%, -15px) scale(1.4); }
+            30% { transform: translate(-50%, -10px) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -60px) scale(0.8); }
+        }
+        @keyframes floatUpHeal {
+            0% { opacity: 1; transform: translate(-50%, 5px) scale(0.9); }
+            100% { opacity: 0; transform: translate(-50%, -30px) scale(1.1); }
+        }
+        @keyframes floatMiss {
+            0% { opacity: 1; transform: translate(-50%, 0px) translateX(0); }
+            50% { opacity: 0.8; transform: translate(-50%, -10px) translateX(10px); }
+            100% { opacity: 0; transform: translate(-50%, -15px) translateX(-15px); }
+        }
+         @keyframes floatUpShieldHit {
+            0% { opacity: 1; transform: translate(-50%, 0px) scale(0.9); }
+            100% { opacity: 0; transform: translate(-50%, -35px) scale(1); }
+        }
 
         @keyframes insufficient-resource-flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         @keyframes idle-breath { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-3px) scale(1.03); } }
@@ -517,13 +596,8 @@
         @keyframes pulse-resource-highlight { from { box-shadow: 0 0 3px 0.5px gold; } to { box-shadow: 0 0 6px 1px orange; } }
         @keyframes pulse-danger { from { box-shadow: 0 0 5px var(--accent-red); } to { box-shadow: 0 0 10px #c53030, 0 0 3px var(--accent-red); } }
         @keyframes hit-flash-effect { 0%, 100% { box-shadow: 0 0 0px rgba(255, 255, 255, 0); filter: brightness(1); } 50% { box-shadow: 0 0 15px 8px rgba(255, 255, 255, 0.8); filter: brightness(1.5); } }
-        @keyframes floatUpBase { 0% { opacity: 1; transform: translate(-50%, 0px); } 100% { opacity: 0; transform: translate(-50%, -40px); } }
-        @keyframes floatUpCritical { 0% { opacity: 1; transform: translate(-50%, 0px) scale(1); } 15% { transform: translate(-50%, -15px) scale(1.4); } 30% { transform: translate(-50%, -10px) scale(1.2); } 100% { opacity: 0; transform: translate(-50%, -60px) scale(0.8); } }
-        @keyframes floatUpHeal { 0% { opacity: 1; transform: translate(-50%, 5px) scale(0.9); } 100% { opacity: 0; transform: translate(-50%, -30px) scale(1.1); } }
-        @keyframes floatMiss { 0% { opacity: 1; transform: translate(-50%, 0px) translateX(0); } 50% { opacity: 0.8; transform: translate(-50%, -10px) translateX(10px); } 100% { opacity: 0; transform: translate(-50%, -15px) translateX(-15px); } }
-        @keyframes floatUpShieldHit { 0% { opacity: 1; transform: translate(-50%, 0px) scale(0.9); } 100% { opacity: 0; transform: translate(-50%, -35px) scale(1); } }
 
-        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; } 
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 
     </style>
@@ -566,7 +640,7 @@
                     <div class="flex flex-col lg:flex-row gap-3 h-full">
                         <div class="lg:w-1/3 flex flex-col gap-3">
                             <div class="panel">
-                                <h2 class="font-orbitron text-md mb-2 text-[color:var(--accent-blue)]">Statut du Noyau</h2> 
+                                <h2 class="font-orbitron text-md mb-2 text-[color:var(--accent-blue)]">Statut du Noyau</h2>
                                 <div id="base-status-section">
                                     <h3 class="font-orbitron text-sm text-[color:var(--accent-yellow)]">Intégrité Structurelle</h3>
                                     <div class="flex justify-between items-center text-xs mb-1">
@@ -616,7 +690,7 @@
                 </div>
 
                 <div id="nexus-section" class="content-section">
-                     <div class="panel">
+                     <div class="panel h-full">
                         <div class="sub-nav-bar">
                             <button class="sub-nav-button active" data-subtab="nanobot-config-subtab" data-parentsection="nexus-section">Configuration</button>
                             <button class="sub-nav-button" data-subtab="inventory-subtab" data-parentsection="nexus-section">Inventaire</button>
@@ -624,8 +698,8 @@
                         <div id="nanobot-config-subtab" class="sub-content active">
                             <div id="nanobot-content" class="flex-grow overflow-y-auto p-1 space-y-4">
                                 <h2 class="font-orbitron text-lg mb-3 text-[color:var(--accent-blue)] border-b-2 border-[color:var(--accent-blue)] pb-1 flex items-center"><i class="ti ti-settings-cog mr-2"></i>Configuration Nexus-7</h2>
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div class="md:col-span-1 space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div class="space-y-4">
                                         <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md">
                                             <h3 class="font-orbitron text-md mb-2 text-sky-300 flex items-center"><i class="ti ti-eye mr-2"></i>Visualisation</h3>
                                             <div id="nanobot-visual-container" class="nanobot-display mx-auto mb-2"><div id="nanobot-body"></div></div>
@@ -633,20 +707,24 @@
                                         </div>
                                         <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md">
                                             <h3 class="font-orbitron text-md mb-2 text-lime-300 flex items-center"><i class="ti ti-components mr-2"></i>Modules Actifs</h3>
-                                            <div id="equipped-modules-display" class="space-y-2 max-h-60 md:max-h-none md:flex-grow overflow-y-auto text-xs pr-1"><p class="text-xs text-gray-500 italic">Chargement modules...</p></div>
+                                            <div id="equipped-modules-display" class="space-y-2 max-h-60 md:max-h-80 lg:max-h-none lg:flex-grow overflow-y-auto text-xs pr-1"><p class="text-xs text-gray-500 italic">Chargement modules...</p></div>
                                         </div>
                                     </div>
-                                    <div class="md:col-span-1 space-y-4">
+                                    <div class="space-y-4">
                                         <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md">
                                             <h3 class="font-orbitron text-md mb-2 text-amber-300 flex items-center"><i class="ti ti-chart-bar mr-2"></i>Statistiques</h3>
                                             <ul class="space-y-1 text-sm">
+                                                <li class="flex justify-between items-center" data-tooltip-type="stat-nanobot" data-tooltip-id="level"><span><i class="ti ti-trending-up text-purple-400 mr-1.5"></i>Niveau:</span> <span id="nanobot-level-display" class="font-semibold text-gray-200">1</span></li>
+                                                <li class="flex justify-between items-center" data-tooltip-type="stat-nanobot" data-tooltip-id="xp"><span><i class="ti ti-star text-yellow-400 mr-1.5"></i>XP:</span> <span id="nanobot-xp-progress-display" class="font-semibold text-gray-200">0/100</span></li>
                                                 <li class="flex justify-between items-center" data-tooltip-type="stat-nanobot" data-tooltip-id="health"><span><i class="ti ti-heart text-red-400 mr-1.5"></i>Santé:</span> <span id="nanobot-health" class="font-semibold text-gray-200">0</span></li>
                                                 <li class="flex justify-between items-center" data-tooltip-type="stat-nanobot" data-tooltip-id="attack"><span><i class="ti ti-sword text-orange-400 mr-1.5"></i>Attaque:</span> <span id="nanobot-attack" class="font-semibold text-gray-200">0</span></li>
                                                 <li class="flex justify-between items-center" data-tooltip-type="stat-nanobot" data-tooltip-id="defense"><span><i class="ti ti-shield text-blue-400 mr-1.5"></i>Défense:</span> <span id="nanobot-defense" class="font-semibold text-gray-200">0</span></li>
                                                 <li class="flex justify-between items-center" data-tooltip-type="stat-nanobot" data-tooltip-id="speed"><span><i class="ti ti-brand-speedtest text-green-400 mr-1.5"></i>Vitesse:</span> <span id="nanobot-speed" class="font-semibold text-gray-200">0</span></li>
                                             </ul>
+                                            <div id="nanobot-xp-bar-container" class="w-full bg-gray-700 rounded-full h-2.5 mt-2">
+                                                <div id="nanobot-xp-bar-fill" class="bg-purple-500 h-2.5 rounded-full" style="width: 0%"></div>
+                                            </div>
                                         </div>
-                                              
                                         <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md">
                                             <h3 class="font-orbitron text-md mb-2 text-teal-300 flex items-center"><i class="ti ti-tool mr-2"></i>Actions</h3>
                                             <div class="space-y-2">
@@ -654,13 +732,18 @@
                                                 <button id="simulate-combat-btn" class="btn btn-danger w-full btn-sm flex items-center justify-center"><i class="ti ti-flame mr-2"></i>Test Combat</button>
                                             </div>
                                         </div>
-    
+                                        <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md">
+                                            <h3 class="font-orbitron text-md mb-2 text-cyan-300 flex items-center"><i class="ti ti-sparkles mr-2"></i>Prochaines Compétences</h3>
+                                            <div id="next-skills-display" class="space-y-1.5 text-xs max-h-40 overflow-y-auto pr-1">
+                                                <p class="text-gray-500 italic">Chargement...</p>
+                                            </div>
+                                        </div>
                                         <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md h-32 flex flex-col">
                                             <h3 class="font-orbitron text-sm mb-1 text-gray-400 flex items-center"><i class="ti ti-file-text mr-2"></i>Log Combat</h3>
-                                            <div id="combat-log-summary" class="flex-grow bg-black bg-opacity-20 p-2 rounded h-full overflow-y-auto text-xs"><h4 class="font-semibold text-gray-300 text-xs">Log Combat:</h4><p class="text-xs text-gray-500 italic">Aucun combat récent.</p></div>
+                                            <div id="combat-log-summary-display" class="flex-grow bg-black bg-opacity-20 p-2 rounded h-full overflow-y-auto text-xs"><h4 class="font-semibold text-gray-300 text-xs">Log Combat:</h4><p class="text-xs text-gray-500 italic">Aucun combat récent.</p></div> <!-- ID was missing here -->
                                         </div>
                                     </div>
-                                    <div class="md:col-span-1 space-y-4">
+                                    <div class="space-y-4 lg:col-span-1 md:col-span-2">
                                         <div class="panel bg-gray-800 bg-opacity-50 border-gray-700 p-3 rounded-lg shadow-md h-full flex flex-col">
                                             <h3 class="font-orbitron text-md mb-2 text-fuchsia-300 flex items-center"><i class="ti ti-armchair mr-2"></i>Équipement</h3>
                                             <div id="nanobot-equipment-slots" class="space-y-1.5 text-xs pr-1 flex-grow overflow-y-auto"><p class="text-xs text-gray-500 italic">Chargement équipement...</p></div>
@@ -671,21 +754,19 @@
                         </div>
                         <div id="inventory-subtab" class="sub-content">
                             <h3 class="font-orbitron text-md mb-2 text-[color:var(--accent-blue)] border-b border-[color:var(--border-color)] pb-1">Inventaire des Objets</h3>
-                            <div id="inventory-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 flex-grow overflow-y-auto pr-1"><p class="text-xs text-gray-400 italic p-2">Inventaire vide.</p></div>
+                            <div id="inventory-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2 flex-grow overflow-y-auto pr-1"><p class="text-xs text-gray-400 italic p-2">Inventaire vide.</p></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Section Fabrication -->
                 <div id="crafting-section" class="content-section">
-                    <div class="panel">
+                    <div class="panel h-full">
                         <h2 class="font-orbitron text-lg text-sky-300 mb-2 border-b border-[color:var(--border-color)] pb-1">Fabrication</h2>
                         <div id="crafting-content" class="flex-grow overflow-y-auto pr-1">
                             <p class="text-gray-400 italic">Interface de Fabrication (chargement...).</p>
                         </div>
                     </div>
                 </div>
-
 
                 <div id="world-section" class="content-section">
                      <div class="panel h-full">
@@ -694,7 +775,7 @@
                             <button class="sub-nav-button" data-subtab="quests-subtab" data-parentsection="world-section">Quêtes</button>
                         </div>
                         <div id="exploration-subtab" class="sub-content active">
-                            <div id="world-section-content"> 
+                            <div id="world-section-content">
                                 <div id="exploration-layout" class="h-full">
                                     <div id="exploration-map-container">
                                         <div id="exploration-actions-bar">
@@ -734,38 +815,31 @@
                 </div>
 
                 <div id="shop-section" class="content-section">
-                    <div id="shop-content" class="panel">
+                    <div id="shop-content" class="panel h-full">
                         <h2 class="font-orbitron text-md mb-2 text-[color:var(--accent-blue)] border-b border-[color:var(--border-color)] pb-1">Marché X-9</h2>
                         <p class="text-xs text-gray-400 mb-2">Stocks limités. Réapprovisionnement périodique.</p>
-                        <div id="shop-items-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 flex-grow overflow-y-auto pr-1"><p class="text-xs text-gray-400 italic p-2">Marché vide.</p></div>
+                        <div id="shop-items-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2 flex-grow overflow-y-auto pr-1"><p class="text-xs text-gray-400 italic p-2">Marché vide.</p></div>
                     </div>
                 </div>
 
-                 <div class="panel mt-2"> 
+                 <div class="panel mt-2 md:hidden">
                     <h3 class="font-orbitron text-sm text-gray-400">Journal Principal</h3>
                     <div id="event-log" class="h-16 overflow-y-auto text-xs"><p class="text-xs text-gray-400 italic">En attente...</p></div>
                 </div>
             </main>
-        </div> 
+        </div>
 
-        <!-- UI D'EXPLORATION ACTIVE DE TUILE -->
         <div id="active-tile-exploration-ui" class="hidden">
             <header id="active-exploration-header">
                 <h2 id="active-exploration-title">Exploration Active</h2>
                 <button id="exit-active-exploration-btn" class="btn btn-danger btn-sm"><i class="ti ti-arrow-back-up mr-1"></i> Carte</button>
             </header>
             <div id="active-exploration-content-wrapper">
-                <div id="active-exploration-main-grid-view">
-                    <!-- Les 9 cellules de la grille seront générées par JS ici -->
-                </div>
-                <!-- MINI-CARTE -->
+                <div id="active-exploration-main-grid-view"></div>
                 <div id="active-exploration-minimap-container" class="mt-2 md:mt-0 md:ml-2">
                     <h4 class="font-orbitron text-xs text-gray-400 mb-1 text-center">Mini-Carte</h4>
-                    <div id="active-exploration-minimap-grid">
-                        <!-- Les 9 cellules de la mini-carte seront générées par JS ici -->
-                    </div>
+                    <div id="active-exploration-minimap-grid"></div>
                 </div>
-                <!-- FIN MINI-CARTE -->
                 <div id="active-exploration-detail-panel">
                     <div id="current-tile-view-details">
                         <div id="current-tile-image"></div>
@@ -782,11 +856,11 @@
                 <div id="active-exploration-nanobot-status"></div>
             </footer>
         </div>
-    </div> 
+    </div>
 
     <div id="modal" class="modal hidden"><div class="modal-content"><h3 id="modal-title" class="font-orbitron text-lg mb-2">Titre</h3><p id="modal-message" class="mb-3 text-sm">Message.</p><div class="flex justify-end space-x-2"><button id="modal-cancel" class="btn btn-secondary btn-sm">Annuler</button><button id="modal-confirm" class="btn btn-primary btn-sm">OK</button></div></div></div>
     <div id="combat-modal" class="modal hidden">
-        <div id="combat-modal-content" class="modal-content"> 
+        <div id="combat-modal-content" class="modal-content">
             <h2 class="font-orbitron text-xl mb-1 text-center text-[color:var(--accent-red)]">Affrontement!</h2>
             <div id="combat-turn-indicator" class="text-center font-semibold text-lg mb-2 text-sky-300">Préparation...</div>
             <div class="combat-arena">
@@ -816,20 +890,30 @@
         </div>
     </div>
     <div id="combat-end-modal" class="modal hidden"><div class="modal-content text-center"><h3 id="combat-end-title" class="font-orbitron text-md mb-1">Victoire!</h3><p id="combat-end-rewards" class="mb-1 text-xs"></p><h4 class="text-blue-300 mt-1 mb-0.5 font-orbitron text-xs">XP & Niveau</h4><p id="xp-gain" class="text-xs mb-0.5"></p><div class="w-full bg-gray-700 rounded-full h-1.5 mb-1"><div id="xp-bar" class="bg-blue-500 h-1.5 rounded-full" style="width: 0%"></div></div><h4 class="text-yellow-300 mt-1 mb-0.5 font-orbitron text-xs">Butin</h4><ul id="loot-list" class="text-xs text-gray-300 list-disc list-inside mb-1"></ul><button id="close-end-modal" class="btn btn-primary btn-xs mt-1">Fermer</button></div></div>
-    <div id="night-assault-video-container" class="modal hidden"><div class="relative"><video id="night-assault-video" preload="auto" playsinline><source src="videos/night_assault_alert.mp4" type="video/mp4"></video><button id="close-night-assault-video-btn" class="btn btn-danger btn-xs">X</button></div></div>
-    <div id="tutorial-modal" class="modal hidden"></div> 
+    
+    <div id="night-assault-video-container" class="modal hidden">
+        <div class="relative">
+            <video id="night-assault-video" preload="auto" playsinline muted> <!-- muted added for autoplay policies -->
+                <source src="videos/night_assault_alert.mp4" type="video/mp4">
+                Votre navigateur ne supporte pas la balise vidéo.
+            </video>
+            <button id="close-night-assault-video-btn" class="btn btn-danger btn-xs">X</button>
+        </div>
+    </div>
+
+    <div id="tutorial-modal" class="modal hidden"></div>
     <div id="tooltip" class="hidden absolute z-[1100] p-2 bg-gray-800 border border-gray-600 rounded-md shadow-lg text-xs text-gray-200 max-w-xs"></div>
 
-    <!-- Scripts -->
+    <!-- Scripts - Ordre IMPORTANT -->
     <script src="js/config_enums.js"></script>
     <script src="js/config_general.js"></script>
     <script src="js/config_lore.js"></script>
     <script src="js/config_tile_exploration.js"></script>
-    <script src="js/config_player.js"></script> 
-    <script src="js/config_world.js"></script>   
+    <script src="js/config_player.js"></script>
+    <script src="js/config_world.js"></script>
     <script src="js/config_events.js"></script>
-    <script src="js/config_gameplay.js"></script> 
-    <script src="js/config.js"></script>         
+    <script src="js/config_gameplay.js"></script>
+    <script src="js/config.js"></script>
 
     <script src="js/gameState.js"></script>
     <script src="js/utils.js"></script>
@@ -838,21 +922,21 @@
     <script src="js/explorationController.js"></script>
     <script src="js/questController.js"></script>
     <script src="js/combat.js"></script>
-    <script src="js/inventoryShop.js"></script> 
-    <script src="js/craftingLogic.js"></script> 
-    
+    <script src="js/inventoryShop.js"></script>
+    <script src="js/craftingLogic.js"></script>
+
     <script src="js/uiNavigation.js"></script>
     <script src="js/explorationUI.js"></script>
     <script src="js/questUI.js"></script>
     <script src="js/tutorialController.js"></script>
-    <script src="js/craftingUI.js"></script> 
-    <script src="js/uiUpdates.js"></script> 
+    <script src="js/craftingUI.js"></script>
+    <script src="js/uiUpdates.js"></script>
+    
     <script src="js/gameplayLogic_nanobot.js"></script>
     <script src="js/gameplayLogic_base.js"></script>
     <script src="js/gameplayLogic_resources_time.js"></script>
     <script src="js/gameplayLogic_night_assault.js"></script>
 
-    <script src="js/main.js" defer></script> 
-
+    <script src="js/main.js" defer></script>
    </body>
 </html>

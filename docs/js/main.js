@@ -5,21 +5,20 @@ console.log("main.js - Fichier chargé et en cours d'analyse...");
 // Déclarées avec let ici pour le scope de ce fichier, mais assignées à window pour la globalité
 let eventLogEl, biomassEl, nanitesEl, mobilityEl, energyEl, crystalShardsEl, crystalShardsDisplayContainer,
     biomassRateEl, nanitesRateEl, gameTimeEl, cycleStatusEl,
-    xpBarEl, nanobotHealthEl, nanobotAttackEl, nanobotDefenseEl, nanobotSpeedEl,
+    xpBarEl, nanobotLevelDisplayEl, nanobotXpProgressDisplayEl, nanobotXpBarFillEl, /* Ajoutés pour Nanobot UI */
+    nanobotHealthEl, nanobotAttackEl, nanobotDefenseEl, nanobotSpeedEl, nextSkillsDisplayEl, /* Ajouté nextSkillsDisplayEl */
     equippedModulesDisplayEl, nanobotVisualBody, equippedItemsDisplayBriefEl, nanobotEquipmentSlotsEl,
     buildingsContainerEl, researchContainerEl, inventoryListEl, shopItemsListEl,
     baseHealthValueEl, baseMaxHealthValueEl, overviewBaseHealthEl, baseHealthBarEl, baseDefensePowerEl,
-    repairBaseBtn, repairBaseFullBtn, repairDefensesBtn, forceCycleChangeBtn, baseHealthDisplayEl, 
+    repairBaseBtn, repairBaseFullBtn, repairDefensesBtn, forceCycleChangeBtn, baseHealthDisplayEl,
     basePreviewContainerEl, placementInfoEl, selectedDefenseForPlacementEl, cancelPlacementBtnEl,
     nightAssaultEnemiesDisplayEl, nightAssaultLogEl,
     mapGridEl, mapScrollContainerEl, nanobotMapPosEl, tileInfoDisplayEl, centerMapBtnEl,
     scanMapButtonEl, explorationLogEl, zoneListEl, tileInteractionPanelEl, tileInteractionDetailsEl, tileInteractionActionsEl,
     explorationTitleEl, worldSectionContentEl,
     activeTileExplorationUIEl, activeExplorationTitleEl, exitActiveExplorationBtnEl,
-    // previewNorthEl, previewWestEl, previewEastEl, previewSouthEl, // Anciens previews supprimés
     currentTileViewContainerEl, currentTileViewEl, currentTileImageEl, currentTileDescriptionEl, currentTileActionsGridEl,
     activeTileLogContainerEl, activeTileLogEl,
-    // activeExploreNavNorthBtn, activeExploreNavWestBtn, activeExploreNavEastBtn, activeExploreNavSouthBtn, // Anciens boutons de nav supprimés
     activeExplorationNanobotStatusEl,
     modalEl, modalTitleEl, modalMessageEl, modalConfirmBtn, modalCancelBtn,
     combatModalEl, combatModalContentEl, combatTurnIndicatorEl, combatNanobotEl, combatNanobotSpriteEl, combatNanobotHealthbarEl,
@@ -28,18 +27,18 @@ let eventLogEl, biomassEl, nanitesEl, mobilityEl, energyEl, crystalShardsEl, cry
     combatLogDetailsContainerEl, combatLogVisualEl,
     combatActionsContainerEl, combatActionFleeBtn,
     combatEndModalEl, combatEndTitleEl, combatEndRewardsEl, xpGainEl, combatXpBarEl, lootListEl, closeEndModalBtn,
-    nightAssaultVideoContainerEl, nightAssaultVideoEl, closeNightAssaultVideoBtnEl,
+    nightAssaultVideoContainerEl, nightAssaultVideoEl, closeNightAssaultVideoBtnEl, // Assurez-vous que c'est bien BtnEl
     tutorialModalEl, tooltipEl,
     toggleNanobotDefendBaseBtn,
     questsContentEl, activeQuestsListEl, completedQuestsListEl,
-    shopContentEl, craftingContentEl; 
+    shopContentEl, craftingContentEl;
 
 var gameState;
 
 let gameLoopInterval = null;
 let lastTickTime = 0;
 let isGamePaused = false;
-const currentVersion = "1.1.4"; 
+const currentVersion = "1.1.4";
 
 function initDOMReferences() {
     console.log("main.js: initDOMReferences - Début");
@@ -55,7 +54,14 @@ function initDOMReferences() {
     gameTimeEl = document.getElementById('gameTime'); window.gameTimeEl = gameTimeEl;
     cycleStatusEl = document.getElementById('cycleStatus'); window.cycleStatusEl = cycleStatusEl;
 
-    xpBarEl = document.getElementById('xp-bar'); window.xpBarEl = xpBarEl;
+    // Pour la section Nanobot
+    nanobotLevelDisplayEl = document.getElementById('nanobot-level-display'); window.nanobotLevelDisplayEl = nanobotLevelDisplayEl;
+    nanobotXpProgressDisplayEl = document.getElementById('nanobot-xp-progress-display'); window.nanobotXpProgressDisplayEl = nanobotXpProgressDisplayEl;
+    nanobotXpBarFillEl = document.getElementById('nanobot-xp-bar-fill'); window.nanobotXpBarFillEl = nanobotXpBarFillEl; // L'élément fill de la barre
+    nextSkillsDisplayEl = document.getElementById('next-skills-display'); window.nextSkillsDisplayEl = nextSkillsDisplayEl;
+
+
+    xpBarEl = document.getElementById('xp-bar'); window.xpBarEl = xpBarEl; // Note: Ceci est la barre générale dans le modal de fin de combat. Celle du Nanobot a un ID spécifique.
     nanobotHealthEl = document.getElementById('nanobot-health'); window.nanobotHealthEl = nanobotHealthEl;
     nanobotAttackEl = document.getElementById('nanobot-attack'); window.nanobotAttackEl = nanobotAttackEl;
     nanobotDefenseEl = document.getElementById('nanobot-defense'); window.nanobotDefenseEl = nanobotDefenseEl;
@@ -104,13 +110,10 @@ function initDOMReferences() {
     explorationTitleEl = document.getElementById('exploration-title'); window.explorationTitleEl = explorationTitleEl;
     worldSectionContentEl = document.getElementById('world-section-content'); window.worldSectionContentEl = worldSectionContentEl;
 
-    // UI Exploration Active (nouvelle structure)
     activeTileExplorationUIEl = document.getElementById('active-tile-exploration-ui'); window.activeTileExplorationUIEl = activeTileExplorationUIEl;
     activeExplorationTitleEl = document.getElementById('active-exploration-title'); window.activeExplorationTitleEl = activeExplorationTitleEl;
     exitActiveExplorationBtnEl = document.getElementById('exit-active-exploration-btn'); window.exitActiveExplorationBtnEl = exitActiveExplorationBtnEl;
-    // Plus besoin de previewNorthEl, WestEl, EastEl, SouthEl et des boutons de nav directionnels ici car la grille 3x3 les remplace
     
-    // Éléments dans le panneau de détails de l'exploration active
     currentTileImageEl = document.getElementById('current-tile-image'); window.currentTileImageEl = currentTileImageEl;
     currentTileDescriptionEl = document.getElementById('current-tile-description'); window.currentTileDescriptionEl = currentTileDescriptionEl;
     currentTileActionsGridEl = document.getElementById('current-tile-actions-grid'); window.currentTileActionsGridEl = currentTileActionsGridEl;
@@ -139,7 +142,7 @@ function initDOMReferences() {
     combatEnemyHealthbarEl = document.getElementById('combat-enemy-healthbar'); window.combatEnemyHealthbarEl = combatEnemyHealthbarEl;
     combatLogDetailsContainerEl = document.getElementById('combat-log-details-container'); window.combatLogDetailsContainerEl = combatLogDetailsContainerEl;
     combatLogVisualEl = document.getElementById('combat-log-visual'); window.combatLogVisualEl = combatLogVisualEl;
-    if (!combatLogVisualEl) console.error("ERREUR initDOMReferences: #combat-log-visual non trouvé !"); else console.log("combatLogVisualEl trouvé:", combatLogVisualEl);
+    if (!combatLogVisualEl) console.error("ERREUR initDOMReferences: #combat-log-visual non trouvé !");
     combatActionsContainerEl = document.getElementById('combat-actions-container'); window.combatActionsContainerEl = combatActionsContainerEl;
     combatActionFleeBtn = document.getElementById('combat-action-flee'); window.combatActionFleeBtn = combatActionFleeBtn;
 
@@ -183,23 +186,28 @@ function setupEventListeners() {
     if(window.modalConfirmBtn) window.modalConfirmBtn.addEventListener('click', () => { if(typeof confirmModal === 'function') confirmModal(); });
     if(window.modalCancelBtn) window.modalCancelBtn.addEventListener('click', () => { if(typeof hideModal === 'function') hideModal(); });
     if(window.closeEndModalBtn) window.closeEndModalBtn.addEventListener('click', () => { if(typeof closeCombatEndModal === 'function') closeCombatEndModal(); });
-    if(window.closeNightAssaultVideoBtnEl) window.closeNightAssaultVideoBtnEl.addEventListener('click', () => { if(typeof hideNightAssaultVideo === 'function') hideNightAssaultVideo(); });
+    
+    if(window.closeNightAssaultVideoBtnEl) { // Modifié ici
+        window.closeNightAssaultVideoBtnEl.addEventListener('click', () => {
+            if(typeof hideNightAssaultVideo === 'function') {
+                hideNightAssaultVideo();
+            } else {
+                console.error("La fonction hideNightAssaultVideo n'est pas définie.");
+            }
+        });
+    } else {
+        console.warn("L'élément #close-night-assault-video-btn n'a pas été trouvé pour l'écouteur.");
+    }
 
     if(window.combatActionFleeBtn) window.combatActionFleeBtn.addEventListener('click', () => { if(typeof fleeCombat === 'function') fleeCombat(); });
 
     const simulateCombatButton = document.getElementById('simulate-combat-btn');
     if (simulateCombatButton) {
         simulateCombatButton.addEventListener('click', () => {
-            if (typeof window.simulateCombat === 'function' && typeof window.DAMAGE_TYPES !== 'undefined') {
-                const testEnemy = {
-                    id: "training_drone_01", name: "Drone d'Entraînement",
-                    health: 40, maxHealth: 40, attack: 10, defense: 3, speed: 5,
-                    color: "#4299e1", spritePath: "https://placehold.co/80x100/4299e1/e2e8f0?text=TRAIN",
-                    resistances: {}, damageType: window.DAMAGE_TYPES.KINETIC, xpValue: 15, lootTable: null, skills: []
-                };
-                window.simulateCombat(testEnemy);
+            if (typeof window.simulateCombat === 'function' && typeof window.DAMAGE_TYPES !== 'undefined' && typeof window.enemyData !== 'undefined' && window.enemyData.training_drone_01) {
+                window.simulateCombat({...window.enemyData.training_drone_01});
             } else {
-                console.error("La fonction simulateCombat ou DAMAGE_TYPES n'est pas définie.");
+                console.error("La fonction simulateCombat, DAMAGE_TYPES ou l'ennemi 'training_drone_01' n'est pas défini.");
             }
         });
     }
@@ -247,10 +255,10 @@ function checkAllConfigLoaded() {
         { name: "zoneBiomesData", data: typeof window.zoneBiomesData !== 'undefined' ? window.zoneBiomesData : undefined, canBeEmpty: false },
         { name: "biomeColorMapping", data: typeof window.biomeColorMapping !== 'undefined' ? window.biomeColorMapping : undefined, canBeEmpty: false },
         { name: "storyEvents", data: typeof window.storyEvents !== 'undefined' ? window.storyEvents : undefined, canBeEmpty: true },
-        { name: "QUEST_DATA", data: typeof window.QUEST_DATA !== 'undefined' ? window.QUEST_DATA : undefined, canBeEmpty: false }, 
-        { name: "shopInventoryData", data: typeof window.shopInventoryData !== 'undefined' ? window.shopInventoryData : undefined, canBeEmpty: false }, 
+        { name: "QUEST_DATA", data: typeof window.QUEST_DATA !== 'undefined' ? window.QUEST_DATA : undefined, canBeEmpty: false },
+        { name: "shopInventoryData", data: typeof window.shopInventoryData !== 'undefined' ? window.shopInventoryData : undefined, canBeEmpty: false },
         { name: "tutorialSteps", data: typeof window.tutorialSteps !== 'undefined' ? window.tutorialSteps : undefined, canBeEmpty: true },
-        { name: "craftingRecipesData", data: typeof window.craftingRecipesData !== 'undefined' ? window.craftingRecipesData : undefined, canBeEmpty: true }, 
+        { name: "craftingRecipesData", data: typeof window.craftingRecipesData !== 'undefined' ? window.craftingRecipesData : undefined, canBeEmpty: true },
         { name: "EQUIPMENT_SLOTS", data: typeof window.EQUIPMENT_SLOTS !== 'undefined' ? window.EQUIPMENT_SLOTS : undefined, canBeEmpty: false },
         { name: "DAMAGE_TYPES", data: typeof window.DAMAGE_TYPES !== 'undefined' ? window.DAMAGE_TYPES : undefined, canBeEmpty: false },
         { name: "RESOURCE_TYPES", data: typeof window.RESOURCE_TYPES !== 'undefined' ? window.RESOURCE_TYPES : undefined, canBeEmpty: false },
@@ -269,10 +277,10 @@ function checkAllConfigLoaded() {
         { name: "NIGHT_ASSAULT_CONFIG", data: typeof window.NIGHT_ASSAULT_CONFIG !== 'undefined' ? window.NIGHT_ASSAULT_CONFIG : undefined, canBeEmpty: false },
         { name: "BASE_GRID_SIZE", data: typeof window.BASE_GRID_SIZE !== 'undefined' ? window.BASE_GRID_SIZE : undefined, canBeEmpty: false },
         { name: "NANOBOT_INITIAL_STATS", data: typeof window.NANOBOT_INITIAL_STATS !== 'undefined' ? window.NANOBOT_INITIAL_STATS : undefined, canBeEmpty: false },
-        { name: "NANOBOT_SKILLS_CONFIG", data: typeof window.NANOBOT_SKILLS_CONFIG !== 'undefined' ? window.NANOBOT_SKILLS_CONFIG : undefined, canBeEmpty: true }, 
+        { name: "NANOBOT_SKILLS_CONFIG", data: typeof window.NANOBOT_SKILLS_CONFIG !== 'undefined' ? window.NANOBOT_SKILLS_CONFIG : undefined, canBeEmpty: true },
         { name: "LEVEL_XP_THRESHOLDS", data: typeof window.LEVEL_XP_THRESHOLDS !== 'undefined' ? window.LEVEL_XP_THRESHOLDS : undefined, isArray: true, canBeEmpty: false },
         { name: "EXPLORATION_SETTINGS", data: typeof window.EXPLORATION_SETTINGS !== 'undefined' ? window.EXPLORATION_SETTINGS : undefined, canBeEmpty: false },
-        { name: "WORLD_ZONES", data: typeof window.WORLD_ZONES !== 'undefined' ? window.WORLD_ZONES : undefined, canBeEmpty: false }, 
+        { name: "WORLD_ZONES", data: typeof window.WORLD_ZONES !== 'undefined' ? window.WORLD_ZONES : undefined, canBeEmpty: false },
         { name: "EVENT_TRIGGERS", data: typeof window.EVENT_TRIGGERS !== 'undefined' ? window.EVENT_TRIGGERS : undefined, canBeEmpty: false },
         { name: "GAME_VERSION_CONFIG_CHECK", data: typeof window.GAME_VERSION_CONFIG_CHECK !== 'undefined' ? window.GAME_VERSION_CONFIG_CHECK : undefined, canBeEmpty: false },
         { name: "TICK_SPEED", data: typeof window.TICK_SPEED !== 'undefined' ? window.TICK_SPEED : undefined, canBeEmpty: false },
@@ -284,6 +292,8 @@ function checkAllConfigLoaded() {
         { name: "DEFAULT_MAP_SIZE", data: typeof window.DEFAULT_MAP_SIZE !== 'undefined' ? window.DEFAULT_MAP_SIZE : undefined, canBeEmpty: false },
         { name: "TILE_TYPES_TO_RESOURCE_KEY", data: typeof window.TILE_TYPES_TO_RESOURCE_KEY !== 'undefined' ? window.TILE_TYPES_TO_RESOURCE_KEY : undefined, canBeEmpty: true },
         { name: "NANOBOT_BASE_PATROL_POINTS", data: typeof window.NANOBOT_BASE_PATROL_POINTS !== 'undefined' ? window.NANOBOT_BASE_PATROL_POINTS : undefined, isArray: true, canBeEmpty: true },
+        { name: "MINOR_TILE_EVENTS", data: typeof window.MINOR_TILE_EVENTS !== 'undefined' ? window.MINOR_TILE_EVENTS : undefined, isArray: true, canBeEmpty: true },
+        { name: "loreData", data: typeof window.loreData !== 'undefined' ? window.loreData : undefined, canBeEmpty: true },
     ];
     let allLoaded = true;
     let missingConfigsMessages = [];
@@ -363,20 +373,24 @@ function init() {
     loadGame();
     console.log("main.js: init() - gameState après loadGame().");
 
-    if (gameState.shopStock.length === 0 && typeof window.shopInventoryData !== 'undefined' && Object.keys(window.shopInventoryData).length > 0) {
-        console.log("Populating initial shop stock from shopInventoryData.");
-        for (const key in window.shopInventoryData) {
-            const shopEntryConfig = window.shopInventoryData[key];
-            gameState.shopStock.push({
-                itemId: shopEntryConfig.itemId,
-                quantity: shopEntryConfig.quantity,
-                cost: { ...shopEntryConfig.cost }, 
-                isUnique: shopEntryConfig.isUnique || false,
-                restockTime: shopEntryConfig.restockTime
-            });
+    if (!gameState.shopStock || gameState.shopStock.length === 0) {
+        console.log("Shop stock vide ou non défini dans gameState, peuplement initial.");
+        gameState.shopStock = [];
+        if (typeof window.shopInventoryData !== 'undefined' && Object.keys(window.shopInventoryData).length > 0) {
+            for (const key in window.shopInventoryData) {
+                const shopEntryConfig = window.shopInventoryData[key];
+                gameState.shopStock.push({
+                    itemId: shopEntryConfig.itemId,
+                    quantity: shopEntryConfig.quantity,
+                    cost: { ...shopEntryConfig.cost },
+                    isUnique: shopEntryConfig.isUnique || false,
+                    restockTime: shopEntryConfig.restockTime,
+                });
+            }
+            console.log("Shop stock initial peuplé depuis shopInventoryData:", JSON.parse(JSON.stringify(gameState.shopStock)));
         }
-    } else if (gameState.shopStock.length > 0) {
-        console.log("Shop stock déjà peuplé ou shopInventoryData vide.");
+    } else {
+        console.log("Shop stock déjà présent dans gameState.");
     }
 
 
@@ -399,12 +413,12 @@ function init() {
 
     if (!gameState.baseGrid || gameState.baseGrid.length === 0) {
         console.log("main.js: init() - Grille de base non chargée. Initialisation...");
-        if(typeof initializeBaseGrid === 'function') initializeBaseGrid(); 
+        if(typeof initializeBaseGrid === 'function') initializeBaseGrid();
         else console.error("initializeBaseGrid function is not defined!");
     }
     
     console.log("main.js: init() - Calculs initiaux (si besoin) après chargement/initialisation...");
-    if(typeof calculateInitialGameState === 'function') calculateInitialGameState(); 
+    if(typeof calculateInitialGameState === 'function') calculateInitialGameState();
     
     console.log("main.js: init() - gameState.resources après calculs initiaux:", JSON.parse(JSON.stringify(gameState.resources)));
 
@@ -460,14 +474,14 @@ function gameLoop(manualTriggerTime) {
     if(typeof updateResearch === 'function') updateResearch(tickDelta);
     if(typeof updateDayNightCycle === 'function') updateDayNightCycle(tickDelta);
     
-    if (!gameState.isDay) { 
+    if (!gameState.isDay) {
         if(typeof window.processNightAssaultTick === 'function') window.processNightAssaultTick();
         else console.warn("processNightAssaultTick non défini");
         
-        if(typeof window.processNanobotBaseDefenseAction === 'function' && gameState.nanobotStats.isDefendingBase) { 
+        if(typeof window.processNanobotBaseDefenseAction === 'function' && gameState.nanobotStats.isDefendingBase) {
             window.processNanobotBaseDefenseAction();
         }
-    } else { 
+    } else {
         if(typeof window.processNanobotBaseDefenseAction === 'function' && gameState.nanobotStats.isDefendingBase && window.NANOBOT_BASE_PATROL_POINTS && window.NANOBOT_BASE_PATROL_POINTS.length > 0) {
             window.processNanobotBaseDefenseAction();
         }
@@ -486,7 +500,6 @@ function gameLoop(manualTriggerTime) {
         if (activeMainSectionButton && activeMainSectionButton.dataset.section === 'world-section') {
             const activeSubTabButton = document.querySelector('#world-section .sub-nav-button.active');
             if (activeSubTabButton && activeSubTabButton.dataset.subtab === 'exploration-subtab') {
-                // Vérifier si on est PAS en mode exploration active avant de mettre à jour le bouton scan
                  if (!gameState.map.activeExplorationTileCoords && typeof window.uiUpdates.updateScanButtonCooldown === 'function') {
                     window.uiUpdates.updateScanButtonCooldown();
                 }
@@ -497,7 +510,7 @@ function gameLoop(manualTriggerTime) {
 
     if (typeof window.explorationController !== 'undefined' && typeof window.explorationController.updateExpiredMapScans === 'function') {
         if (window.explorationController.updateExpiredMapScans()) {
-            if (gameState.map && gameState.map.activeExplorationTileCoords === null && 
+            if (gameState.map && gameState.map.activeExplorationTileCoords === null &&
                 typeof window.explorationUI !== 'undefined' && typeof window.explorationUI.updateExplorationMapDisplay === 'function' &&
                 window.worldSectionContentEl && !window.worldSectionContentEl.classList.contains('blurred-background')) {
                 const activeSubTabButton = document.querySelector('#world-section .sub-nav-button.active');
@@ -530,24 +543,41 @@ function loadGame() {
         try {
             const loadedState = JSON.parse(savedGame);
             const initialState = getInitialGameState();
+            
             gameState = deepMerge(initialState, loadedState);
 
+            // Ensure crucial structures are valid post-merge
             if (!gameState.map || typeof gameState.map.tiles !== 'object') gameState.map = initialState.map;
             if (!gameState.buildings || typeof gameState.buildings !== 'object') gameState.buildings = initialState.buildings;
             if (!gameState.research || typeof gameState.research !== 'object') gameState.research = initialState.research;
             if (!gameState.inventory || !Array.isArray(gameState.inventory)) gameState.inventory = initialState.inventory;
-            if (!gameState.baseGrid || !Array.isArray(gameState.baseGrid)) gameState.baseGrid = [];
-            if (!gameState.defenses || typeof gameState.defenses !== 'object') gameState.defenses = {};
-            if (!gameState.quests || typeof gameState.quests !== 'object') gameState.quests = {};
-            if (!gameState.nanobotModuleLevels || typeof gameState.nanobotModuleLevels !== 'object') gameState.nanobotModuleLevels = {};
-            if (!gameState.nanobotEquipment || typeof gameState.nanobotEquipment !== 'object') gameState.nanobotEquipment = {};
+            if (!gameState.baseGrid || !Array.isArray(gameState.baseGrid) || gameState.baseGrid.length === 0) {
+                if(typeof initializeBaseGrid === 'function') initializeBaseGrid();
+            }
+            if (!gameState.defenses || typeof gameState.defenses !== 'object') gameState.defenses = initialState.defenses;
+            if (!gameState.quests || typeof gameState.quests !== 'object') gameState.quests = initialState.quests;
+            if (!gameState.nanobotModuleLevels || typeof gameState.nanobotModuleLevels !== 'object') gameState.nanobotModuleLevels = initialState.nanobotModuleLevels;
+            if (!gameState.nanobotEquipment || typeof gameState.nanobotEquipment !== 'object') {
+                gameState.nanobotEquipment = initialState.nanobotEquipment;
+            } else {
+                 for(const slot in initialState.nanobotEquipment) {
+                    if(!(slot in gameState.nanobotEquipment)) {
+                        gameState.nanobotEquipment[slot] = null;
+                    }
+                 }
+            }
             if (!gameState.nightAssault || typeof gameState.nightAssault !== 'object') gameState.nightAssault = initialState.nightAssault;
             if (gameState.nightAssault && !Array.isArray(gameState.nightAssault.log)) gameState.nightAssault.log = [];
+            
             if (!Array.isArray(gameState.explorationLog)) gameState.explorationLog = [];
             if (!Array.isArray(gameState.eventLog)) gameState.eventLog = [];
-            if (!Array.isArray(gameState.shopStock)) gameState.shopStock = []; 
+            
+            if (!Array.isArray(gameState.shopStock) || gameState.shopStock.some(item => typeof item !== 'object' || !item.itemId)) {
+                gameState.shopStock = []; // Will be repopulated in init()
+            }
             if (!Array.isArray(gameState.purchasedShopItems)) gameState.purchasedShopItems = [];
             if (typeof gameState.nanobotSkills !== 'object' || gameState.nanobotSkills === null) gameState.nanobotSkills = {};
+            if (typeof gameState.gameplayFlags !== 'object' || gameState.gameplayFlags === null) gameState.gameplayFlags = initialState.gameplayFlags;
 
 
             if(typeof addLogEntry === 'function') addLogEntry("Partie chargée.", "success");
@@ -560,11 +590,11 @@ function loadGame() {
             if(typeof addLogEntry === 'function') addLogEntry("Sauvegarde corrompue ou invalide. Démarrage d'une nouvelle partie.", "error");
             localStorage.removeItem(getSaveKey());
             gameState = getInitialGameState();
-             if(typeof calculateInitialGameState === 'function') calculateInitialGameState();
+            if(typeof calculateInitialGameState === 'function') calculateInitialGameState();
         }
     } else {
         console.log(`loadGame: Aucune sauvegarde (${getSaveKey()}). Utilisation de l'état initial.`);
-        if(typeof calculateInitialGameState === 'function') calculateInitialGameState();
+        if(typeof calculateInitialGameState === 'function') calculateInitialGameState(); // gameState est déjà initialisé par getInitialGameState()
     }
 }
 window.loadGame = loadGame;

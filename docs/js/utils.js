@@ -59,7 +59,7 @@ function addLogEntry(message, type = 'info', targetLogOrElement = 'event', logAr
                 if (logElement && window.combatLogDetailsContainerEl && !window.combatLogDetailsContainerEl.open) {
                    window.combatLogDetailsContainerEl.open = true;
                 }
-                if (logArray === null && window.currentCombatInstance) logArray = window.currentCombatInstance.combatLog; 
+                if (logArray === null && window.currentCombatInstance) logArray = window.currentCombatInstance.combatLog;
                 else if (logArray === null && window.gameState) logArray = window.gameState.combatLogSummary;
                 break;
             case 'exploration': logElement = window.explorationLogEl; if (logArray === null && window.gameState) logArray = window.gameState.explorationLog; break;
@@ -117,7 +117,7 @@ function addLogEntry(message, type = 'info', targetLogOrElement = 'event', logAr
     const MAX_LOG_ENTRIES = 100;
     while (logElement.children.length >= MAX_LOG_ENTRIES) {
         if (logElement.firstChild) logElement.removeChild(logElement.firstChild);
-        else break; 
+        else break;
     }
     logElement.appendChild(p);
     logElement.scrollTop = logElement.scrollHeight;
@@ -159,36 +159,34 @@ function showModal(title, messageOrHtml, onConfirm = null, showCancelButton = tr
 
     if (onConfirm) {
         window.modalConfirmBtn.style.display = 'inline-block';
-        window.modalConfirmBtn.onclick = () => { 
-            onConfirm();
-            hideModal();
+        window.modalConfirmBtn.onclick = () => {
+            onConfirm(); // Appeler le callback original
+            hideModal(); // Ensuite, cacher la modale (qui gère isGamePaused)
         };
     } else {
-        window.modalConfirmBtn.style.display = 'none'; // Cacher si pas de callback onConfirm
+        window.modalConfirmBtn.style.display = 'none';
     }
 
     if (showCancelButton) {
         window.modalCancelBtn.style.display = 'inline-block';
         window.modalCancelBtn.onclick = () => {
             if (typeof onCancel === 'function') {
-                onCancel(); 
+                onCancel(); // Appeler le callback original
             }
-            // Toujours appeler hideModal, que onCancel soit défini ou non,
-            // car le but du bouton Cancel est de fermer la modale.
-            hideModal(); 
+            hideModal(); // Ensuite, cacher la modale
         };
     } else {
         window.modalCancelBtn.style.display = 'none';
     }
 
     window.modalEl.classList.remove('hidden');
-    isGamePaused = true;
+    isGamePaused = true; // Mettre en pause au moment de l'affichage
 }
 window.showModal = showModal;
 
 function hideModal() {
     if(window.modalEl) window.modalEl.classList.add('hidden');
-    isGamePaused = false;
+    isGamePaused = false; // Remettre en jeu quand la modale est cachée
 }
 window.hideModal = hideModal;
 
@@ -299,7 +297,14 @@ function getTooltipContent(type, id, targetElement) {
                 content = `<strong>Énergie</strong><br>Consommée: ${consumed}<br>Capacité Totale: ${totalCap}<br>Disponible: ${Math.max(0, totalCap - consumed)}`;
             } else if (resourceKey === 'mobility') {
                 const currentMobility = Math.floor(window.gameState.resources.mobility || 0);
-                content = `<strong>Mobilité</strong>: ${currentMobility} / ${(typeof window.MAX_MOBILITY_POINTS !== 'undefined' ? window.MAX_MOBILITY_POINTS : '?')}<br>Recharge dans: ${formatTime(window.gameState.mobilityRechargeTimer || 0)}`;
+                const rechargeTime = window.MOBILITY_RECHARGE_TIME_PER_POINT || 30;
+                const timeToNextPoint = currentMobility < (window.MAX_MOBILITY_POINTS || 10) ? rechargeTime - (window.gameState.mobilityRechargeTimer || 0) : 0;
+                content = `<strong>Mobilité</strong>: ${currentMobility} / ${(typeof window.MAX_MOBILITY_POINTS !== 'undefined' ? window.MAX_MOBILITY_POINTS : '?')}`;
+                if (timeToNextPoint > 0) {
+                    content += `<br>Recharge dans: ${formatTime(timeToNextPoint)}`;
+                } else if (currentMobility >= (window.MAX_MOBILITY_POINTS || 10)) {
+                    content += `<br><span class="text-green-400">Max</span>`;
+                }
             } else if (resourceKey === 'base-health-value') {
                  content = `<strong>Santé du Noyau</strong>: ${Math.floor(window.gameState.baseStats.currentHealth)} / ${window.gameState.baseStats.maxHealth}<br>Défense: ${window.gameState.baseStats.defensePower}`;
                  if (window.gameState.nightAssault.isActive && !window.gameState.isDay) {
@@ -367,7 +372,7 @@ function getTooltipContent(type, id, targetElement) {
             break;
         
         case 'inventory-item':
-        case 'shop-item': // Gérer les items du shop de manière similaire
+        case 'shop-item': 
              if (window.itemsData && window.itemsData[id]) {
                 const item = window.itemsData[id];
                 content = `<strong>${item.name}</strong> <span class="text-xs text-gray-400">(${item.type})</span><hr class="my-1 border-gray-600">${item.description_long || item.description}<br>`;
@@ -376,7 +381,6 @@ function getTooltipContent(type, id, targetElement) {
                 if (item.slot && window.EQUIPMENT_SLOTS) content += `Emplacement: <span class="text-purple-400">${window.EQUIPMENT_SLOTS[item.slot] || item.slot}</span><br>`;
                 if (item.value && type === 'inventory-item') content += `Valeur: <span class="text-yellow-400">${item.value} Nanites</span><br>`;
                 
-                // Pour le shop, trouver les infos de coût depuis gameState.shopStock
                 if (type === 'shop-item' && window.gameState && window.gameState.shopStock) {
                     const shopEntry = window.gameState.shopStock.find(entry => entry.itemId === id);
                     if (shopEntry && shopEntry.cost) {
@@ -401,11 +405,17 @@ function getTooltipContent(type, id, targetElement) {
             }
             break;
         
-        case 'map-tile': // id devrait être "x,y"
-            // ... (utiliser window.WORLD_ZONES, window.tileData, etc.) ...
+        case 'map-tile': 
+            // id devrait être "x,y" si vous voulez des détails spécifiques à la tuile
+            // Pour l'instant, on va juste afficher le titre de l'élément qui a déclenché le tooltip
+            content = targetElement.title || `Case (${id})`;
             break;
         case 'stat-nanobot':
-            // ... (utiliser window.STAT_NAMES) ...
+            let statFullName = (window.STAT_NAMES && window.STAT_NAMES[id]) || id.charAt(0).toUpperCase() + id.slice(1);
+            let statDescription = "Description non disponible.";
+            // Vous pouvez ajouter des descriptions spécifiques pour chaque stat ici si vous le souhaitez
+            // Exemple: if (id === 'health') statDescription = "Points de vie totaux du Nanobot.";
+            content = `<strong>${statFullName}</strong><hr class="my-1 border-gray-600">${statDescription}`;
             break;
 
         default:
@@ -468,9 +478,11 @@ function highlightInsufficientCosts(buttonOrContainer, costObject) {
             }
             if (currentAmount < requiredAmount) {
                 part.classList.add('insufficient');
-                const headerResourceKey = isItemResource ? resourceId : resourceId; // Pour trouver le nom d'affichage
+                const headerResourceKey = isItemResource ? resourceId : resourceId; 
                 const headerResourceName = isItemResource ? (window.itemsData[headerResourceKey]?.name) : (headerResourceKey.charAt(0).toUpperCase() + headerResourceKey.slice(1));
-                const headerResourceEl = document.querySelector(`.resource-item[title*="${headerResourceName}"]`);
+                
+                // Chercher l'élément ressource dans l'en-tête par son data-tooltip-id
+                const headerResourceEl = document.querySelector(`.resource-item[data-tooltip-id="${headerResourceKey}"]`);
                 if (headerResourceEl) {
                     headerResourceEl.classList.add('insufficient-flash');
                     setTimeout(() => headerResourceEl.classList.remove('insufficient-flash'), 1400);
@@ -498,18 +510,18 @@ function deepMerge(target, source) {
     if (isObject(target) && isObject(source)) {
         Object.keys(source).forEach(key => {
             if (isObject(source[key])) {
-                if (!(key in target) || !isObject(target[key])) { // S'assurer que target[key] est aussi un objet
-                    Object.assign(output, { [key]: deepMerge({}, source[key]) }); // Fusionner dans un objet vide si target[key] n'est pas un objet
+                if (!(key in target) || !isObject(target[key])) { 
+                    Object.assign(output, { [key]: deepMerge({}, source[key]) }); 
                 } else {
                     output[key] = deepMerge(target[key], source[key]);
                 }
             } else if (Array.isArray(source[key])) {
-                Object.assign(output, { [key]: [...source[key]] }); // Fusionner des tableaux pour éviter les références partagées
+                Object.assign(output, { [key]: [...source[key]] }); 
             } else {
                 Object.assign(output, { [key]: source[key] });
             }
         });
-    } else if (isObject(source)) { // Si target n'est pas un objet mais source l'est
+    } else if (isObject(source)) { 
         return deepMerge({}, source);
     }
     return output;
@@ -530,8 +542,8 @@ function drawProjectileVisual(startX, startY, endX, endY, type = 'friendly', vis
     const distance = Math.sqrt(dx * dx + dy * dy);
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
     projectile.style.width = `${distance}px`; projectile.style.height = '2px';
-    projectile.style.backgroundColor = type === 'friendly' ? 'var(--accent-yellow)' : 'var(--accent-red)';
-    projectile.style.boxShadow = `0 0 5px ${type === 'friendly' ? 'var(--accent-yellow)' : 'var(--accent-red)'}`;
+    projectile.style.backgroundColor = type === 'friendly' || type === 'nanobot-base' ? 'var(--accent-yellow)' : 'var(--accent-red)';
+    projectile.style.boxShadow = `0 0 5px ${type === 'friendly' || type === 'nanobot-base' ? 'var(--accent-yellow)' : 'var(--accent-red)'}`;
     projectile.style.position = 'absolute'; projectile.style.left = `${startX}px`;
     projectile.style.top = `${startY - 1}px`; projectile.style.transformOrigin = '0 50%';
     projectile.style.transform = `rotate(${angle}deg)`; projectile.style.zIndex = '20';
@@ -582,7 +594,23 @@ function showItemInfoModal(itemType, itemId, itemNameFallback) {
                 const level = window.gameState.buildings[itemId] || 0;
                 title = `${dataObject.name} (Niv. ${level})`;
                 detailedContent = `<p class="text-sm text-gray-300 mb-2">${dataObject.description_long || dataObject.description}</p>`;
-                // ... ajouter d'autres détails spécifiques aux bâtiments ...
+                 if (level > 0 && dataObject.levels && dataObject.levels[level-1]) {
+                    const currentLvlData = dataObject.levels[level-1];
+                    detailedContent += `<hr class="my-1 border-gray-700"><p class="text-xs"><strong>Effets Actuels (Niv. ${level}):</strong></p><ul class="list-disc list-inside text-xs pl-3">`;
+                    if(currentLvlData.production) detailedContent += `<li>Production: ${Object.entries(currentLvlData.production).map(([res,val])=>`${val}/s ${res}`).join(', ')}</li>`;
+                    if(currentLvlData.capacity) detailedContent += `<li>Capacité: ${Object.entries(currentLvlData.capacity).map(([res,val])=>`${val} ${res}`).join(', ')}</li>`;
+                    if(currentLvlData.researchSpeedFactor) detailedContent += `<li>Vitesse Recherche: x${currentLvlData.researchSpeedFactor}</li>`;
+                    if(currentLvlData.energyConsumption) detailedContent += `<li>Conso. Énergie: ${currentLvlData.energyConsumption}</li>`;
+                    if(currentLvlData.baseHealthBonus && dataObject.id === 'reinforcedWall') detailedContent += `<li>Bonus PV Noyau: +${currentLvlData.baseHealthBonus}</li>`;
+                    if(currentLvlData.defensePowerBonus) detailedContent += `<li>Bonus Défense Noyau: +${currentLvlData.defensePowerBonus}</li>`;
+                    if(dataObject.type === 'crafting' && currentLvlData.unlockedCategories) detailedContent += `<li>Catégories débloq.: ${currentLvlData.unlockedCategories.join(', ')}</li>`;
+                    if (dataObject.type === 'defense' && currentLvlData.stats) {
+                        detailedContent += `<li>PV Tourelle: ${currentLvlData.stats.health}</li>`;
+                        if (currentLvlData.stats.attack) detailedContent += `<li>Attaque: ${currentLvlData.stats.attack}</li>`;
+                        if (currentLvlData.stats.range) detailedContent += `<li>Portée: ${currentLvlData.stats.range}</li>`;
+                    }
+                    detailedContent += `</ul>`;
+                }
             }
             break;
         case 'module-card':
@@ -591,7 +619,10 @@ function showItemInfoModal(itemType, itemId, itemNameFallback) {
                 const currentLevel = window.gameState.nanobotModuleLevels[itemId] || 0;
                 title = `${dataObject.name} (Niv. ${currentLevel})`;
                  detailedContent = `<p class="text-sm text-gray-300 mb-2">${dataObject.description_long || dataObject.description}</p>`;
-                // ... ajouter d'autres détails spécifiques aux modules ...
+                 if (currentLevel > 0 && dataObject.levels && dataObject.levels[currentLevel-1]) {
+                    const currentLvlData = dataObject.levels[currentLevel-1];
+                    if(currentLvlData.statBoost) detailedContent += `<p class="text-xs"><strong>Boosts Actuels:</strong> ${Object.entries(currentLvlData.statBoost).map(([s,v]) => `${(window.STAT_NAMES && window.STAT_NAMES[s] || s)}:+${v}`).join(', ')}</p>`;
+                 }
             }
             break;
         case 'research-card':
@@ -599,7 +630,9 @@ function showItemInfoModal(itemType, itemId, itemNameFallback) {
              if (dataObject) {
                 title = dataObject.name;
                 detailedContent = `<p class="text-sm text-gray-300 mb-2">${dataObject.description_long || dataObject.description}</p>`;
-                // ... ajouter d'autres détails spécifiques aux recherches ...
+                if(dataObject.grantsStatBoost) detailedContent += `<p class="text-xs"><strong>Effets:</strong> Stats: ${Object.entries(dataObject.grantsStatBoost).map(([s,v])=>`${(window.STAT_NAMES && window.STAT_NAMES[s] || s)}:+${v}`).join(', ')}</p>`;
+                if(dataObject.unlocksBuilding && window.buildingsData && window.buildingsData[dataObject.unlocksBuilding]) detailedContent += `<p class="text-xs"><strong>Débloque:</strong> ${window.buildingsData[dataObject.unlocksBuilding].name}</p>`;
+                if(dataObject.grantsModule && window.nanobotModulesData && window.nanobotModulesData[dataObject.grantsModule]) detailedContent += `<p class="text-xs"><strong>Débloque:</strong> Module ${window.nanobotModulesData[dataObject.grantsModule].name}</p>`;
             }
             break;
         default:
@@ -611,15 +644,15 @@ function showItemInfoModal(itemType, itemId, itemNameFallback) {
         detailedContent = `<p class="text-red-400">Impossible de charger les détails pour ${itemNameFallback || itemId}.</p>`;
     }
 
-    showModal(title, detailedContent, null, true, hideModal); 
+    showModal(title, detailedContent, null, true, hideModal);
     
     const confirmButton = document.getElementById('modal-confirm');
-    if (confirmButton) confirmButton.style.display = 'none'; 
+    if (confirmButton) confirmButton.style.display = 'none';
 
     const cancelButton = document.getElementById('modal-cancel');
     if (cancelButton) {
         cancelButton.textContent = "Fermer";
-        cancelButton.style.display = 'inline-block'; 
+        cancelButton.style.display = 'inline-block';
     }
 }
 window.showItemInfoModal = showItemInfoModal;

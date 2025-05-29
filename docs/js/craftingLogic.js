@@ -10,34 +10,33 @@ var craftingLogic = {
         }
         const recipe = window.craftingRecipesData[recipeId];
 
-        // 1. Vérifier les conditions de déblocage
         if (recipe.unlockCondition) {
             if (recipe.unlockCondition.research && (!gs.research || !gs.research[recipe.unlockCondition.research])) {
-                return false; // Recherche non complétée
+                return false;
             }
             if (recipe.unlockCondition.gameplayFlag && (!gs.gameplayFlags || !gs.gameplayFlags[recipe.unlockCondition.gameplayFlag])) {
-                return false; // Flag de jeu non actif
+                return false;
             }
-            // Ajouter d'autres types de conditions de déblocage ici si besoin
         }
 
-        // 2. Vérifier le bâtiment requis
         if (recipe.requiredBuilding) {
             if (!gs.buildings || (gs.buildings[recipe.requiredBuilding] || 0) < (recipe.requiredBuildingLevel || 1)) {
-                return false; // Bâtiment requis non construit ou niveau insuffisant
+                return false;
             }
         }
 
-        // 3. Vérifier les ingrédients
         for (const ingredient of recipe.ingredients) {
             if (ingredient.type === "item") {
                 const countInInventory = (gs.inventory || []).filter(itemId => itemId === ingredient.id).length;
                 if (countInInventory < ingredient.quantity) {
-                    return false; // Pas assez d'items
+                    return false;
                 }
             } else if (ingredient.type === "resource") {
                 if ((gs.resources[ingredient.id] || 0) < ingredient.quantity) {
-                    return false; // Pas assez de ressources
+                    // Spécial pour l'énergie : elle n'est pas "consommée" directement des ressources globales pour le craft (sauf si explicitement indiqué)
+                    // Mais ici on vérifie si on A assez d'énergie si c'est un ingrédient de type "resource"
+                    // Le coût en énergie de fonctionnement du bâtiment est géré ailleurs.
+                    return false;
                 }
             }
         }
@@ -53,18 +52,22 @@ var craftingLogic = {
 
         const recipe = window.craftingRecipesData[recipeId];
 
-        // Consommer les ingrédients
         for (const ingredient of recipe.ingredients) {
             if (ingredient.type === "item") {
                 for (let i = 0; i < ingredient.quantity; i++) {
                     if(typeof removeFromInventory === 'function') removeFromInventory(ingredient.id);
                 }
             } else if (ingredient.type === "resource") {
-                gs.resources[ingredient.id] -= ingredient.quantity;
+                // Ne pas déduire l'énergie ici si elle représente une "capacité" ou un "coût de fonctionnement"
+                // Déduire seulement si c'est listé comme un ingrédient ressource à consommer.
+                 if (gs.resources[ingredient.id] !== undefined) { // Vérifie que la ressource existe dans gs.resources
+                    gs.resources[ingredient.id] -= ingredient.quantity;
+                } else {
+                    console.warn(`Tentative de déduction d'une ressource inconnue '${ingredient.id}' de gs.resources.`);
+                }
             }
         }
 
-        // Ajouter l'output à l'inventaire
         if(typeof addToInventory === 'function') {
             for (let i = 0; i < (recipe.output.quantity || 1); i++) {
                 addToInventory(recipe.output.itemId);
@@ -73,13 +76,10 @@ var craftingLogic = {
 
         if(typeof addLogEntry === 'function') addLogEntry(`${recipe.name} fabriqué avec succès !`, "success", window.eventLogEl, gs.eventLog);
         
-        // Mettre à jour les UI pertinentes
         if(typeof window.uiUpdates !== 'undefined' && typeof window.uiUpdates.updateResourceDisplay === 'function') window.uiUpdates.updateResourceDisplay();
         if(typeof updateInventoryDisplay === 'function') updateInventoryDisplay();
-        if(typeof window.craftingUI !== 'undefined' && typeof window.craftingUI.updateCraftingDisplay === 'function') window.craftingUI.updateCraftingDisplay(); // Rafraîchir l'UI de craft
+        if(typeof window.craftingUI !== 'undefined' && typeof window.craftingUI.updateCraftingDisplay === 'function') window.craftingUI.updateCraftingDisplay();
         
-        // TODO: Gérer le temps de craft si nécessaire (pour l'instant, c'est instantané)
-
         return true;
     }
 };

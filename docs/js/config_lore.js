@@ -7,10 +7,7 @@ const loreData = {
             name: "Vestiges de la Terre Unie (VTU)",
             description: "Descendants des survivants de la Grande Catastrophe Terrestre, les VTU sont des technologues pragmatiques cherchant à reconstruire une civilisation stable. Ils sont souvent méfiants envers les technologies inconnues mais excellent dans l'ingénierie robuste et la logistique.",
             ideology: "Reconstruction, Stabilité, Prudence Technologique",
-            relations: { // Exemple de relations avec d'autres factions (si vous en avez)
-                // "cyborg_cult": "hostile",
-                // "xenos_explorers": "neutral"
-            }
+            relations: {}
         },
         "children_of_the_singularity": {
             name: "Enfants de la Singularité",
@@ -24,7 +21,6 @@ const loreData = {
             ideology: "Pillage, Domination, Survie du plus apte",
             relations: {}
         }
-        // Ajoutez d'autres factions
     },
     "world_history": {
         "great_collapse_era": {
@@ -42,12 +38,11 @@ const loreData = {
             summary: "Face aux dangers d'une galaxie hostile et aux ressources limitées, le Projet Nexus a été lancé pour créer des IA auto-suffisantes capables d'établir des avant-postes et de préparer des mondes pour la colonisation.",
             timeline_entry: "150 DG (Après Grille): Le Projet Nexus est approuvé par le Conseil des Colonies Unies."
         },
-        "your_planet_XN7": { // Le nom de votre planète de jeu
+        "your_planet_XN7": {
             title: "La Planète XN-7 (Nom de code: 'Genesis')",
             summary: "Une planète riche en ressources mais parsemée de ruines d'une civilisation inconnue et d'une faune locale dangereuse. Le Nexus-7 a été déployé ici pour évaluer son potentiel de colonisation.",
             current_status: "Déploiement du Nexus-7 en cours. Anomalies énergétiques et structures extraterrestres détectées."
         }
-        // Ajoutez d'autres éléments d'histoire
     },
     "technology_lore": {
         "nanites": {
@@ -62,9 +57,8 @@ const loreData = {
             title: "Propulseurs à Vide (Hyperspatiaux)",
             description: "La technologie permettant les voyages interstellaires rapides en manipulant les dimensions supérieures. Nécessite des quantités massives d'énergie et des calculs de navigation complexes."
         }
-        // Ajoutez d'autres éléments de lore technologique
     },
-    "codex_entries": [ // Peut être utilisé pour un codex en jeu
+    "codex_entries": [
         {
             id: "what_is_nexus7",
             category: "Nexus Project",
@@ -82,8 +76,33 @@ const loreData = {
             category: "Protocoles",
             title: "Protocole de Premier Contact",
             content: "En cas de rencontre avec des formes de vie intelligentes non hostiles, le protocole standard est d'observer, de collecter des données et d'éviter toute action pouvant être interprétée comme une agression. Toute communication doit être approuvée par le commandement central (actuellement hors de portée)."
+        },
+        { // Entrée ajoutée pour le test
+            id: "ancient_structure_protocol",
+            category: "Structures Anciennes",
+            title: "Protocoles des Structures Anciennes",
+            content: "Les structures anciennes découvertes sur XN-7 semblent répondre à des stimuli énergétiques spécifiques, souvent catalysés par des cristaux locaux. Leur fonction exacte reste un mystère, mais elles pourraient receler des technologies ou des informations précieuses."
+        },
+        { // Entrée ajoutée pour le test
+            id: "origin_signal_01",
+            category: "Signaux Inconnus",
+            title: "Fragment de Signal d'Origine 01",
+            content: "Ce fragment de données corrompu semble faire partie d'une transmission beaucoup plus vaste. Les premières analyses suggèrent une origine non-humaine et extrêmement ancienne. Des efforts de décodage supplémentaires sont nécessaires."
+        },
+        { // Entrée ajoutée pour le test
+            id: "ruins_log_01",
+            category: "Ruines",
+            title: "Journal des Ruines Alpha-01",
+            content: "Log récupéré d'une console endommagée : '...flux énergétique instable... confinement en échec... évacuation impossible... que les étoiles aient pitié de nos âmes...'. La nature de l'événement reste inconnue."
+        },
+        { // Entrée ajoutée pour le test
+            id: "desert_climate_data",
+            category: "Environnement",
+            title: "Données Climatiques du Désert",
+            content: "Les balises météo récupérées indiquent que le climat désertique de cette région est le résultat d'un événement cataclysmique passé, et non sa condition naturelle originelle. Des fluctuations extrêmes de température et des tempêtes de sable sont fréquentes."
         }
     ]
 };
+window.loreData = loreData; // Assignation à window pour la portée globale
 
-console.log("config_lore.js - loreData défini:", typeof loreData);
+console.log("config_lore.js - loreData défini:", typeof window.loreData);

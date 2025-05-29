@@ -20,12 +20,12 @@ function getInitialGameState() {
         level: 1, xp: 0,
         xpToNext: (typeof window.LEVEL_XP_THRESHOLDS !== 'undefined' && window.LEVEL_XP_THRESHOLDS.length > 0) ? window.LEVEL_XP_THRESHOLDS[0] : 100,
         health: 100, currentHealth: 100, attack: 10, defense: 5, speed: 10,
-        baseHealth: 100, baseAttack: 10, baseDefense: 5, baseSpeed: 10, // Ajout des stats de base
+        baseHealth: 100, baseAttack: 10, baseDefense: 5, baseSpeed: 10,
         critChance: 0.05, critDamage: 1.5, energyRegen: 0.5, rageMax: 100,
-        resistances: {}, // Initialiser les résistances
-        lastMapScanTime: 0, // Pour le cooldown du scan de carte
-        isDefendingBase: true, // MODIFIÉ: Défense activée par défaut
-        baseDefensePosition: null, // { row, col }
+        resistances: {},
+        lastMapScanTime: 0,
+        isDefendingBase: true,
+        baseDefensePosition: null,
         baseDefenseTargetEnemyId: null,
         baseDefensePatrolIndex: 0,
         baseDefenseLastActionTime: 0
@@ -35,27 +35,17 @@ function getInitialGameState() {
         maxHealth: 500, currentHealth: 500, defensePower: 0,
     };
 
-    // `currentVersion` est défini dans main.js
     const gameVersion = typeof currentVersion !== 'undefined' ? currentVersion : "0.0.0";
 
-    // Items de départ pour test
+    // Items de départ pour test (ajusté pour inclure quelques nouveaux matériaux de base)
     const startingInventory = [
         "repair_kit_basic",
         "repair_kit_basic",
-        "laser_pistol_mk1",
-        "alloy_plates",
-        "alloy_plates",
-        "alloy_plates",
-        "alloy_plates",
-        "alloy_plates",
-        "crystal_shard_raw",
-        "crystal_shard_raw",
-        "crystal_shard_raw",
-        "nanite_cluster_small",
-        "nanite_cluster_small",
-        "nanite_cluster_small",
-        "nanite_cluster_small",
-        "nanite_cluster_small",
+        "laser_pistol_mk1", // Le joueur commence avec un pistolet
+        "alloy_plates", "alloy_plates", "alloy_plates",
+        "crystal_shard_raw", "crystal_shard_raw", "crystal_shard_raw", "crystal_shard_raw", "crystal_shard_raw",
+        "nanite_cluster_small", "nanite_cluster_small", "nanite_cluster_small",
+        // "blueprint_shield_module_mk1" // Pourrait être donné au début pour tester le déblocage de recette
     ];
 
 
@@ -68,11 +58,11 @@ function getInitialGameState() {
 
         resources: initialResources,
         productionRates: { biomass: 0, nanites: 0, crystal_shards: 0 },
-        capacity: { biomass: 50000, nanites: 30000, energy: 0, crystal_shards: 5000 }, // Energy capacity est à 0 initialement, augmentée par les générateurs
+        capacity: { biomass: 50000, nanites: 30000, energy: 0, crystal_shards: 5000 },
 
         buildings: {},
         defenses: {},
-        baseGrid: [], // Sera initialisé par initializeBaseGrid()
+        baseGrid: [],
 
         research: {},
         activeResearch: null,
@@ -82,19 +72,19 @@ function getInitialGameState() {
         nanobotEquipment: {
              WEAPON: null, ARMOR_CORE: null, SHIELD_GENERATOR: null,
              MOBILITY_SYSTEM: null, UTILITY_A: null, UTILITY_B: null, PROCESSOR: null
-        }, // Utiliser les clés de EQUIPMENT_SLOTS
-        nanobotSkills: {}, // Objet: { skillId: { cooldownRemaining: X, ...autresDonneesSiBesoin } }
+        },
+        nanobotSkills: {},
 
         inventory: startingInventory,
 
         map: {
-            tiles: {}, // Sera { zoneId: [[tile, ...], ...], ... }
+            tiles: {},
             nanobotPos: { x: 0, y: 0 },
-            selectedTile: null, // {x, y} de la tuile sélectionnée sur la carte du monde
-            activeExplorationTileCoords: null, // {x, y} pour l'UI d'exploration active
+            selectedTile: null,
+            activeExplorationTileCoords: null,
         },
         currentZoneId: (typeof window.EXPLORATION_SETTINGS !== 'undefined' ? window.EXPLORATION_SETTINGS.initialZoneId : 'verdant_archipelago'),
-        unlockedZones: [(typeof window.EXPLORATION_SETTINGS !== 'undefined' ? window.EXPLORATION_SETTINGS.initialZoneId : 'verdant_archipelago')], // Zone de départ est débloquée
+        unlockedZones: [(typeof window.EXPLORATION_SETTINGS !== 'undefined' ? window.EXPLORATION_SETTINGS.initialZoneId : 'verdant_archipelago')],
 
         baseStats: initialBaseStats,
         nightAssault: {
@@ -103,36 +93,38 @@ function getInitialGameState() {
             timerToNextAssault: (typeof window.NIGHT_ASSAULT_CONFIG !== 'undefined' ? window.NIGHT_ASSAULT_CONFIG.timeBetweenAssaults : 1200),
             enemies: [],
             spawnQueue: [],
-            log: [], // Log spécifique à l'assaut
-            deficitWarningLogged: 0, // Pour éviter spam de log de déficit énergétique
-            lastAttackTime: 0 // Pour NIGHT_ASSAULT_TICK_INTERVAL
+            log: [],
+            deficitWarningLogged: 0,
+            lastAttackTime: 0
         },
 
         quests: {},
         activeStoryEvents: [],
         completedStoryEvents: [],
 
-        shopStock: [], // Sera une liste d'objets: [{itemId, quantity, cost, isUnique, restockTime}, ...]
-        purchasedShopItems: [], // Liste des IDs des items uniques déjà achetés
+        shopStock: [],
+        purchasedShopItems: [],
         lastShopRestockTime: 0,
 
         tutorialCompleted: false,
-        tutorialCurrentStepId: null, // Pour suivre l'étape actuelle si le joueur quitte/revient
-        gameplayFlags: {
-            crystalShardsUnlocked: false // Exemple
+        tutorialCurrentStepId: null,
+        gameplayFlags: { // Important d'avoir cet objet
+            crystalShardsUnlocked: false
+            // Les flags pour les recettes (ex: shieldGeneratorBasicRecipeUnlocked, advancedCircuitryRecipeUnlocked)
+            // seront mis à true par l'utilisation des items de plans.
         },
         mobilityRechargeTimer: 0,
         
-        placementMode: { // Pour la construction de défenses
+        placementMode: {
             isActive: false,
             selectedDefenseType: null,
             selectedDefenseLevel: 1
         },
 
-        version: gameVersion, // Version du jeu au moment de la création de cet état
-        explorationLog: [], // Log pour l'exploration
-        eventLog: [], // Log principal d'événements
-        combatLogSummary: [] // Log résumé pour le panneau nanobot (si utilisé)
+        version: gameVersion,
+        explorationLog: [],
+        eventLog: [],
+        combatLogSummary: []
     };
 }
 
@@ -178,7 +170,7 @@ function calculateInitialGameState() {
         if (typeof window.LEVEL_XP_THRESHOLDS !== 'undefined' && gameState.nanobotStats.level > 0 && gameState.nanobotStats.level <= window.LEVEL_XP_THRESHOLDS.length) {
             gameState.nanobotStats.xpToNext = window.LEVEL_XP_THRESHOLDS[gameState.nanobotStats.level - 1];
         } else if (typeof window.LEVEL_XP_THRESHOLDS !== 'undefined' && gameState.nanobotStats.level > window.LEVEL_XP_THRESHOLDS.length) {
-            gameState.nanobotStats.xpToNext = Infinity; 
+            gameState.nanobotStats.xpToNext = Infinity;
         }
         if (typeof window.NANOBOT_SKILLS_CONFIG !== 'undefined' && gameState.nanobotStats.level === 1) {
             for (const skillId in window.NANOBOT_SKILLS_CONFIG) {
@@ -191,16 +183,14 @@ function calculateInitialGameState() {
             }
         }
         
-        // S'assurer que la défense de base du Nanobot est bien configurée si activée
         if (gameState.nanobotStats.isDefendingBase) {
             if (!gameState.nanobotStats.baseDefensePosition && typeof window.NANOBOT_BASE_PATROL_POINTS !== 'undefined' && window.NANOBOT_BASE_PATROL_POINTS.length > 0 && typeof window.BASE_GRID_SIZE !== 'undefined') {
-                // Logique pour trouver une position initiale (similaire à toggleNanobotDefendBase)
                 let initialPatrolPoint = window.NANOBOT_BASE_PATROL_POINTS[0];
                 let r = initialPatrolPoint.row;
                 let c = initialPatrolPoint.col;
 
-                if (gameState.baseGrid && gameState.baseGrid[r] && 
-                    r >= 0 && r < window.BASE_GRID_SIZE.rows && 
+                if (gameState.baseGrid && gameState.baseGrid[r] &&
+                    r >= 0 && r < window.BASE_GRID_SIZE.rows &&
                     c >= 0 && c < window.BASE_GRID_SIZE.cols &&
                     !gameState.baseGrid[r][c]) {
                     gameState.nanobotStats.baseDefensePosition = { ...initialPatrolPoint };
@@ -208,13 +198,13 @@ function calculateInitialGameState() {
                     const coreRow = Math.floor(window.BASE_GRID_SIZE.rows / 2);
                     const coreCol = Math.floor(window.BASE_GRID_SIZE.cols / 2);
                     const adjacents = [
-                        {r: coreRow-1, c: coreCol}, {r: coreRow+1, c: coreCol}, 
+                        {r: coreRow-1, c: coreCol}, {r: coreRow+1, c: coreCol},
                         {r: coreRow, c: coreCol-1}, {r: coreRow, c: coreCol+1}
                     ];
                     let foundSpot = false;
                     for (const spot of adjacents) {
                         if (gameState.baseGrid && gameState.baseGrid[spot.r] &&
-                            spot.r >= 0 && spot.r < window.BASE_GRID_SIZE.rows && 
+                            spot.r >= 0 && spot.r < window.BASE_GRID_SIZE.rows &&
                             spot.c >= 0 && spot.c < window.BASE_GRID_SIZE.cols &&
                             !gameState.baseGrid[spot.r][spot.c]) {
                             gameState.nanobotStats.baseDefensePosition = { row: spot.r, col: spot.c };
@@ -224,21 +214,20 @@ function calculateInitialGameState() {
                     }
                     if (!foundSpot) {
                         console.warn("Impossible de trouver une case vide pour placer le Nanobot en défense automatiquement.");
-                        gameState.nanobotStats.baseDefensePosition = null; // Ou une position par défaut sûre
+                        gameState.nanobotStats.baseDefensePosition = null;
                     }
                 }
                 gameState.nanobotStats.baseDefensePatrolIndex = 0;
                 gameState.nanobotStats.baseDefenseLastActionTime = gameState.gameTime || 0;
                 gameState.nanobotStats.baseDefenseTargetEnemyId = null;
             }
-            // Mise à jour de l'UI du bouton (si ce n'est pas déjà géré par uiUpdates)
             const btn = window.toggleNanobotDefendBaseBtn;
             if (btn) {
                 btn.innerHTML = `<i class="ti ti-home-shield mr-2"></i>Nexus-7 Déf. Noyau`;
                 btn.classList.add('btn-success');
                 btn.classList.remove('btn-secondary');
             }
-        } else { // Si isDefendingBase est false, s'assurer que le bouton est correct
+        } else {
              const btn = window.toggleNanobotDefendBaseBtn;
             if (btn) {
                 btn.innerHTML = `<i class="ti ti-home-shield mr-2"></i>Nexus-7 Autonome`;

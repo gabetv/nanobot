@@ -325,111 +325,28 @@ var uiUpdates = {
         if (researchAvailableCount === 0) { researchContainer.innerHTML += "<p class='text-gray-500 italic text-sm p-2'>Aucune recherche disponible ou en cours.</p>"; }
     },
 
-    updateNanobotModulesDisplay: function() {
-        const container = window.equippedModulesDisplayEl; 
-        if (!container) { console.warn("UI: updateNanobotModulesDisplay - #equipped-modules-display non trouvé."); return; }
-        container.innerHTML = ''; let hasModules = false;
-
-        if (typeof window.nanobotModulesData === 'undefined' || Object.keys(window.nanobotModulesData).length === 0) {
-            container.innerHTML = "<p class='text-xs text-gray-500 italic p-1'>Données modules non chargées.</p>"; return;
-        }
-        if (!gameState || !gameState.nanobotModuleLevels) {
-            container.innerHTML = "<p class='text-xs text-gray-500 italic p-1'>État modules non initialisé.</p>"; return;
-        }
-
-        for (const moduleId in window.nanobotModulesData) {
-            const moduleData = window.nanobotModulesData[moduleId];
-            if (!moduleData) { console.error(`[ModulesDisplay] ERREUR: Aucune donnée pour module ID '${moduleId}'.`); continue; }
-            if (!moduleData.levels || !Array.isArray(moduleData.levels) || moduleData.levels.length === 0) {
-                console.error(`[ModulesDisplay] ERREUR: Données de niveaux manquantes pour module '${moduleId}'.`);
-                const errorDiv = document.createElement('div');  container.appendChild(errorDiv);
-                hasModules = true; continue;
-            }
-
-            let isUnlocked = false; 
-            if (moduleData.unlockMethod) {
-                 if (moduleData.unlockMethod.research && gameState.research && gameState.research[moduleData.unlockMethod.research]) isUnlocked = true;
-                 else if (moduleData.unlockMethod.building && typeof window.buildingsData !== 'undefined' && window.buildingsData[moduleData.unlockMethod.building] && (gameState.buildings[moduleData.unlockMethod.building] || 0) >= (moduleData.unlockMethod.buildingLevel || 1) ) isUnlocked = true;
-            } else { isUnlocked = true; } 
-
-
-            let currentLevel = gameState.nanobotModuleLevels[moduleId] || 0;
-            let isReplacedByActiveHigherTier = false;
-            for (const checkId in window.nanobotModulesData) {
-                if (window.nanobotModulesData[checkId].replaces === moduleId && (gameState.nanobotModuleLevels[checkId] || 0) > 0) {
-                    isReplacedByActiveHigherTier = true; break;
-                }
-            }
-            if(isReplacedByActiveHigherTier && currentLevel === 0 && !isUnlocked) continue;
-
-            if (isUnlocked || currentLevel > 0) {
-                hasModules = true;
-                const moduleDiv = document.createElement('div');
-                moduleDiv.className = 'module-card bg-gray-700 bg-opacity-70 p-2.5 rounded-md shadow border border-gray-600';
-                moduleDiv.dataset.tooltipType = 'module-card'; moduleDiv.dataset.tooltipId = moduleId;
-                const infoIconContainer = document.createElement('div'); infoIconContainer.className = 'info-icon-container';
-                const infoIcon = document.createElement('i'); infoIcon.className = 'ti ti-info-circle info-icon text-sky-400 hover:text-sky-300';
-                infoIcon.title = `Plus d'infos sur ${moduleData.name}`;
-                infoIconContainer.appendChild(infoIcon); moduleDiv.appendChild(infoIconContainer);
-
-                let content = `<div class="flex justify-between items-baseline mb-1"><h4 class="font-semibold text-sm text-lime-400">${moduleData.name}</h4><span class="text-xs text-gray-400">Niv. ${currentLevel}</span></div>`;
-                content += `<p class="text-xs text-gray-300 mb-1.5">${moduleData.description}</p>`;
-                if (currentLevel > 0) {
-                    const currentLevelDataDef = moduleData.levels.find(l => l.level === currentLevel);
-                    if (currentLevelDataDef && currentLevelDataDef.statBoost) content += `<div class="text-xs text-green-300 mb-1.5"><strong>Actuel:</strong> ${Object.entries(currentLevelDataDef.statBoost).map(([s,v]) => `${(window.STAT_NAMES && window.STAT_NAMES[s] || s.charAt(0).toUpperCase() + s.slice(1))}:+${v}`).join(', ')}</div>`;
-                } else if (isReplacedByActiveHigherTier) {
-                    content += `<p class="text-xs text-gray-500 italic">Remplacé par une version supérieure.</p>`;
-                } else {
-                    content += `<p class="text-xs text-yellow-400">Prêt à activer.</p>`;
-                }
-                moduleDiv.insertAdjacentHTML('beforeend', content);
-
-                const nextLevelDataDef = moduleData.levels.find(l => l.level === currentLevel + 1);
-                const costDataForNextLevel = currentLevel === 0 ? moduleData.levels[0].costToUnlockOrUpgrade : (nextLevelDataDef ? nextLevelDataDef.costToUpgrade : null) ;
-
-                if (costDataForNextLevel && (currentLevel < moduleData.levels.length) && !isReplacedByActiveHigherTier) {
-                    let canAfford = true;
-                    for(const res_1 in costDataForNextLevel) {
-                        if (typeof window.itemsData !== 'undefined' && window.itemsData[res_1]) { 
-                            if ((gameState.inventory || []).filter(itemId => itemId === res_1).length < costDataForNextLevel[res_1]) canAfford = false;
-                        } else { 
-                            if ((gameState.resources[res_1] || 0) < costDataForNextLevel[res_1]) canAfford = false;
-                        }
-                        if (!canAfford) break;
-                    }
-                    const buttonText = currentLevel === 0 ? "Activer" : "Améliorer";
-                    const upgradeButton = document.createElement('button');
-                    upgradeButton.className = `btn ${canAfford ? 'btn-primary' : 'btn-disabled'} btn-xs mt-2 w-full`;
-                    let buttonHtmlContent = `<i class="ti ti-trending-up mr-1"></i>${buttonText} (`;
-                    buttonHtmlContent += Object.entries(costDataForNextLevel).map(([res, val]) => {
-                        const resourceName = (typeof window.itemsData !== 'undefined' && window.itemsData[res]) ? window.itemsData[res].name : res.charAt(0).toUpperCase() + res.slice(1);
-                        return `<span class="cost-part" data-resource-id="${res}" data-required-amount="${val}">${val} ${resourceName}</span>`;
-                    }).join(', ');
-                    buttonHtmlContent += `)`;
-                    upgradeButton.innerHTML = buttonHtmlContent;
-                    if(!canAfford) upgradeButton.disabled = true;
-                    upgradeButton.onclick = (e) => { if(typeof upgradeNanobotModule === 'function') upgradeNanobotModule(moduleId);}; 
-                    if (typeof highlightInsufficientCosts === 'function' && typeof clearCostHighlights === 'function') { 
-                        upgradeButton.addEventListener('mouseover', () => highlightInsufficientCosts(upgradeButton, costDataForNextLevel));
-                        upgradeButton.addEventListener('mouseout', () => clearCostHighlights(upgradeButton));
-                    }
-                    moduleDiv.appendChild(upgradeButton);
-                } else if (currentLevel > 0 && !isReplacedByActiveHigherTier) {
-                    moduleDiv.insertAdjacentHTML('beforeend', `<p class="text-xs text-green-400 mt-1.5 italic">Niveau Max Atteint</p>`);
-                }
-                container.appendChild(moduleDiv);
-            }
-        }
-        if (!hasModules) { container.innerHTML = "<p class='text-xs text-gray-500 italic p-1'>Aucun module débloqué ou disponible pour activation.</p>"; }
-    },
-
     updateNanobotDisplay: function() {
         if (!gameState || !gameState.nanobotStats) { console.error("UI: updateNanobotDisplay - gameState ou nanobotStats non défini."); return; }
+        
+        // MAJ Stats de base
+        const nanobotLevelDisplayEl = document.getElementById('nanobot-level-display');
+        const nanobotXpProgressDisplayEl = document.getElementById('nanobot-xp-progress-display');
+        const nanobotXpBarFillEl = document.getElementById('nanobot-xp-bar-fill');
+        
+        if(nanobotLevelDisplayEl) nanobotLevelDisplayEl.textContent = gameState.nanobotStats.level;
+        if(nanobotXpProgressDisplayEl) nanobotXpProgressDisplayEl.textContent = `${Math.floor(gameState.nanobotStats.xp)} / ${gameState.nanobotStats.xpToNext === Infinity ? 'MAX' : gameState.nanobotStats.xpToNext}`;
+        if(nanobotXpBarFillEl) {
+            const xpToNextForBar = gameState.nanobotStats.xpToNext > 0 && gameState.nanobotStats.xpToNext !== Infinity ? gameState.nanobotStats.xpToNext : 1;
+            const xpPercent = (gameState.nanobotStats.xp / xpToNextForBar) * 100;
+            nanobotXpBarFillEl.style.width = `${Math.min(100, Math.max(0, xpPercent))}%`;
+        }
+
         if(window.nanobotHealthEl) window.nanobotHealthEl.textContent = `${Math.floor(gameState.nanobotStats.currentHealth)} / ${gameState.nanobotStats.health}`;
         if(window.nanobotAttackEl) window.nanobotAttackEl.textContent = gameState.nanobotStats.attack;
         if(window.nanobotDefenseEl) window.nanobotDefenseEl.textContent = gameState.nanobotStats.defense;
         if(window.nanobotSpeedEl) window.nanobotSpeedEl.textContent = gameState.nanobotStats.speed;
         
+        // MAJ Visuel Nanobot
         if(window.nanobotVisualBody) {
             window.nanobotVisualBody.innerHTML = ''; 
             const nanobotBaseImagePath = 'images/nanobot_base_body.png';
@@ -476,6 +393,39 @@ var uiUpdates = {
         }
         if(window.equippedItemsDisplayBriefEl) window.equippedItemsDisplayBriefEl.textContent = equippedItemsNames.length > 0 ? `Actif: ${equippedItemsNames.join(', ')}` : "Aucun équipement (visuel).";
         
+        // MAJ Prochaines Compétences
+        const nextSkillsDisplayEl = document.getElementById('next-skills-display');
+        if (nextSkillsDisplayEl && typeof window.NANOBOT_SKILLS_CONFIG !== 'undefined') {
+            nextSkillsDisplayEl.innerHTML = '';
+            const currentLevel = gameState.nanobotStats.level;
+            const allSkills = Object.values(window.NANOBOT_SKILLS_CONFIG)
+                .filter(skill => skill.unlock && skill.unlock.level > currentLevel) 
+                .sort((a, b) => a.unlock.level - b.unlock.level); 
+
+            let skillsToShow = 0;
+            if (allSkills.length > 0) {
+                for (const skill of allSkills) {
+                    if (skillsToShow >= 3) break; 
+                    
+                    const skillItemDiv = document.createElement('div');
+                    skillItemDiv.className = 'next-skill-item';
+                    skillItemDiv.innerHTML = `
+                        <div>
+                            <i class="next-skill-icon ${skill.icon || 'ti ti-sparkles'}"></i>
+                            <span class="next-skill-name">${skill.name}</span>
+                        </div>
+                        <span class="next-skill-level-req">Niv. ${skill.unlock.level}</span>
+                    `;
+                    nextSkillsDisplayEl.appendChild(skillItemDiv);
+                    skillsToShow++;
+                }
+            }
+            if (skillsToShow === 0) {
+                nextSkillsDisplayEl.innerHTML = '<p class="text-xs text-gray-500 italic">Aucune nouvelle compétence prévue pour le moment ou niveau maximum atteint.</p>';
+            }
+        }
+
+
         if(typeof this.updateEquippedItemsDisplay === 'function') this.updateEquippedItemsDisplay();
         if(typeof this.updateNanobotModulesDisplay === 'function') this.updateNanobotModulesDisplay(); 
     },
@@ -523,12 +473,22 @@ var uiUpdates = {
     },
 
     updateXpBar: function() {
-        const generalXpBar = window.xpBarEl; 
-        if(!generalXpBar || !gameState || !gameState.nanobotStats || gameState.nanobotStats.level === undefined) return;
-        const stats = gameState.nanobotStats;
-        const xpToNextLevel = stats.xpToNext > 0 && stats.xpToNext !== Infinity ? stats.xpToNext : 1; 
-        const percent = (stats.xp / xpToNextLevel) * 100;
-        generalXpBar.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+        const generalXpBar = window.xpBarEl; // For combat end modal
+        if (generalXpBar && gameState && gameState.nanobotStats && gameState.nanobotStats.level !== undefined) {
+            const stats = gameState.nanobotStats;
+            const xpToNextLevel = stats.xpToNext > 0 && stats.xpToNext !== Infinity ? stats.xpToNext : 1; 
+            const percent = (stats.xp / xpToNextLevel) * 100;
+            generalXpBar.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+        }
+
+        // MAJ spécifique pour la barre d'XP dans la section Nanobot
+        const nanobotXpBarFillEl = document.getElementById('nanobot-xp-bar-fill');
+        if (nanobotXpBarFillEl && gameState && gameState.nanobotStats && gameState.nanobotStats.level !== undefined) {
+             const stats = gameState.nanobotStats;
+             const xpToNextLevel = stats.xpToNext > 0 && stats.xpToNext !== Infinity ? stats.xpToNext : 1; 
+             const percent = (stats.xp / xpToNextLevel) * 100;
+             nanobotXpBarFillEl.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+        }
     },
 
     updateBaseStatusDisplay: function() {
@@ -697,7 +657,7 @@ var uiUpdates = {
     },
 
     drawLaserShot: function(startX, startY, endX, endY, type = 'friendly', visualType = 'laser') {
-        if (typeof drawProjectileVisual === 'function') drawProjectileVisual(startX, startY, endX, endY, type, visualType); // Modifié pour passer visualType
+        if (typeof drawProjectileVisual === 'function') drawProjectileVisual(startX, startY, endX, endY, type, visualType); 
     },
     drawEnemyProjectile: function(startX, startY, endX, endY, damageType) {
         this.drawLaserShot(startX, startY, endX, endY, 'enemy'); 

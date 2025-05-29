@@ -3,12 +3,12 @@ console.log("craftingUI.js - Fichier chargé.");
 
 var craftingUI = {
     updateCraftingDisplay: function() {
-        const craftingContainer = document.getElementById('crafting-content'); // L'ID de la div dans l'onglet Fabrication
+        const craftingContainer = document.getElementById('crafting-content');
         if (!craftingContainer) {
             console.warn("CraftingUI: Conteneur #crafting-content non trouvé.");
             return;
         }
-        craftingContainer.innerHTML = ''; // Vider le contenu précédent
+        craftingContainer.innerHTML = '';
 
         if (typeof window.craftingRecipesData === 'undefined' || Object.keys(window.craftingRecipesData).length === 0) {
             craftingContainer.innerHTML = '<p class="text-gray-500 italic text-sm p-2">Aucune recette de fabrication définie.</p>';
@@ -27,9 +27,8 @@ var craftingUI = {
         for (const recipeId in window.craftingRecipesData) {
             const recipe = window.craftingRecipesData[recipeId];
             const canCurrentlyCraft = typeof window.craftingLogic !== 'undefined' ? window.craftingLogic.canCraft(recipeId, window.gameState) : false;
-            let isRecipeUnlocked = true; // Par défaut, sauf si condition de déblocage
+            let isRecipeUnlocked = true;
 
-            // Vérifier les conditions de déblocage
             if (recipe.unlockCondition) {
                 if (recipe.unlockCondition.research && (!window.gameState.research || !window.gameState.research[recipe.unlockCondition.research])) {
                     isRecipeUnlocked = false;
@@ -39,7 +38,7 @@ var craftingUI = {
                 }
             }
             
-            if (!isRecipeUnlocked) continue; // Ne pas afficher les recettes non débloquées
+            if (!isRecipeUnlocked) continue;
 
             recipesDisplayed++;
             const recipeDiv = document.createElement('div');
@@ -67,10 +66,15 @@ var craftingUI = {
                     hasEnough = currentAmount >= ing.quantity;
                 } else if (ing.type === "resource") {
                     currentAmount = window.gameState.resources[ing.id] || 0;
-                    ingredientName = (window.RESOURCE_TYPES && window.RESOURCE_TYPES[ing.id]?.toLowerCase()) || ing.id.charAt(0).toUpperCase() + ing.id.slice(1);
+                    // Pour l'affichage, donner un nom plus lisible aux ressources
+                    if (ing.id === "biomass") ingredientName = "Biomasse";
+                    else if (ing.id === "nanites") ingredientName = "Nanites";
+                    else if (ing.id === "crystal_shards") ingredientName = "Éclats Cristal";
+                    else if (ing.id === "energy") ingredientName = "Énergie";
+                    else ingredientName = (window.RESOURCE_TYPES && window.RESOURCE_TYPES[ing.id]?.toLowerCase()) || ing.id.charAt(0).toUpperCase() + ing.id.slice(1);
                     hasEnough = currentAmount >= ing.quantity;
                 }
-                content += `<li class="${hasEnough ? 'text-green-400' : 'text-red-400'}">- ${ingredientName}: ${currentAmount}/${ing.quantity}</li>`;
+                content += `<li class="${hasEnough ? 'text-green-400' : 'text-red-400'}">- ${ingredientName}: ${ing.quantity} (Possédé: ${currentAmount})</li>`;
             });
             content += '</ul>';
 
@@ -81,11 +85,6 @@ var craftingUI = {
                 content += `<p class="text-xs mt-1 ${meetsBuildingReq ? 'text-gray-400' : 'text-red-400'}">Requis: ${reqBuilding?.name || recipe.requiredBuilding} (Niv. ${recipe.requiredBuildingLevel || 1}) - Actuel: Niv. ${currentBuildingLevel}</p>`;
             }
             
-            // Instantané pour l'instant, mais on pourrait afficher le temps
-            // if (recipe.craftTime) {
-            //     content += `<p class="text-xs text-gray-500 mt-1">Temps: ${formatTime(recipe.craftTime)}</p>`;
-            // }
-
             recipeDiv.innerHTML = content;
 
             const craftButton = document.createElement('button');
